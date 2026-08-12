@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Daniel's Directory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+  --radius: 14px; --max: 1080px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--body); line-height: 1.6;
+  background-image:
+    radial-gradient(ellipse 60% 50% at 20% -10%, rgba(124,197,118,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 90% 10%, rgba(230,192,104,0.08) 0%, transparent 60%);
+  background-attachment: fixed;
+}
+header { text-align: center; padding: 5rem 2rem 3rem; }
+.crest {
+  width: 56px; height: 56px; margin: 0 auto 1.5rem; border-radius: 50%;
+  background: radial-gradient(circle, var(--leaf-bright) 0%, var(--leaf) 60%, transparent 100%);
+  opacity: 0.9; box-shadow: 0 0 30px rgba(124,197,118,0.4);
+}
+h1 {
+  font-family: var(--heading); font-weight: 800; font-size: clamp(2.2rem, 5vw, 3.4rem);
+  letter-spacing: 0.02em; color: var(--leaf-bright);
+  text-shadow: 0 0 24px rgba(124,197,118,0.35);
+}
+.subtitle {
+  font-family: var(--mono); font-size: 0.82rem; color: var(--dim);
+  letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.8rem;
+}
+main { max-width: var(--max); margin: 0 auto; padding: 0 2rem 6rem; }
+.category { margin-bottom: 3.5rem; }
+.category-head {
+  display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem; border-bottom: 1px solid var(--border);
+}
+.category-head .leaf-icon { font-size: 1.1rem; }
+.category-head h2 {
+  font-family: var(--heading); font-weight: 700; font-size: 1.15rem; color: var(--leaf-bright);
+  letter-spacing: 0.03em;
+}
+.category-head .count {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--dim); margin-left: auto;
+}
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.4rem 1.5rem; text-decoration: none; display: block; transition: border-color 0.2s, transform 0.2s, background 0.2s;
+}
+.card:hover { border-color: var(--border-bright); background: var(--surface2); transform: translateY(-2px); }
+.card .name {
+  font-family: var(--heading); font-weight: 700; font-size: 1rem; color: var(--text); margin-bottom: 0.4rem;
+}
+.card .desc { font-size: 0.85rem; color: var(--muted); line-height: 1.55; margin-bottom: 0.7rem; }
+.card .url { font-family: var(--mono); font-size: 0.72rem; color: var(--leaf); word-break: break-all; }
+.card.featured { border-color: rgba(230,192,104,0.35); background: linear-gradient(135deg, rgba(230,192,104,0.06) 0%, var(--surface) 60%); }
+.card.featured .url { color: var(--gold); }
+.badge {
+  display: inline-block; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 100px; margin-bottom: 0.6rem;
+  background: rgba(124,197,118,0.12); color: var(--leaf-bright); border: 1px solid rgba(124,197,118,0.25);
+}
+.badge.gold { background: rgba(230,192,104,0.12); color: var(--gold); border-color: rgba(230,192,104,0.3); }
+footer {
+  text-align: center; padding: 3rem 2rem; border-top: 1px solid var(--border);
+  font-family: var(--mono); font-size: 0.75rem; color: var(--dim);
+}
+@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } header { padding: 3.5rem 1.5rem 2.5rem; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="crest"></div>
+  <h1>Kokiri</h1>
+  <p class="subtitle">Daniel's Directory — Everything, In One Place</p>
+</header>
+
+<main>
+
+  <div class="category">
+    <div class="category-head">
+      <span class="leaf-icon">🌿</span>
+      <h2>Live Domains</h2>
+      <span class="count">2</span>
+    </div>
+    <div class="grid">
+      <a href="https://furinfit.com" class="card featured" target="_blank">
+        <span class="badge gold">Custom Domain</span>
+        <div class="name">Furin Fitness</div>
+        <div class="desc">Bootcamp, community, 1-on-1 coaching, and partner program — combined offer page with slug pages.</div>
+        <div class="url">furinfit.com</div>
+      </a>
+      <a href="https://hajimesolutions.com" class="card featured" target="_blank">
+        <span class="badge gold">Custom Domain</span>
+        <div class="name">Hajime Solutions</div>
+        <div class="desc">Marketing + AI services hub — website, advertising, AI agents, and about me.</div>
+        <div class="url">hajimesolutions.com</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="category">
+    <div class="category-head">
+      <span class="leaf-icon">🏕️</span>
+      <h2>Furin Fitness — Pages</h2>
+      <span class="count">5</span>
+    </div>
+    <div class="grid">
+      <a href="https://furinfit.com/" class="card" target="_blank">
+        <div class="name">Combined Offer Page</div>
+        <div class="desc">Story, bootcamp, community, coaching, and partner sections all in one.</div>
+        <div class="url">furinfit.com</div>
+      </a>
+      <a href="https://furinfit.com/bootcamp" class="card" target="_blank">
+        <div class="name">Bootcamp</div>
+        <div class="desc">$299 for 3 months (50% off) — consultation-focused CTA.</div>
+        <div class="url">furinfit.com/bootcamp</div>
+      </a>
+      <a href="https://furinfit.com/enroll" class="card" target="_blank">
+        <div class="name">Bootcamp — Enroll</div>
+        <div class="desc">Same offer, with a direct purchase link.</div>
+        <div class="url">furinfit.com/enroll</div>
+      </a>
+      <a href="https://furinfit.com/coaching" class="card" target="_blank">
+        <div class="name">1-on-1 Coaching</div>
+        <div class="desc">$449 for 3 months (50% off) — fully personalized coaching.</div>
+        <div class="url">furinfit.com/coaching</div>
+      </a>
+      <a href="https://furinfit.com/partners" class="card" target="_blank">
+        <div class="name">Partners / Affiliate</div>
+        <div class="desc">Apply to become a Furin Fitness affiliate partner.</div>
+        <div class="url">furinfit.com/partners</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="category">
+    <div class="category-head">
+      <span class="leaf-icon">🛠️</span>
+      <h2>Hajime Solutions — Pages</h2>
+      <span class="count">5</span>
+    </div>
+    <div class="grid">
+      <a href="https://hajimesolutions.com/" class="card" target="_blank">
+        <div class="name">Services Hub</div>
+        <div class="desc">Marketing + AI services overview, links to every sub-service.</div>
+        <div class="url">hajimesolutions.com</div>
+      </a>
+      <a href="https://hajimesolutions.com/web-services" class="card" target="_blank">
+        <div class="name">Website Services</div>
+        <div class="desc">3 free landing pages offer, plus full site builds.</div>
+        <div class="url">hajimesolutions.com/web-services</div>
+      </a>
+      <a href="https://hajimesolutions.com/advertising" class="card" target="_blank">
+        <div class="name">Advertising & Lead Gen</div>
+        <div class="desc">Paid acquisition and lead-gen campaign management.</div>
+        <div class="url">hajimesolutions.com/advertising</div>
+      </a>
+      <a href="https://hajimesolutions.com/ai-agents" class="card" target="_blank">
+        <div class="name">AI Agents & Implementation</div>
+        <div class="desc">Custom AI agents wired into real business workflows.</div>
+        <div class="url">hajimesolutions.com/ai-agents</div>
+      </a>
+      <a href="https://hajimesolutions.com/aboutme" class="card" target="_blank">
+        <div class="name">About Me</div>
+        <div class="desc">Personal growth-systems portfolio.</div>
+        <div class="url">hajimesolutions.com/aboutme</div>
+      </a>
+      <a href="https://hajimesolutions.com/english" class="card" target="_blank">
+        <div class="name">English Bootcamp</div>
+        <div class="desc">English-teaching bootcamp landing page, hosted as a slug.</div>
+        <div class="url">hajimesolutions.com/english</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="category">
+    <div class="category-head">
+      <span class="leaf-icon">📄</span>
+      <h2>Standalone Sites</h2>
+      <span class="count">6</span>
+    </div>
+    <div class="grid">
+      <a href="https://danielfanto95-pixel.github.io/daniel-fanto-portfolio/" class="card" target="_blank">
+        <div class="name">Growth Systems Portfolio</div>
+        <div class="desc">Original personal portfolio site.</div>
+        <div class="url">daniel-fanto-portfolio</div>
+      </a>
+      <a href="https://danielfanto95-pixel.github.io/delinquent-fitness/" class="card" target="_blank">
+        <div class="name">Delinquent Fitness</div>
+        <div class="desc">Earlier fitness landing page, pre-Furin rebrand.</div>
+        <div class="url">delinquent-fitness</div>
+      </a>
+      <a href="https://danielfanto95-pixel.github.io/affiliate1/" class="card" target="_blank">
+        <div class="name">Affiliate (v1)</div>
+        <div class="desc">Original affiliate landing page.</div>
+        <div class="url">affiliate1</div>
+      </a>
+      <a href="https://danielfanto95-pixel.github.io/daniel-fanto-pt/" class="card" target="_blank">
+        <div class="name">Personal Trainer Page</div>
+        <div class="desc">Standalone personal training landing page.</div>
+        <div class="url">daniel-fanto-pt</div>
+      </a>
+      <a href="https://danielfanto95-pixel.github.io/daniel-fanto-guidance/" class="card" target="_blank">
+        <div class="name">Goal Accountability Coaching</div>
+        <div class="desc">Coaching/guidance offer page.</div>
+        <div class="url">daniel-fanto-guidance</div>
+      </a>
+      <a href="https://danielfanto95-pixel.github.io/english-bootcamp/" class="card" target="_blank">
+        <div class="name">English Bootcamp (standalone)</div>
+        <div class="desc">Original standalone version, also mirrored as a Hajime Solutions slug.</div>
+        <div class="url">english-bootcamp</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="category">
+    <div class="category-head">
+      <span class="leaf-icon">⚙️</span>
+      <h2>Tools & Templates</h2>
+      <span class="count">2</span>
+    </div>
+    <div class="grid">
+      <a href="https://danielfanto95-pixel.github.io/login-template/" class="card" target="_blank">
+        <span class="badge">Demo</span>
+        <div class="name">Login Template</div>
+        <div class="desc">Working signup/login/dashboard demo — Supabase Auth + Row Level Security on static hosting.</div>
+        <div class="url">login-template</div>
+      </a>
+      <a href="https://app.notion.com/p/48539f798614442abf8982749403a612" class="card" target="_blank">
+        <span class="badge">Notion</span>
+        <div class="name">Furin Fitness Bookings</div>
+        <div class="desc">Database for tracking Cal.com bookings by source page.</div>
+        <div class="url">Notion database</div>
+      </a>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  kokiri · danielfanto95-pixel · updated as new things get built
+</footer>
+
+</body>
+</html>
