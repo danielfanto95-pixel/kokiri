@@ -57,11 +57,17 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
   padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
 }
+.nav-group { margin-bottom: 0.3rem; }
 .nav-group-label {
   font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em;
-  text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem; cursor: pointer; user-select: none;
+  display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
 }
-.nav-group-label:first-child { margin-top: 0; }
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content { overflow: hidden; }
+.nav-group-content.collapsed { display: none; }
 .nav-link {
   display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
   cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent;
@@ -91,12 +97,18 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   </main>
 
   <nav class="nav-side">
-    <div class="nav-group-label">Kokiri</div>
-    <div id="nav-sheets"></div>
-    <div class="nav-group-label">Agents</div>
-    <div id="nav-agents"></div>
-    <div class="nav-group-label">Dashboards</div>
-    <div id="nav-dashboards"></div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
   </nav>
 </div>
 
@@ -233,6 +245,24 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     currentColumns.push(data);
     renderGrid();
   });
+
+  // ---------- Collapsible nav groups (state persisted across pages) ----------
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+  initNavCollapse();
 
   loadNav();
 </script>

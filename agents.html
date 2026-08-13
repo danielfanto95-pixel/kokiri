@@ -51,8 +51,15 @@ body {
 @media (max-width: 780px) { .layout { grid-template-columns: 1fr; } .nav-side { display: none; } }
 
 .nav-side { border-left: 1px solid var(--border); padding: 1rem 0.8rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px); }
-.nav-group-label { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.6rem; }
-.nav-group-label:first-child { margin-top: 0; }
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.6rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
 .nav-link {
   display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
   cursor: pointer; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
@@ -192,13 +199,21 @@ main { padding: 1.5rem; overflow-x: hidden; }
   </main>
 
   <nav class="nav-side">
-    <div class="nav-group-label">Kokiri</div>
-    <div id="nav-sheets"></div>
-    <div class="nav-group-label">Agents</div>
-    <div id="agent-list"></div>
-    <button id="btn-new-agent">+ New Agent</button>
-    <div class="nav-group-label">Dashboards</div>
-    <div id="nav-dashboards"></div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <div id="agent-list"></div>
+        <button id="btn-new-agent">+ New Agent</button>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
   </nav>
 
   <div class="chat-panel">
@@ -798,6 +813,24 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
   }
 
   function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ---------- Collapsible nav groups (state persisted across pages) ----------
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+  initNavCollapse();
 
   await loadSettings();
   await loadKokiriNav();
