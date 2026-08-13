@@ -69,6 +69,34 @@ td { background: var(--bg); }
   background: transparent; border: 1px dashed var(--border-bright); border-radius: 8px; padding: 0.5rem; cursor: pointer;
 }
 @media (max-width: 900px) { .nav-side { display: none; } }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; padding: 1.5rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface2); border: 1px solid var(--border-bright); border-radius: 14px; padding: 1.8rem;
+  width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto;
+}
+.modal h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 1.2rem; }
+.modal label { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin: 0.9rem 0 0.35rem; }
+.modal input, .modal textarea, .modal select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+  font-family: var(--body); font-size: 0.9rem; padding: 0.55rem 0.7rem;
+}
+.modal textarea { min-height: 90px; resize: vertical; }
+.modal .modal-actions { display: flex; gap: 0.6rem; margin-top: 1.5rem; }
+.modal .modal-actions button {
+  flex: 1; padding: 0.65rem; border-radius: 8px; border: none; font-family: var(--heading); font-weight: 700;
+  font-size: 0.75rem; cursor: pointer;
+}
+.modal .btn-save { background: var(--leaf); color: #0c120d; }
+.modal .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.source-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.source-row .name { flex: 1; }
+.source-row .meta { color: var(--muted); font-size: 0.75rem; }
+.source-row .del { color: var(--dim); cursor: pointer; }
+.source-row .del:hover { color: #f87171; }
 </style>
 </head>
 <body>
@@ -84,6 +112,8 @@ td { background: var(--bg); }
       <h2 id="dash-title">Loading…</h2>
       <button class="action-btn" id="btn-add-widget">+ Add Widget</button>
       <button class="action-btn" id="btn-sync-notion">🔄 Sync Notion</button>
+      <button class="action-btn" id="btn-sources">📁 Sources</button>
+      <button class="action-btn" id="btn-generate" style="color:var(--gold);border-color:var(--gold);">✨ Generate with AI</button>
     </div>
     <div class="widgets" id="widgets"></div>
   </main>
@@ -97,6 +127,10 @@ td { background: var(--bg); }
     <div id="nav-dashboards"></div>
     <button id="btn-new-dashboard">+ New Dashboard</button>
   </nav>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-body"></div>
 </div>
 
 <script type="module">
@@ -185,11 +219,186 @@ td { background: var(--bg); }
       const { data } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
       return (data || []).map(r => ({ id: r.id, ...r.data }));
     }
+    if (widget.source_table === 'dashboard_source_rows' && widget.source_id) {
+      const { data } = await supabase.from('dashboard_source_rows').select('*').eq('source_id', widget.source_id).order('sort_order');
+      return (data || []).map(r => ({ id: r.id, ...r.data }));
+    }
     let q = supabase.from(widget.source_table).select('*').order('created_at', { ascending: false }).limit(100);
     if (widget.filter_field && widget.filter_value) q = q.eq(widget.filter_field, widget.filter_value);
     const { data } = await q;
     return data || [];
   }
+
+  // ---------- Modal helpers ----------
+  function openModal(html) {
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+  document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); });
+
+  // ---------- Sources: upload, list, delete ----------
+  function parseCsv(text) {
+    const lines = text.replace(/\r/g, '').split('\n').filter(l => l.length > 0);
+    if (lines.length === 0) return { columns: [], rows: [] };
+    const splitLine = (line) => {
+      const cells = []; let cur = ''; let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQuotes = !inQuotes; }
+        else if (c === ',' && !inQuotes) { cells.push(cur); cur = ''; }
+        else { cur += c; }
+      }
+      cells.push(cur);
+      return cells.map(c => c.trim());
+    };
+    const columns = splitLine(lines[0]);
+    const rows = lines.slice(1).map(line => {
+      const cells = splitLine(line);
+      const obj = {};
+      columns.forEach((c, i) => obj[c] = cells[i] ?? '');
+      return obj;
+    });
+    return { columns, rows };
+  }
+
+  async function uploadSource(file) {
+    const text = await file.text();
+    let columns = [], rows = [];
+    if (file.name.toLowerCase().endsWith('.json')) {
+      const parsed = JSON.parse(text);
+      const arr = Array.isArray(parsed) ? parsed : (parsed.data || parsed.rows || []);
+      rows = arr;
+      columns = arr.length ? Object.keys(arr[0]) : [];
+    } else {
+      const result = parseCsv(text);
+      columns = result.columns;
+      rows = result.rows;
+    }
+    if (rows.length === 0) throw new Error('No rows found in file.');
+
+    const { data: source, error } = await supabase.from('dashboard_sources').insert({
+      name: file.name.replace(/\.(csv|json)$/i, ''), file_name: file.name, columns, row_count: rows.length,
+    }).select().single();
+    if (error) throw error;
+
+    const batchSize = 50;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize).map((r, idx) => ({ source_id: source.id, data: r, sort_order: i + idx }));
+      await supabase.from('dashboard_source_rows').insert(batch);
+    }
+    return source;
+  }
+
+  async function openSourcesModal() {
+    const { data: sources } = await supabase.from('dashboard_sources').select('*').order('created_at', { ascending: false });
+    openModal(`
+      <h2>📁 Data Sources</h2>
+      <input type="file" id="s-file-input" accept=".csv,.json" style="margin-bottom:1rem;">
+      <div id="s-upload-status" style="font-size:0.78rem;color:var(--muted);"></div>
+      <div id="s-source-list" style="margin-top:0.8rem;">
+        ${(sources || []).length === 0 ? '<p class="empty">No sources uploaded yet.</p>' :
+          sources.map(s => `<div class="source-row"><span class="name">${escapeHtml(s.name)}</span><span class="meta">${s.row_count} rows</span><span class="del" data-del-source="${s.id}">×</span></div>`).join('')}
+      </div>
+      <div class="modal-actions"><button class="btn-cancel" id="m-cancel">Close</button></div>
+    `);
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    document.getElementById('s-file-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const statusEl = document.getElementById('s-upload-status');
+      statusEl.textContent = 'Uploading and parsing…';
+      try {
+        await uploadSource(file);
+        statusEl.textContent = '✓ Uploaded.';
+        openSourcesModal();
+      } catch (err) {
+        statusEl.textContent = '⚠ ' + err.message;
+      }
+    });
+    document.querySelectorAll('[data-del-source]').forEach(el => {
+      el.addEventListener('click', async () => {
+        if (!confirm('Delete this source and all its data?')) return;
+        await supabase.from('dashboard_sources').delete().eq('id', el.dataset.delSource);
+        openSourcesModal();
+      });
+    });
+  }
+  document.getElementById('btn-sources').addEventListener('click', openSourcesModal);
+
+  // ---------- AI dashboard generation ----------
+  async function callIntelligenceForGeneration(systemPrompt, userText) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/chat-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userText }] }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.text) throw new Error(json.error || 'No intelligence configured — add a key in the Agent Dashboard Settings first.');
+    return json.text;
+  }
+
+  document.getElementById('btn-generate').addEventListener('click', async () => {
+    const { data: sources } = await supabase.from('dashboard_sources').select('*').order('created_at', { ascending: false });
+    if (!sources || sources.length === 0) {
+      alert('Upload a data source first (📁 Sources), then generate a dashboard from it.');
+      return;
+    }
+    openModal(`
+      <h2>✨ Generate Dashboard with AI</h2>
+      <label>Dashboard Name</label>
+      <input id="g-name" placeholder="e.g. Sales Overview">
+      <label>Source</label>
+      <select id="g-source">${sources.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${s.row_count} rows)</option>`).join('')}</select>
+      <label>Requirements</label>
+      <textarea id="g-requirements" placeholder="Describe what you want to see — e.g. 'total count, a table of the 10 most recent rows, and a breakdown by status'"></textarea>
+      <div id="g-status" style="font-size:0.78rem;color:var(--muted);margin-top:0.6rem;"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="m-cancel">Cancel</button>
+        <button class="btn-save" id="m-generate">Generate</button>
+      </div>
+    `);
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    document.getElementById('m-generate').addEventListener('click', async () => {
+      const name = document.getElementById('g-name').value.trim();
+      const sourceId = document.getElementById('g-source').value;
+      const requirements = document.getElementById('g-requirements').value.trim();
+      if (!name || !requirements) { alert('Name and requirements are required.'); return; }
+      const statusEl = document.getElementById('g-status');
+      statusEl.textContent = 'Thinking…';
+
+      try {
+        const source = sources.find(s => s.id === sourceId);
+        const { data: sampleRows } = await supabase.from('dashboard_source_rows').select('data').eq('source_id', sourceId).limit(5);
+
+        const systemPrompt = `You design dashboards for a data tool. Given a data source's columns and a sample of rows, plus a user's requirements, output ONLY a JSON array of widget specs (no prose, no markdown fences). Each widget: {"title":"...","widget_type":"table"|"stat","columns":["..."]} — "columns" must be a subset of the given column names (omit for stat widgets). Keep it to 2-5 widgets that best satisfy the requirements.`;
+        const userPrompt = `Source columns: ${JSON.stringify(source.columns)}\nSample rows: ${JSON.stringify((sampleRows || []).map(r => r.data))}\n\nRequirements: ${requirements}`;
+
+        const raw = await callIntelligenceForGeneration(systemPrompt, userPrompt);
+        const jsonMatch = raw.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) throw new Error('AI did not return a valid widget list.');
+        const widgetSpecs = JSON.parse(jsonMatch[0]);
+
+        const { data: dash } = await supabase.from('dashboards').insert({ name, sort_order: dashboardsList.length + 1 }).select().single();
+        for (let i = 0; i < widgetSpecs.length; i++) {
+          const w = widgetSpecs[i];
+          await supabase.from('dashboard_widgets').insert({
+            dashboard_id: dash.id, title: w.title || `Widget ${i + 1}`,
+            widget_type: w.widget_type === 'stat' ? 'stat' : 'table',
+            source_table: 'dashboard_source_rows', source_id: sourceId,
+            columns: Array.isArray(w.columns) ? w.columns : [], sort_order: i + 1,
+          });
+        }
+        closeModal();
+        dashboardsList.push(dash);
+        renderDashNav();
+        selectDashboard(dash.id);
+      } catch (err) {
+        statusEl.textContent = '⚠ ' + err.message;
+      }
+    });
+  });
 
   async function renderWidgetBody(widget) {
     if (widget.widget_type === 'stat') {
@@ -241,14 +450,23 @@ td { background: var(--bg); }
   document.getElementById('btn-add-widget').addEventListener('click', async () => {
     const title = prompt('Widget title:');
     if (!title) return;
-    const sourceTable = prompt('Source (agent_tasks / agent_tribunal / notion_tasks / kokiri_rows):', 'agent_tasks');
+    const sourceTable = prompt('Source (agent_tasks / agent_tribunal / notion_tasks / kokiri_rows / upload):', 'agent_tasks');
     if (!sourceTable) return;
     let sheetSlug = null;
+    let sourceId = null;
     if (sourceTable === 'kokiri_rows') sheetSlug = prompt('Which Kokiri sheet slug? (e.g. crm, sources)');
+    if (sourceTable === 'upload') {
+      const { data: sources } = await supabase.from('dashboard_sources').select('*').order('created_at', { ascending: false });
+      if (!sources || sources.length === 0) { alert('No uploaded sources yet — use 📁 Sources to upload one first.'); return; }
+      const list = sources.map((s, i) => `${i + 1}. ${s.name}`).join('\n');
+      const idx = parseInt(prompt(`Pick a source:\n${list}`, '1'), 10) - 1;
+      if (!sources[idx]) return;
+      sourceId = sources[idx].id;
+    }
     const type = confirm('Show as a count (OK) or a full table (Cancel)?') ? 'stat' : 'table';
     await supabase.from('dashboard_widgets').insert({
       dashboard_id: currentDashboard.id, title, widget_type: sourceTable === 'notion_tasks' ? 'notion_tasks' : type,
-      source_table: sourceTable, source_sheet_slug: sheetSlug, sort_order: 1,
+      source_table: sourceTable === 'upload' ? 'dashboard_source_rows' : sourceTable, source_sheet_slug: sheetSlug, source_id: sourceId, sort_order: 1,
     });
     renderWidgets();
   });
