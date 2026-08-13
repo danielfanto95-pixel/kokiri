@@ -72,6 +72,14 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .item-row .content .meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
 .empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 
+.context-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.3rem;
+  font-size: 0.85rem; color: var(--muted); line-height: 1.6; white-space: pre-wrap;
+}
+.context-card.empty-state { text-align: left; border-style: dashed; }
+.context-edit-link { display: inline-block; margin-top: 0.8rem; font-family: var(--mono); font-size: 0.75rem; color: var(--leaf); text-decoration: none; }
+.context-edit-link:hover { color: var(--leaf-bright); }
+
 .nav-side {
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
   padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
@@ -138,6 +146,11 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
         <h2>Notable Things <span class="count" id="notable-count"></span></h2>
         <div id="notable-list"><p class="empty">Loading…</p></div>
       </div>
+
+      <div class="section">
+        <h2>📝 Global Instructions & Context</h2>
+        <div id="context-preview"><p class="empty">Loading…</p></div>
+      </div>
     </div>
   </main>
 
@@ -153,6 +166,12 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     <div class="nav-group">
       <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
       <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
     </div>
   </nav>
 </div>
@@ -256,8 +275,20 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   }
   initNavCollapse();
 
+  async function loadContextPreview() {
+    const { data } = await supabase.from('kokiri_settings').select('value').eq('key', 'global_context').maybeSingle();
+    const el = document.getElementById('context-preview');
+    const value = data?.value?.trim();
+    if (!value) {
+      el.innerHTML = `<div class="context-card empty-state">Nothing set yet — global instructions apply to every agent, the chat panel, and the autonomous runner.<br><a class="context-edit-link" href="context.html">📝 Set Global Instructions →</a></div>`;
+      return;
+    }
+    const preview = value.length > 300 ? value.slice(0, 300) + '…' : value;
+    el.innerHTML = `<div class="context-card">${escapeHtml(preview)}</div><a class="context-edit-link" href="context.html">📝 Edit →</a>`;
+  }
+
   const { agents } = await loadNav();
-  await Promise.all([loadTodos(agents), loadNotable(agents)]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview()]);
 </script>
 
 </body>

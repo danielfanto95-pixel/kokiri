@@ -217,6 +217,12 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
       <div class="nav-group-content" id="nav-dashboards"></div>
     </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
   </nav>
 
   <div class="chat-panel">
@@ -296,8 +302,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
   document.getElementById('btn-settings').addEventListener('click', () => {
     openModal(`
       <h2>⚙ Intelligence Settings</h2>
-      <label>Global Context & Instructions</label>
-      <textarea id="s-global-context" style="min-height:110px;" placeholder="Applies to every AI call across Kokiri — chat, agents, and the autonomous runner. e.g. tone, priorities, things to always/never do.">${escapeHtml(settings.global_context || '')}</textarea>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem;">Global instructions/context now live on their own page — <a href="context.html" style="color:var(--cyan);">📝 Global Instructions →</a></p>
 
       <label>OmniRoute URL (local)</label>
       <input id="s-omni-url" value="${settings.omnirouter_url || 'http://localhost:20128'}">
@@ -326,7 +331,6 @@ main { padding: 1.5rem; overflow-x: hidden; }
       </div>
     `);
     document.getElementById('m-save').addEventListener('click', async () => {
-      await saveSetting('global_context', document.getElementById('s-global-context').value.trim());
       await saveSetting('omnirouter_url', document.getElementById('s-omni-url').value.trim());
       await saveSetting('omnirouter_key', document.getElementById('s-omni-key').value.trim());
       await saveSecret('anthropic_api_key', document.getElementById('s-claude-key').value.trim(), 'anthropic_key_configured');
