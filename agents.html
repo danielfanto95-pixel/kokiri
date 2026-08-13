@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Agent Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050a10; --panel: #0a1420; --panel2: #0e1c2c;
+  --border: rgba(94,224,255,0.16); --border-bright: rgba(94,224,255,0.4);
+  --cyan: #5ee0ff; --cyan-bright: #9ff5ff; --gold: #ffd76a;
+  --text: #d8ecf4; --muted: #6f93a3; --dim: #3d5866;
+  --danger: #ff6b6b; --ok: #6bffb0;
+  --heading: 'Orbitron', sans-serif; --body: 'Rajdhani', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--body); font-size: 15px; min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 20% 0%, rgba(94,224,255,0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(255,215,106,0.05) 0%, transparent 55%),
+    linear-gradient(rgba(94,224,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94,224,255,0.03) 1px, transparent 1px);
+  background-size: auto, auto, 42px 42px, 42px 42px;
+  background-attachment: fixed;
+}
+.topbar {
+  display: flex; align-items: center; gap: 1.2rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: rgba(10,20,32,0.85); backdrop-filter: blur(10px);
+  position: sticky; top: 0; z-index: 20;
+}
+.brand { font-family: var(--heading); font-weight: 800; font-size: 1.05rem; color: var(--cyan-bright); letter-spacing: 0.06em; text-shadow: 0 0 16px rgba(94,224,255,0.5); }
+.brand span { color: var(--gold); text-shadow: 0 0 16px rgba(255,215,106,0.5); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.7rem; }
+.status-pill {
+  font-family: var(--mono); font-size: 0.68rem; padding: 0.3rem 0.65rem; border-radius: 100px;
+  border: 1px solid var(--border); color: var(--muted); display: flex; align-items: center; gap: 0.4rem;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+.status-dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.status-dot.off { background: var(--danger); }
+.topbar button, .topbar a.btn {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer; text-decoration: none;
+}
+.topbar button:hover, .topbar a.btn:hover { border-color: var(--cyan); color: var(--cyan-bright); }
+
+.layout { display: grid; grid-template-columns: 240px 1fr 340px; min-height: calc(100vh - 57px); }
+@media (max-width: 1100px) { .layout { grid-template-columns: 200px 1fr; } .chat-panel { display: none; } }
+
+.sidebar { border-right: 1px solid var(--border); padding: 1rem 0.8rem; }
+.sidebar-label { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 0.5rem 0.4rem 0.6rem; }
+.agent-item {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.7rem; border-radius: 8px;
+  cursor: pointer; margin-bottom: 0.3rem; border: 1px solid transparent;
+}
+.agent-item:hover { background: var(--panel); }
+.agent-item.active { background: var(--panel2); border-color: var(--border-bright); }
+.agent-item .icon { font-size: 1.1rem; }
+.agent-item .name { font-family: var(--heading); font-size: 0.8rem; font-weight: 700; flex: 1; }
+.agent-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.agent-status-dot.paused { background: var(--dim); }
+#btn-new-agent {
+  width: 100%; margin-top: 0.6rem; font-family: var(--mono); font-size: 0.72rem; color: var(--cyan);
+  background: transparent; border: 1px dashed var(--border-bright); border-radius: 8px; padding: 0.55rem; cursor: pointer;
+}
+#btn-new-agent:hover { background: rgba(94,224,255,0.06); }
+
+main { padding: 1.5rem; overflow-x: hidden; }
+.agent-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+.agent-header .icon-big { font-size: 2.2rem; }
+.agent-header h1 { font-family: var(--heading); font-size: 1.3rem; color: var(--cyan-bright); text-shadow: 0 0 14px rgba(94,224,255,0.35); }
+.agent-header .purpose { color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; max-width: 560px; }
+.agent-header .meta-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+.chip-btn {
+  font-family: var(--mono); font-size: 0.7rem; color: var(--text); background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 100px; padding: 0.35rem 0.8rem; cursor: pointer;
+}
+.chip-btn:hover { border-color: var(--cyan); }
+.chip-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+.subtabs { display: flex; gap: 0.4rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.subtab {
+  font-family: var(--heading); font-size: 0.72rem; letter-spacing: 0.05em; color: var(--muted); background: none;
+  border: none; padding: 0.6rem 0.9rem; cursor: pointer; border-bottom: 2px solid transparent;
+}
+.subtab.active { color: var(--cyan-bright); border-bottom-color: var(--cyan); }
+
+.panel-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.item-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1.1rem;
+  display: flex; gap: 0.8rem; align-items: flex-start;
+}
+.item-card .body { flex: 1; }
+.item-card .title { font-weight: 700; font-size: 0.92rem; margin-bottom: 0.15rem; }
+.item-card .sub { color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+.item-card .tag {
+  font-family: var(--mono); font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 100px;
+  border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+}
+.item-card .tag.todo, .item-card .tag.open { color: var(--gold); border-color: rgba(255,215,106,0.3); }
+.item-card .tag.done, .item-card .tag.resolved { color: var(--ok); border-color: rgba(107,255,176,0.3); }
+.item-card .tag.high { color: var(--danger); border-color: rgba(255,107,107,0.3); }
+.item-card .del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.9rem; }
+.item-card .del:hover { color: var(--danger); }
+.empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
+#btn-add-item {
+  margin-top: 0.8rem; font-family: var(--mono); font-size: 0.75rem; color: var(--cyan); background: transparent;
+  border: 1px dashed var(--border-bright); border-radius: 8px; padding: 0.6rem; cursor: pointer; width: 100%;
+}
+#btn-add-item:hover { background: rgba(94,224,255,0.06); }
+
+.chat-panel { border-left: 1px solid var(--border); display: flex; flex-direction: column; height: calc(100vh - 57px); position: sticky; top: 57px; }
+.chat-head { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+.chat-head h3 { font-family: var(--heading); font-size: 0.85rem; color: var(--cyan-bright); }
+.chat-head select {
+  margin-left: auto; background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; font-family: var(--mono); font-size: 0.7rem; padding: 0.3rem 0.5rem;
+}
+.chat-log { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; }
+.msg { font-size: 0.85rem; line-height: 1.55; }
+.msg .role { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.25rem; }
+.msg.user .role { color: var(--gold); }
+.msg.assistant .role { color: var(--cyan); }
+.msg .content { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.8rem; white-space: pre-wrap; }
+.msg .assign-btn {
+  margin-top: 0.4rem; font-family: var(--mono); font-size: 0.65rem; color: var(--muted); background: none;
+  border: 1px solid var(--border); border-radius: 100px; padding: 0.2rem 0.6rem; cursor: pointer;
+}
+.msg .assign-btn:hover { color: var(--cyan); border-color: var(--cyan); }
+.chat-input-row { padding: 0.8rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
+.chat-input-row textarea {
+  flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-family: var(--body); font-size: 0.88rem; padding: 0.55rem 0.7rem; resize: none; min-height: 40px;
+}
+.chat-input-row textarea:focus { outline: none; border-color: var(--cyan); }
+.chat-input-row button {
+  background: var(--cyan); color: #05131a; border: none; border-radius: 8px; padding: 0 1.1rem;
+  font-family: var(--heading); font-weight: 700; font-size: 0.75rem; cursor: pointer;
+}
+.chat-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--panel2); border: 1px solid var(--border-bright); border-radius: 14px; padding: 1.8rem;
+  width: 100%; max-width: 440px; max-height: 85vh; overflow-y: auto;
+}
+.modal h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--cyan-bright); margin-bottom: 1.2rem; }
+.modal label { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin: 0.9rem 0 0.35rem; }
+.modal input, .modal textarea, .modal select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+  font-family: var(--body); font-size: 0.9rem; padding: 0.55rem 0.7rem;
+}
+.modal textarea { min-height: 70px; resize: vertical; }
+.modal .modal-actions { display: flex; gap: 0.6rem; margin-top: 1.5rem; }
+.modal .modal-actions button {
+  flex: 1; padding: 0.65rem; border-radius: 8px; border: none; font-family: var(--heading); font-weight: 700;
+  font-size: 0.75rem; cursor: pointer;
+}
+.modal .btn-save { background: var(--cyan); color: #05131a; }
+.modal .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">KOKIRI // <span>AGENT DASHBOARD</span></div>
+  <div class="topbar-right">
+    <div class="status-pill"><span class="status-dot" id="dot-omni"></span> OmniRoute</div>
+    <div class="status-pill"><span class="status-dot" id="dot-openrouter"></span> OpenRouter</div>
+    <button id="btn-settings">⚙ Settings</button>
+    <a href="app.html" class="btn">← Kokiri OS</a>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-label">Agents</div>
+    <div id="agent-list"></div>
+    <button id="btn-new-agent">+ New Agent</button>
+  </div>
+
+  <main>
+    <div id="agent-detail"></div>
+  </main>
+
+  <div class="chat-panel">
+    <div class="chat-head">
+      <h3>💬 Intelligence</h3>
+      <select id="chat-target"><option value="">General</option></select>
+    </div>
+    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-input-row">
+      <textarea id="chat-input" placeholder="Ask, assign, or discuss..."></textarea>
+      <button id="btn-send">Send</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let agents = [];
+  let currentAgent = null;
+  let currentTab = 'tools';
+  let settings = {};
+
+  const TAB_CONFIG = {
+    tools:    { table: 'agent_tools', label: 'Tools', titleField: 'name', subField: 'description', tagField: null },
+    tasks:    { table: 'agent_tasks', label: 'Tasks', titleField: 'title', subField: 'description', tagField: 'status' },
+    timelines:{ table: 'agent_timeline', label: 'Timelines', titleField: 'event_text', subField: null, tagField: 'event_type' },
+    triage:   { table: 'agent_triage', label: 'Triage', titleField: 'issue_text', subField: null, tagField: 'severity' },
+    tribunal: { table: 'agent_tribunal', label: 'Tribunal', titleField: 'title', subField: 'verdict', tagField: null },
+  };
+
+  // ---------- Settings ----------
+  async function loadSettings() {
+    const { data } = await supabase.from('kokiri_settings').select('*');
+    settings = {};
+    (data || []).forEach(row => settings[row.key] = row.value);
+    updateStatusPills();
+  }
+  async function saveSetting(key, value) {
+    await supabase.from('kokiri_settings').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    settings[key] = value;
+  }
+
+  function updateStatusPills() {
+    document.getElementById('dot-openrouter').className = 'status-dot ' + (settings.openrouter_api_key ? 'on' : 'off');
+  }
+
+  async function pingOmni() {
+    const url = settings.omnirouter_url || 'http://localhost:20128';
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 1500);
+      const res = await fetch(url.replace(/\/$/, '') + '/v1/models', { signal: ctrl.signal, headers: settings.omnirouter_key ? { Authorization: 'Bearer ' + settings.omnirouter_key } : {} });
+      clearTimeout(t);
+      document.getElementById('dot-omni').className = 'status-dot ' + (res.ok ? 'on' : 'off');
+    } catch { document.getElementById('dot-omni').className = 'status-dot off'; }
+  }
+
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    openModal(`
+      <h2>⚙ Intelligence Settings</h2>
+      <label>OmniRoute URL (local)</label>
+      <input id="s-omni-url" value="${settings.omnirouter_url || 'http://localhost:20128'}">
+      <label>OmniRoute Client Key (optional)</label>
+      <input id="s-omni-key" value="${settings.omnirouter_key || ''}">
+      <label>OpenRouter API Key</label>
+      <input id="s-or-key" type="password" value="${settings.openrouter_api_key || ''}" placeholder="sk-or-...">
+      <label>OpenRouter Free Model</label>
+      <input id="s-or-model" value="${settings.openrouter_model || 'meta-llama/llama-3.1-8b-instruct:free'}">
+      <div class="modal-actions">
+        <button class="btn-cancel" id="m-cancel">Cancel</button>
+        <button class="btn-save" id="m-save">Save</button>
+      </div>
+    `);
+    document.getElementById('m-save').addEventListener('click', async () => {
+      await saveSetting('omnirouter_url', document.getElementById('s-omni-url').value.trim());
+      await saveSetting('omnirouter_key', document.getElementById('s-omni-key').value.trim());
+      await saveSetting('openrouter_api_key', document.getElementById('s-or-key').value.trim());
+      await saveSetting('openrouter_model', document.getElementById('s-or-model').value.trim());
+      updateStatusPills();
+      pingOmni();
+      closeModal();
+    });
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+  });
+
+  function openModal(html) {
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+  document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); });
+
+  // ---------- Agents ----------
+  async function loadAgents() {
+    const { data } = await supabase.from('agents').select('*').order('sort_order');
+    agents = data || [];
+    renderAgentList();
+    const chatTarget = document.getElementById('chat-target');
+    chatTarget.innerHTML = '<option value="">General</option>' + agents.map(a => `<option value="${a.id}">${a.icon} ${a.name}</option>`).join('');
+    if (!currentAgent && agents.length) selectAgent(agents[0].id);
+  }
+
+  function renderAgentList() {
+    const el = document.getElementById('agent-list');
+    el.innerHTML = agents.map(a => `
+      <div class="agent-item ${currentAgent?.id === a.id ? 'active' : ''}" data-id="${a.id}">
+        <span class="icon">${a.icon}</span>
+        <span class="name">${escapeHtml(a.name)}</span>
+        <span class="agent-status-dot ${a.status !== 'active' ? 'paused' : ''}"></span>
+      </div>
+    `).join('');
+    el.querySelectorAll('.agent-item').forEach(item => {
+      item.addEventListener('click', () => selectAgent(item.dataset.id));
+    });
+  }
+
+  async function selectAgent(id) {
+    currentAgent = agents.find(a => a.id === id);
+    renderAgentList();
+    renderAgentHeader();
+    await renderTabContent();
+  }
+
+  function renderAgentHeader() {
+    if (!currentAgent) { document.getElementById('agent-detail').innerHTML = '<p class="empty">No agents yet. Create one to get started.</p>'; return; }
+    const a = currentAgent;
+    document.getElementById('agent-detail').innerHTML = `
+      <div class="agent-header">
+        <div class="icon-big">${a.icon}</div>
+        <div>
+          <h1>${escapeHtml(a.name)}</h1>
+          <div class="purpose">${escapeHtml(a.purpose || '')}</div>
+        </div>
+        <div class="meta-actions">
+          <span class="chip-btn">${a.status}</span>
+          <span class="chip-btn">${escapeHtml(a.model_pref || 'auto')}</span>
+          <span class="chip-btn" id="btn-edit-agent">Edit</span>
+          <span class="chip-btn danger" id="btn-del-agent">Delete</span>
+        </div>
+      </div>
+      <div class="subtabs" id="subtabs"></div>
+      <div class="panel-list" id="panel-list"></div>
+      <button id="btn-add-item"></button>
+    `;
+    const subtabs = document.getElementById('subtabs');
+    subtabs.innerHTML = Object.keys(TAB_CONFIG).map(k => `<button class="subtab ${currentTab===k?'active':''}" data-tab="${k}">${TAB_CONFIG[k].label}</button>`).join('');
+    subtabs.querySelectorAll('.subtab').forEach(btn => btn.addEventListener('click', () => { currentTab = btn.dataset.tab; renderAgentHeader(); renderTabContent(); }));
+    document.getElementById('btn-add-item').textContent = '+ Add ' + TAB_CONFIG[currentTab].label.slice(0, -1);
+    document.getElementById('btn-add-item').addEventListener('click', addItemFlow);
+    document.getElementById('btn-edit-agent').addEventListener('click', editAgentFlow);
+    document.getElementById('btn-del-agent').addEventListener('click', deleteAgentFlow);
+  }
+
+  async function renderTabContent() {
+    if (!currentAgent) return;
+    const cfg = TAB_CONFIG[currentTab];
+    const { data } = await supabase.from(cfg.table).select('*').eq('agent_id', currentAgent.id).order('created_at', { ascending: false });
+    const list = document.getElementById('panel-list');
+    if (!data || data.length === 0) { list.innerHTML = '<p class="empty">Nothing here yet.</p>'; return; }
+    list.innerHTML = data.map(item => `
+      <div class="item-card" data-id="${item.id}">
+        <div class="body">
+          <div class="title">${escapeHtml(item[cfg.titleField] || '')}</div>
+          ${cfg.subField ? `<div class="sub">${escapeHtml(item[cfg.subField] || '')}</div>` : ''}
+        </div>
+        ${cfg.tagField ? `<span class="tag ${item[cfg.tagField]}">${escapeHtml(item[cfg.tagField] || '')}</span>` : ''}
+        <span class="del" data-del="${item.id}">×</span>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-del]').forEach(el => {
+      el.addEventListener('click', async () => {
+        await supabase.from(cfg.table).delete().eq('id', el.dataset.del);
+        renderTabContent();
+      });
+    });
+  }
+
+  function addItemFlow() {
+    const cfg = TAB_CONFIG[currentTab];
+    let fields = '';
+    if (currentTab === 'tools') fields = `<label>Name</label><input id="f1"><label>Description</label><textarea id="f2"></textarea>`;
+    if (currentTab === 'tasks') fields = `<label>Title</label><input id="f1"><label>Description</label><textarea id="f2"></textarea><label>Status</label><select id="f3"><option>todo</option><option>in_progress</option><option>done</option><option>blocked</option></select>`;
+    if (currentTab === 'timelines') fields = `<label>Event</label><textarea id="f1"></textarea><label>Type</label><select id="f3"><option>log</option><option>milestone</option><option>note</option></select>`;
+    if (currentTab === 'triage') fields = `<label>Issue</label><textarea id="f1"></textarea><label>Severity</label><select id="f3"><option>low</option><option>medium</option><option>high</option></select>`;
+    if (currentTab === 'tribunal') fields = `<label>Title</label><input id="f1"><label>Verdict</label><textarea id="f2"></textarea><label>Adjustment</label><textarea id="f4"></textarea>`;
+
+    openModal(`<h2>Add ${TAB_CONFIG[currentTab].label.slice(0,-1)}</h2>${fields}
+      <div class="modal-actions"><button class="btn-cancel" id="m-cancel">Cancel</button><button class="btn-save" id="m-save">Save</button></div>`);
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    document.getElementById('m-save').addEventListener('click', async () => {
+      const row = { agent_id: currentAgent.id };
+      const f1 = document.getElementById('f1')?.value.trim();
+      const f2 = document.getElementById('f2')?.value.trim();
+      const f3 = document.getElementById('f3')?.value;
+      const f4 = document.getElementById('f4')?.value.trim();
+      if (currentTab === 'tools') { row.name = f1; row.description = f2; }
+      if (currentTab === 'tasks') { row.title = f1; row.description = f2; row.status = f3; }
+      if (currentTab === 'timelines') { row.event_text = f1; row.event_type = f3; }
+      if (currentTab === 'triage') { row.issue_text = f1; row.severity = f3; }
+      if (currentTab === 'tribunal') { row.title = f1; row.verdict = f2; row.adjustment = f4; }
+      await supabase.from(TAB_CONFIG[currentTab].table).insert(row);
+      closeModal();
+      renderTabContent();
+    });
+  }
+
+  function editAgentFlow() {
+    const a = currentAgent;
+    openModal(`
+      <h2>Edit Agent</h2>
+      <label>Icon (emoji)</label><input id="f1" value="${a.icon}">
+      <label>Name</label><input id="f2" value="${escapeHtml(a.name)}">
+      <label>Purpose</label><textarea id="f3">${escapeHtml(a.purpose || '')}</textarea>
+      <label>Model Preference</label><input id="f4" value="${escapeHtml(a.model_pref || 'auto')}">
+      <label>Status</label><select id="f5"><option ${a.status==='active'?'selected':''}>active</option><option ${a.status==='paused'?'selected':''}>paused</option></select>
+      <div class="modal-actions"><button class="btn-cancel" id="m-cancel">Cancel</button><button class="btn-save" id="m-save">Save</button></div>
+    `);
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    document.getElementById('m-save').addEventListener('click', async () => {
+      const updates = {
+        icon: document.getElementById('f1').value.trim() || '⚔️',
+        name: document.getElementById('f2').value.trim(),
+        purpose: document.getElementById('f3').value.trim(),
+        model_pref: document.getElementById('f4').value.trim(),
+        status: document.getElementById('f5').value,
+      };
+      await supabase.from('agents').update(updates).eq('id', a.id);
+      closeModal();
+      await loadAgents();
+      selectAgent(a.id);
+    });
+  }
+
+  async function deleteAgentFlow() {
+    if (!confirm(`Delete agent "${currentAgent.name}" and all its data? This cannot be undone.`)) return;
+    await supabase.from('agents').delete().eq('id', currentAgent.id);
+    currentAgent = null;
+    await loadAgents();
+  }
+
+  document.getElementById('btn-new-agent').addEventListener('click', () => {
+    openModal(`
+      <h2>New Agent</h2>
+      <label>Icon (emoji)</label><input id="f1" value="🗡️">
+      <label>Name</label><input id="f2" placeholder="e.g. Scout">
+      <label>Purpose</label><textarea id="f3" placeholder="What does this agent do?"></textarea>
+      <label>Model Preference</label><input id="f4" value="auto">
+      <div class="modal-actions"><button class="btn-cancel" id="m-cancel">Cancel</button><button class="btn-save" id="m-save">Create</button></div>
+    `);
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    document.getElementById('m-save').addEventListener('click', async () => {
+      const name = document.getElementById('f2').value.trim();
+      if (!name) return;
+      const { data } = await supabase.from('agents').insert({
+        icon: document.getElementById('f1').value.trim() || '⚔️',
+        name, purpose: document.getElementById('f3').value.trim(),
+        model_pref: document.getElementById('f4').value.trim() || 'auto',
+        sort_order: agents.length + 1,
+      }).select().single();
+      closeModal();
+      await loadAgents();
+      if (data) selectAgent(data.id);
+    });
+  });
+
+  // ---------- Chat ----------
+  async function loadChatLog(agentId) {
+    let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true }).limit(50);
+    q = agentId ? q.eq('agent_id', agentId) : q.is('agent_id', null);
+    const { data } = await q;
+    const log = document.getElementById('chat-log');
+    log.innerHTML = (data || []).map(m => renderMsg(m.role, m.content, m.id)).join('');
+    log.scrollTop = log.scrollHeight;
+    attachAssignHandlers();
+  }
+
+  function renderMsg(role, content, id) {
+    return `<div class="msg ${role}">
+      <div class="role">${role}</div>
+      <div class="content">${escapeHtml(content)}</div>
+      ${role === 'assistant' ? `<button class="assign-btn" data-content="${encodeURIComponent(content)}">+ Assign as Task</button>` : ''}
+    </div>`;
+  }
+
+  function attachAssignHandlers() {
+    document.querySelectorAll('.assign-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!currentAgent) { alert('Select an agent first.'); return; }
+        const content = decodeURIComponent(btn.dataset.content);
+        await supabase.from('agent_tasks').insert({
+          agent_id: currentAgent.id, title: content.slice(0, 70), description: content, status: 'todo',
+        });
+        btn.textContent = '✓ Assigned';
+        btn.disabled = true;
+        if (currentTab === 'tasks') renderTabContent();
+      });
+    });
+  }
+
+  document.getElementById('chat-target').addEventListener('change', () => {
+    loadChatLog(document.getElementById('chat-target').value || null);
+  });
+
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const targetId = document.getElementById('chat-target').value || null;
+    input.value = '';
+    const btn = document.getElementById('btn-send');
+    btn.disabled = true;
+
+    await supabase.from('chat_messages').insert({ agent_id: targetId, role: 'user', content: text });
+    await loadChatLog(targetId);
+
+    const log = document.getElementById('chat-log');
+    log.insertAdjacentHTML('beforeend', `<div class="msg assistant"><div class="role">assistant</div><div class="content">…thinking</div></div>`);
+    log.scrollTop = log.scrollHeight;
+
+    try {
+      const agentCtx = targetId ? agents.find(a => a.id === targetId) : null;
+      const systemPrompt = agentCtx
+        ? `You are ${agentCtx.name}, an agent whose purpose is: ${agentCtx.purpose || 'general assistance'}. Respond helpfully and concisely.`
+        : `You are Navi, the general coordinating intelligence for Kokiri, Daniel's personal agent dashboard. Respond helpfully and concisely.`;
+      const reply = await callIntelligence(systemPrompt, text);
+      await supabase.from('chat_messages').insert({ agent_id: targetId, role: 'assistant', content: reply.text, model_used: reply.source });
+      await loadChatLog(targetId);
+    } catch (err) {
+      await supabase.from('chat_messages').insert({ agent_id: targetId, role: 'assistant', content: '⚠ ' + err.message });
+      await loadChatLog(targetId);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById('btn-send').addEventListener('click', sendChat);
+  document.getElementById('chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+
+  async function callIntelligence(systemPrompt, userText) {
+    const omniUrl = (settings.omnirouter_url || 'http://localhost:20128').replace(/\/$/, '');
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4000);
+      const res = await fetch(omniUrl + '/v1/chat/completions', {
+        method: 'POST', signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json', ...(settings.omnirouter_key ? { Authorization: 'Bearer ' + settings.omnirouter_key } : {}) },
+        body: JSON.stringify({ model: 'auto/free', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userText }] }),
+      });
+      clearTimeout(t);
+      if (!res.ok) throw new Error('omni not ok');
+      const json = await res.json();
+      return { text: json.choices?.[0]?.message?.content || '(empty response)', source: 'omnirouter' };
+    } catch {
+      if (!settings.openrouter_api_key) throw new Error('OmniRoute unreachable and no OpenRouter key set — open Settings to add one.');
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + settings.openrouter_api_key },
+        body: JSON.stringify({
+          model: settings.openrouter_model || 'meta-llama/llama-3.1-8b-instruct:free',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userText }],
+        }),
+      });
+      if (!res.ok) throw new Error('OpenRouter error: ' + res.status);
+      const json = await res.json();
+      return { text: json.choices?.[0]?.message?.content || '(empty response)', source: 'openrouter' };
+    }
+  }
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  await loadSettings();
+  await loadAgents();
+  await loadChatLog(null);
+  pingOmni();
+</script>
+
+</body>
+</html>
