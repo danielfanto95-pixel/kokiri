@@ -88,6 +88,7 @@ let agentsCache = [];
 let sheetsCache = [];
 let deepgramVoice = 'aura-asteria-en';
 let deepgramConfigured = false;
+let localSettings = {};
 
 async function init() {
   if (initialized) return;
@@ -98,13 +99,14 @@ async function init() {
   const [{ data: agents }, { data: sheets }, { data: settingsRows }] = await Promise.all([
     supabase.from('agents').select('id, name, purpose, status').order('sort_order'),
     supabase.from('kokiri_sheets').select('id, slug, name').order('sort_order'),
-    supabase.from('kokiri_settings').select('key, value').in('key', ['deepgram_voice', 'deepgram_key_configured']),
+    supabase.from('kokiri_settings').select('key, value').in('key', ['deepgram_voice', 'deepgram_key_configured', 'omnirouter_url', 'omnirouter_key', 'ollama_url', 'ollama_model']),
   ]);
   agentsCache = agents || [];
   sheetsCache = sheets || [];
   (settingsRows || []).forEach(r => {
     if (r.key === 'deepgram_voice' && r.value) deepgramVoice = r.value;
     if (r.key === 'deepgram_key_configured') deepgramConfigured = r.value === 'true';
+    localSettings[r.key] = r.value;
   });
 
   let { data: thread } = await supabase.from('chat_threads').select('*').is('agent_id', null).eq('title', 'Site Assistant').maybeSingle();
@@ -148,6 +150,7 @@ Use navigate when the user asks to go somewhere. Use query_data when answering r
 }
 
 async function callIntelligence(messages) {
+  // 1. Premium/OpenRouter cascade via the server-side proxy.
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const ctrl = new AbortController();
@@ -160,7 +163,43 @@ async function callIntelligence(messages) {
     clearTimeout(t);
     if (res.ok) { const json = await res.json(); if (json.text) return json; }
   } catch { /* fall through */ }
-  throw new Error('No intelligence available right now — check Settings on the Agent Dashboard for a configured key.');
+
+  // 2. OmniRoute (local, free) — only reachable if you're on the machine running it.
+  const omniUrl = (localSettings.omnirouter_url || 'http://localhost:20128').replace(/\/$/, '');
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(omniUrl + '/v1/chat/completions', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', ...(localSettings.omnirouter_key ? { Authorization: 'Bearer ' + localSettings.omnirouter_key } : {}) },
+      body: JSON.stringify({ model: 'auto/free', messages }),
+    });
+    clearTimeout(t);
+    if (!res.ok) throw new Error('omni not ok');
+    const json = await res.json();
+    return { text: json.choices?.[0]?.message?.content || '(empty response)', source: 'omnirouter' };
+  } catch { /* fall through to Ollama */ }
+
+  // 3. Ollama (local, free, unlimited) — same reachability constraint as OmniRoute.
+  if (localSettings.ollama_model) {
+    const ollamaUrl = (localSettings.ollama_url || 'http://localhost:11434').replace(/\/$/, '');
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 20000);
+      const res = await fetch(ollamaUrl + '/api/chat', {
+        method: 'POST', signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: localSettings.ollama_model, messages, stream: false }),
+      });
+      clearTimeout(t);
+      if (!res.ok) throw new Error('ollama not ok');
+      const json = await res.json();
+      const text = json.message?.content;
+      if (text) return { text, source: 'ollama' };
+    } catch { /* fall through */ }
+  }
+
+  throw new Error('No intelligence available right now — check Settings on the Agent Dashboard for a configured key, or make sure OmniRoute/Ollama is running locally.');
 }
 
 function extractAction(text) {
