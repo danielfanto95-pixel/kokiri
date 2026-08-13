@@ -46,20 +46,22 @@ body {
 }
 .topbar button:hover, .topbar a.btn:hover { border-color: var(--cyan); color: var(--cyan-bright); }
 
-.layout { display: grid; grid-template-columns: 240px 1fr 340px; min-height: calc(100vh - 57px); }
-@media (max-width: 1100px) { .layout { grid-template-columns: 200px 1fr; } .chat-panel { display: none; } }
+.layout { display: grid; grid-template-columns: 1fr 230px 340px; min-height: calc(100vh - 57px); }
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr 200px; } .chat-panel { display: none; } }
+@media (max-width: 780px) { .layout { grid-template-columns: 1fr; } .nav-side { display: none; } }
 
-.sidebar { border-right: 1px solid var(--border); padding: 1rem 0.8rem; }
-.sidebar-label { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 0.5rem 0.4rem 0.6rem; }
-.agent-item {
-  display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.7rem; border-radius: 8px;
-  cursor: pointer; margin-bottom: 0.3rem; border: 1px solid transparent;
+.nav-side { border-left: 1px solid var(--border); padding: 1rem 0.8rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px); }
+.nav-group-label { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.6rem; }
+.nav-group-label:first-child { margin-top: 0; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
 }
-.agent-item:hover { background: var(--panel); }
-.agent-item.active { background: var(--panel2); border-color: var(--border-bright); }
-.agent-item .icon { font-size: 1.1rem; }
-.agent-item .name { font-family: var(--heading); font-size: 0.8rem; font-weight: 700; flex: 1; }
-.agent-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.nav-link:hover { background: var(--panel); color: var(--text); }
+.agent-item.active { background: var(--panel2); border-color: var(--border-bright); color: var(--cyan-bright); }
+.agent-item .icon { font-size: 1.05rem; }
+.agent-item .name { font-family: var(--heading); font-size: 0.76rem; font-weight: 700; flex: 1; }
+.agent-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
 .agent-status-dot.paused { background: var(--dim); }
 #btn-new-agent {
   width: 100%; margin-top: 0.6rem; font-family: var(--mono); font-size: 0.72rem; color: var(--cyan);
@@ -173,20 +175,21 @@ main { padding: 1.5rem; overflow-x: hidden; }
     <div class="status-pill"><span class="status-dot" id="dot-omni"></span> OmniRoute</div>
     <div class="status-pill"><span class="status-dot" id="dot-openrouter"></span> OpenRouter</div>
     <button id="btn-settings">⚙ Settings</button>
-    <a href="app.html" class="btn">← Kokiri OS</a>
   </div>
 </div>
 
 <div class="layout">
-  <div class="sidebar">
-    <div class="sidebar-label">Agents</div>
-    <div id="agent-list"></div>
-    <button id="btn-new-agent">+ New Agent</button>
-  </div>
-
   <main>
     <div id="agent-detail"></div>
   </main>
+
+  <nav class="nav-side">
+    <div class="nav-group-label">Kokiri</div>
+    <div id="nav-sheets"></div>
+    <div class="nav-group-label">Agents</div>
+    <div id="agent-list"></div>
+    <button id="btn-new-agent">+ New Agent</button>
+  </nav>
 
   <div class="chat-panel">
     <div class="chat-head">
@@ -288,6 +291,12 @@ main { padding: 1.5rem; overflow-x: hidden; }
   document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); });
 
   // ---------- Agents ----------
+  async function loadKokiriNav() {
+    const { data } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
+    const el = document.getElementById('nav-sheets');
+    el.innerHTML = (data || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+  }
+
   async function loadAgents() {
     const { data } = await supabase.from('agents').select('*').order('sort_order');
     agents = data || [];
@@ -300,7 +309,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
   function renderAgentList() {
     const el = document.getElementById('agent-list');
     el.innerHTML = agents.map(a => `
-      <div class="agent-item ${currentAgent?.id === a.id ? 'active' : ''}" data-id="${a.id}">
+      <div class="nav-link agent-item ${currentAgent?.id === a.id ? 'active' : ''}" data-id="${a.id}">
         <span class="icon">${a.icon}</span>
         <span class="name">${escapeHtml(a.name)}</span>
         <span class="agent-status-dot ${a.status !== 'active' ? 'paused' : ''}"></span>
@@ -567,6 +576,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
   function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   await loadSettings();
+  await loadKokiriNav();
   await loadAgents();
   await loadChatLog(null);
   pingOmni();

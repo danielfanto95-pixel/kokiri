@@ -18,23 +18,16 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .topbar {
   display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
   border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
-  overflow-x: auto;
 }
 .brand { font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap; }
-.tabs { display: flex; gap: 0.3rem; flex: 1; overflow-x: auto; }
-.tab {
-  font-family: var(--mono); font-size: 0.76rem; color: var(--muted); background: transparent;
-  border: 1px solid transparent; border-radius: 6px; padding: 0.4rem 0.7rem; cursor: pointer; white-space: nowrap;
-}
-.tab:hover { color: var(--text); border-color: var(--border); }
-.tab.active { color: var(--leaf-bright); background: var(--surface2); border-color: var(--border-bright); }
 #btn-logout {
-  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
   padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem; white-space: nowrap;
 }
 #btn-logout:hover { border-color: var(--leaf); color: var(--text); }
 
-main { padding: 1.5rem; }
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem; min-width: 0; }
 .sheet-head { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .sheet-head h2 { font-family: var(--heading); font-size: 1.3rem; color: var(--leaf-bright); }
 .action-btn {
@@ -51,31 +44,59 @@ th, td {
 }
 th {
   background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright);
-  white-space: nowrap; position: sticky; top: 45px;
+  white-space: nowrap; position: sticky; top: 0;
 }
 td { background: var(--surface); color: var(--text); min-width: 160px; }
 td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
 .row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.72rem; text-align: center; width: 30px; }
-.row-del:hover { color: var(--error, #f87171); }
+.row-del:hover { color: #f87171; }
 .empty-note { color: var(--muted); font-size: 0.85rem; padding: 2rem; text-align: center; }
+
+/* Right-hand global nav */
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em;
+  text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+}
+.nav-group-label:first-child { margin-top: 0; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent;
+  text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+.nav-link .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--leaf); flex-shrink: 0; opacity: 0.6; }
+@media (max-width: 900px) { .nav-side { display: none; } }
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <div class="brand">Kokiri OS</div>
-  <div class="tabs" id="tabs"></div>
   <button id="btn-logout">Log Out</button>
 </div>
 
-<main>
-  <div class="sheet-head">
-    <h2 id="sheet-title">Loading…</h2>
-    <button class="action-btn" id="btn-add-row">+ Add Row</button>
-    <button class="action-btn" id="btn-add-col">+ Add Column</button>
-  </div>
-  <div class="grid-wrap"><table id="grid"></table></div>
-</main>
+<div class="layout">
+  <main>
+    <div class="sheet-head">
+      <h2 id="sheet-title">Loading…</h2>
+      <button class="action-btn" id="btn-add-row">+ Add Row</button>
+      <button class="action-btn" id="btn-add-col">+ Add Column</button>
+    </div>
+    <div class="grid-wrap"><table id="grid"></table></div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group-label">Kokiri</div>
+    <div id="nav-sheets"></div>
+    <div class="nav-group-label">Agents</div>
+    <div id="nav-agents"></div>
+  </nav>
+</div>
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -94,15 +115,21 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   let currentColumns = [];
   let currentRows = [];
 
-  async function loadSheets() {
-    const { data, error } = await supabase.from('kokiri_sheets').select('*').order('sort_order');
-    if (error) { console.error(error); return; }
-    sheets = data;
-    const tabsEl = document.getElementById('tabs');
-    tabsEl.innerHTML = sheets.map(s => `<button class="tab" data-slug="${s.slug}">${s.name}</button>`).join('');
-    tabsEl.querySelectorAll('.tab').forEach(btn => {
-      btn.addEventListener('click', () => selectSheet(btn.dataset.slug));
-    });
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('*').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+    ]);
+    sheets = sheetData || [];
+
+    const navSheets = document.getElementById('nav-sheets');
+    navSheets.innerHTML = sheets.map(s => `<div class="nav-link" data-slug="${s.slug}"><span class="dot"></span>${escapeHtml(s.name)}</div>`).join('');
+    navSheets.querySelectorAll('.nav-link').forEach(el => el.addEventListener('click', () => selectSheet(el.dataset.slug)));
+
+    const navAgents = document.getElementById('nav-agents');
+    navAgents.innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('')
+      + `<a class="nav-link" href="agents.html" style="color:var(--gold);">→ Open Dashboard</a>`;
+
     const hashSlug = window.location.hash.replace('#', '');
     const initial = sheets.find(s => s.slug === hashSlug) || sheets[0];
     if (initial) selectSheet(initial.slug);
@@ -112,7 +139,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     currentSheet = sheets.find(s => s.slug === slug);
     if (!currentSheet) return;
     window.location.hash = slug;
-    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.slug === slug));
+    document.querySelectorAll('#nav-sheets .nav-link').forEach(b => b.classList.toggle('active', b.dataset.slug === slug));
     document.getElementById('sheet-title').textContent = currentSheet.name;
 
     const [{ data: cols }, { data: rows }] = await Promise.all([
@@ -148,7 +175,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   function escapeHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   function attachGridHandlers() {
@@ -201,7 +228,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     renderGrid();
   });
 
-  loadSheets();
+  loadNav();
 </script>
 
 </body>
