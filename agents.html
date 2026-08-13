@@ -265,7 +265,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <label>OpenRouter API Key</label>
       <input id="s-or-key" type="password" value="${settings.openrouter_api_key || ''}" placeholder="sk-or-...">
       <label>OpenRouter Free Model</label>
-      <input id="s-or-model" value="${settings.openrouter_model || 'meta-llama/llama-3.1-8b-instruct:free'}">
+      <input id="s-or-model" value="${settings.openrouter_model || 'openai/gpt-oss-20b:free'}">
       <div class="modal-actions">
         <button class="btn-cancel" id="m-cancel">Cancel</button>
         <button class="btn-save" id="m-save">Save</button>
@@ -563,7 +563,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + settings.openrouter_api_key },
         body: JSON.stringify({
-          model: settings.openrouter_model || 'meta-llama/llama-3.1-8b-instruct:free',
+          model: settings.openrouter_model || 'openai/gpt-oss-20b:free',
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userText }],
         }),
       });
