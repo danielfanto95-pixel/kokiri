@@ -197,6 +197,8 @@ main { padding: 1.5rem; overflow-x: hidden; }
     <div class="nav-group-label">Agents</div>
     <div id="agent-list"></div>
     <button id="btn-new-agent">+ New Agent</button>
+    <div class="nav-group-label">Dashboards</div>
+    <div id="nav-dashboards"></div>
   </nav>
 
   <div class="chat-panel">
@@ -301,9 +303,12 @@ main { padding: 1.5rem; overflow-x: hidden; }
 
   // ---------- Agents ----------
   async function loadKokiriNav() {
-    const { data } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
-    const el = document.getElementById('nav-sheets');
-    el.innerHTML = (data || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    const [{ data: sheetData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('');
   }
 
   async function loadAgents() {

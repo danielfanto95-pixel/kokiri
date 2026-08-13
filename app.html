@@ -95,6 +95,8 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     <div id="nav-sheets"></div>
     <div class="nav-group-label">Agents</div>
     <div id="nav-agents"></div>
+    <div class="nav-group-label">Dashboards</div>
+    <div id="nav-dashboards"></div>
   </nav>
 </div>
 
@@ -116,9 +118,10 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   let currentRows = [];
 
   async function loadNav() {
-    const [{ data: sheetData }, { data: agentData }] = await Promise.all([
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
       supabase.from('kokiri_sheets').select('*').order('sort_order'),
       supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
     sheets = sheetData || [];
 
@@ -129,6 +132,9 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     const navAgents = document.getElementById('nav-agents');
     navAgents.innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('')
       + `<a class="nav-link" href="agents.html" style="color:var(--gold);">→ Open Dashboard</a>`;
+
+    const navDashboards = document.getElementById('nav-dashboards');
+    navDashboards.innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('');
 
     const hashSlug = window.location.hash.replace('#', '');
     const initial = sheets.find(s => s.slug === hashSlug) || sheets[0];

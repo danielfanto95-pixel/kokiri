@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Dashboards</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand { font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap; }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem; white-space: nowrap;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem; min-width: 0; }
+.dash-head { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+.dash-head h2 { font-family: var(--heading); font-size: 1.3rem; color: var(--leaf-bright); }
+.action-btn {
+  font-family: var(--mono); font-size: 0.75rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer;
+}
+.action-btn:hover { border-color: var(--leaf); }
+
+.widgets { display: flex; flex-direction: column; gap: 1.2rem; }
+.widget { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; }
+.widget h3 { font-family: var(--heading); font-size: 0.95rem; color: var(--leaf-bright); margin-bottom: 0.8rem; }
+.widget-grid-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: max-content; }
+th, td { border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; font-size: 0.8rem; vertical-align: top; }
+th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; }
+td { background: var(--bg); }
+.stat-box { display: flex; align-items: baseline; gap: 0.6rem; }
+.stat-num { font-family: var(--heading); font-size: 2.2rem; font-weight: 800; color: var(--gold); }
+.stat-label { color: var(--muted); font-size: 0.85rem; }
+.assign-cell select { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 5px; font-size: 0.75rem; padding: 0.2rem 0.4rem; }
+.assign-cell button { font-family: var(--mono); font-size: 0.7rem; color: var(--leaf); background: transparent; border: 1px solid var(--border); border-radius: 5px; padding: 0.2rem 0.5rem; cursor: pointer; margin-left: 0.3rem; }
+.assign-cell button:hover { border-color: var(--leaf); }
+.empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group-label { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem; }
+.nav-group-label:first-child { margin-top: 0; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+#btn-new-dashboard {
+  width: 100%; margin-top: 0.4rem; font-family: var(--mono); font-size: 0.7rem; color: var(--leaf);
+  background: transparent; border: 1px dashed var(--border-bright); border-radius: 8px; padding: 0.5rem; cursor: pointer;
+}
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Kokiri — Dashboards</div>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="dash-head">
+      <h2 id="dash-title">Loading…</h2>
+      <button class="action-btn" id="btn-add-widget">+ Add Widget</button>
+      <button class="action-btn" id="btn-sync-notion">🔄 Sync Notion</button>
+    </div>
+    <div class="widgets" id="widgets"></div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group-label">Kokiri</div>
+    <div id="nav-sheets"></div>
+    <div class="nav-group-label">Agents</div>
+    <div id="nav-agents"></div>
+    <div class="nav-group-label">Dashboards</div>
+    <div id="nav-dashboards"></div>
+    <button id="btn-new-dashboard">+ New Dashboard</button>
+  </nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  let dashboardsList = [];
+  let currentDashboard = null;
+  let agentsList = [];
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('*').order('sort_order'),
+    ]);
+    agentsList = agentData || [];
+    dashboardsList = dashData || [];
+
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-agents').innerHTML = agentsList.map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('')
+      + `<a class="nav-link" href="agents.html" style="color:var(--gold);">→ Open Dashboard</a>`;
+    renderDashNav();
+
+    const hashId = window.location.hash.replace('#', '');
+    const initial = dashboardsList.find(d => d.id === hashId) || dashboardsList[0];
+    if (initial) selectDashboard(initial.id);
+  }
+
+  function renderDashNav() {
+    document.getElementById('nav-dashboards').innerHTML = dashboardsList.map(d =>
+      `<div class="nav-link ${currentDashboard?.id === d.id ? 'active' : ''}" data-id="${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</div>`
+    ).join('');
+    document.querySelectorAll('#nav-dashboards .nav-link').forEach(el => {
+      el.addEventListener('click', () => selectDashboard(el.dataset.id));
+    });
+  }
+
+  document.getElementById('btn-new-dashboard').addEventListener('click', async () => {
+    const name = prompt('Dashboard name:');
+    if (!name) return;
+    const { data } = await supabase.from('dashboards').insert({ name, sort_order: dashboardsList.length + 1 }).select().single();
+    dashboardsList.push(data);
+    renderDashNav();
+    selectDashboard(data.id);
+  });
+
+  async function selectDashboard(id) {
+    currentDashboard = dashboardsList.find(d => d.id === id);
+    if (!currentDashboard) return;
+    window.location.hash = id;
+    renderDashNav();
+    document.getElementById('dash-title').textContent = currentDashboard.name;
+    await renderWidgets();
+  }
+
+  async function renderWidgets() {
+    const { data: widgets } = await supabase.from('dashboard_widgets').select('*').eq('dashboard_id', currentDashboard.id).order('sort_order');
+    const container = document.getElementById('widgets');
+    if (!widgets || widgets.length === 0) {
+      container.innerHTML = '<p class="empty">No widgets yet — click "+ Add Widget" to pull in data.</p>';
+      return;
+    }
+    container.innerHTML = widgets.map(w => `<div class="widget" data-widget-id="${w.id}"><h3>${escapeHtml(w.title)}</h3><div class="widget-body">Loading…</div></div>`).join('');
+    for (const w of widgets) {
+      const el = container.querySelector(`[data-widget-id="${w.id}"] .widget-body`);
+      el.innerHTML = await renderWidgetBody(w);
+    }
+    attachAssignHandlers();
+  }
+
+  async function fetchSourceRows(widget) {
+    if (widget.source_table === 'kokiri_rows' && widget.source_sheet_slug) {
+      const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', widget.source_sheet_slug).single();
+      if (!sheet) return [];
+      const { data } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
+      return (data || []).map(r => ({ id: r.id, ...r.data }));
+    }
+    let q = supabase.from(widget.source_table).select('*').order('created_at', { ascending: false }).limit(100);
+    if (widget.filter_field && widget.filter_value) q = q.eq(widget.filter_field, widget.filter_value);
+    const { data } = await q;
+    return data || [];
+  }
+
+  async function renderWidgetBody(widget) {
+    if (widget.widget_type === 'stat') {
+      const rows = await fetchSourceRows(widget);
+      return `<div class="stat-box"><div class="stat-num">${rows.length}</div><div class="stat-label">${escapeHtml(widget.title)}</div></div>`;
+    }
+    if (widget.widget_type === 'notion_tasks') {
+      const { data } = await supabase.from('notion_tasks').select('*').order('last_synced_at', { ascending: false }).limit(100);
+      if (!data || data.length === 0) return '<p class="empty">No Notion tasks synced yet. Click "Sync Notion" above (requires Notion credentials to be set first).</p>';
+      const agentOptions = agentsList.map(a => `<option value="${a.id}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
+      return `<div class="widget-grid-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Assigned</th><th>Action</th></tr></thead><tbody>
+        ${data.map(t => `<tr>
+          <td><a href="${t.url}" target="_blank" style="color:var(--leaf-bright);">${escapeHtml(t.title)}</a></td>
+          <td>${escapeHtml(t.status || '—')}</td>
+          <td>${t.assigned_agent_id ? escapeHtml(agentsList.find(a => a.id === t.assigned_agent_id)?.name || '—') : '—'}</td>
+          <td class="assign-cell">
+            <select data-notion-id="${t.id}">${agentOptions}</select>
+            <button data-assign-notion="${t.id}">Assign</button>
+          </td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+    }
+    // default: table
+    const rows = await fetchSourceRows(widget);
+    if (rows.length === 0) return '<p class="empty">No data.</p>';
+    const cols = widget.columns && widget.columns.length ? widget.columns : Object.keys(rows[0]).filter(k => k !== 'id').slice(0, 6);
+    return `<div class="widget-grid-wrap"><table><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>
+      ${rows.map(r => `<tr>${cols.map(c => `<td>${escapeHtml(r[c])}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>`;
+  }
+
+  function attachAssignHandlers() {
+    document.querySelectorAll('[data-assign-notion]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const notionRowId = btn.dataset.assignNotion;
+        const select = document.querySelector(`select[data-notion-id="${notionRowId}"]`);
+        const agentId = select.value;
+        if (!agentId) { alert('Pick an agent first.'); return; }
+        const { data: task } = await supabase.from('notion_tasks').select('*').eq('id', notionRowId).single();
+        await supabase.from('notion_tasks').update({ assigned_agent_id: agentId }).eq('id', notionRowId);
+        await supabase.from('agent_tasks').insert({
+          agent_id: agentId, title: task.title, description: `Synced from Notion: ${task.url}`, status: 'todo',
+        });
+        renderWidgets();
+      });
+    });
+  }
+
+  document.getElementById('btn-add-widget').addEventListener('click', async () => {
+    const title = prompt('Widget title:');
+    if (!title) return;
+    const sourceTable = prompt('Source (agent_tasks / agent_tribunal / notion_tasks / kokiri_rows):', 'agent_tasks');
+    if (!sourceTable) return;
+    let sheetSlug = null;
+    if (sourceTable === 'kokiri_rows') sheetSlug = prompt('Which Kokiri sheet slug? (e.g. crm, sources)');
+    const type = confirm('Show as a count (OK) or a full table (Cancel)?') ? 'stat' : 'table';
+    await supabase.from('dashboard_widgets').insert({
+      dashboard_id: currentDashboard.id, title, widget_type: sourceTable === 'notion_tasks' ? 'notion_tasks' : type,
+      source_table: sourceTable, source_sheet_slug: sheetSlug, sort_order: 1,
+    });
+    renderWidgets();
+  });
+
+  document.getElementById('btn-sync-notion').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-sync-notion');
+    btn.disabled = true;
+    btn.textContent = 'Syncing…';
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/notion-sync', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + session.access_token },
+      });
+      const json = await res.json();
+      if (!res.ok) { alert('Sync failed: ' + (json.error || res.status)); }
+      else { alert(`Synced ${json.count} Notion tasks.`); renderWidgets(); }
+    } catch (e) {
+      alert('Sync failed: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔄 Sync Notion';
+    }
+  });
+
+  loadNav();
+</script>
+
+</body>
+</html>
