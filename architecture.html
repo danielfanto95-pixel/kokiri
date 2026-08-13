@@ -90,6 +90,55 @@ textarea:focus { outline: none; border-color: var(--leaf); }
 .nav-link:hover { background: var(--surface2); color: var(--text); }
 .nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
 @media (max-width: 900px) { .nav-side { display: none; } }
+
+.pages-section { margin-top: 2rem; }
+.pages-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.pages-head h2 { font-family: var(--heading); font-size: 1.15rem; color: var(--leaf-bright); flex: 1; }
+#btn-add-page {
+  background: transparent; border: 1px solid var(--border-bright); color: var(--leaf-bright);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem; font-weight: 600;
+}
+#btn-add-page:hover { background: var(--surface2); }
+.page-cat-badge {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.15rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-bright); color: var(--leaf-bright); white-space: nowrap;
+}
+.pages-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.page-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem;
+  display: flex; gap: 1rem; align-items: flex-start;
+}
+.page-card-main { flex: 1; min-width: 0; }
+.page-card-title { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.3rem; }
+.page-card-title a { color: var(--text); font-weight: 700; text-decoration: none; font-size: 0.95rem; }
+.page-card-title a:hover { color: var(--leaf-bright); }
+.page-card-url { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); }
+.page-card-desc { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+.page-card-del {
+  background: transparent; border: none; color: var(--dim); cursor: pointer; font-size: 0.85rem; padding: 0.2rem 0.4rem; flex-shrink: 0;
+}
+.page-card-del:hover { color: #e08a8a; }
+.add-page-form {
+  display: none; background: var(--surface); border: 1px dashed var(--border-bright); border-radius: 10px;
+  padding: 1.2rem; margin-bottom: 1rem; gap: 0.7rem; flex-direction: column;
+}
+.add-page-form.open { display: flex; }
+.add-page-form input, .add-page-form textarea, .add-page-form select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+  font-family: var(--body); font-size: 0.85rem; padding: 0.55rem 0.7rem;
+}
+.add-page-form input:focus, .add-page-form textarea:focus, .add-page-form select:focus { outline: none; border-color: var(--leaf); }
+.add-page-form-row { display: flex; gap: 0.7rem; }
+.add-page-form-row > * { flex: 1; }
+.add-page-form-actions { display: flex; gap: 0.6rem; }
+#btn-save-page {
+  background: var(--leaf); color: #0c120d; border: none; border-radius: 6px; padding: 0.5rem 1.1rem;
+  font-family: var(--heading); font-weight: 700; font-size: 0.8rem; cursor: pointer;
+}
+#btn-cancel-page {
+  background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.5rem 1.1rem;
+  font-size: 0.8rem; cursor: pointer; font-family: inherit;
+}
 </style>
 </head>
 <body>
@@ -114,6 +163,35 @@ textarea:focus { outline: none; border-color: var(--leaf); }
           <button id="btn-save" style="display:none;">Save</button>
           <span class="save-status" id="save-status"></span>
         </div>
+      </div>
+
+      <div class="pages-section">
+        <div class="pages-head">
+          <h2>📄 Pages</h2>
+          <button id="btn-add-page">+ Add Page</button>
+        </div>
+
+        <div class="add-page-form" id="add-page-form">
+          <div class="add-page-form-row">
+            <input type="text" id="page-name" placeholder="Name (e.g. Billing)">
+            <input type="text" id="page-url" placeholder="URL / filename (e.g. billing.html)">
+          </div>
+          <div class="add-page-form-row">
+            <select id="page-category">
+              <option>Core</option>
+              <option>System</option>
+              <option>Public</option>
+              <option>Component</option>
+            </select>
+          </div>
+          <textarea id="page-desc" rows="2" placeholder="What this page does"></textarea>
+          <div class="add-page-form-actions">
+            <button id="btn-save-page">Add Page</button>
+            <button id="btn-cancel-page">Cancel</button>
+          </div>
+        </div>
+
+        <div class="pages-list" id="pages-list"></div>
       </div>
     </div>
   </main>
@@ -363,9 +441,75 @@ GitHub Pages: $0. Supabase free tier (DB, Auth, Edge Functions, cron): $0 at cur
     statusEl.textContent = error ? '⚠ ' + error.message : '✓ Saved ' + new Date().toLocaleTimeString();
   });
 
+  // --- Pages registry ---
+  const pagesListEl = document.getElementById('pages-list');
+  const addPageForm = document.getElementById('add-page-form');
+  const btnAddPage = document.getElementById('btn-add-page');
+  const btnCancelPage = document.getElementById('btn-cancel-page');
+  const btnSavePage = document.getElementById('btn-save-page');
+
+  function slugify(s) {
+    return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || crypto.randomUUID().slice(0, 8);
+  }
+
+  async function loadPages() {
+    const { data, error } = await supabase.from('kokiri_pages').select('*').order('sort_order').order('created_at');
+    if (error) { pagesListEl.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">⚠ ${escapeHtml(error.message)}</p>`; return; }
+    renderPages(data || []);
+  }
+
+  function renderPages(pages) {
+    if (!pages.length) { pagesListEl.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">No pages registered yet.</p>`; return; }
+    pagesListEl.innerHTML = pages.map(p => `
+      <div class="page-card" data-id="${p.id}">
+        <div class="page-card-main">
+          <div class="page-card-title">
+            <a href="${escapeHtml(p.url)}">${escapeHtml(p.name)}</a>
+            <span class="page-cat-badge">${escapeHtml(p.category)}</span>
+            <span class="page-card-url">${escapeHtml(p.url)}</span>
+          </div>
+          <div class="page-card-desc">${escapeHtml(p.description)}</div>
+        </div>
+        <button class="page-card-del" data-id="${p.id}" title="Remove from registry">✕</button>
+      </div>
+    `).join('');
+    pagesListEl.querySelectorAll('.page-card-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remove this page from the registry? (does not delete the actual file)')) return;
+        await supabase.from('kokiri_pages').delete().eq('id', btn.dataset.id);
+        loadPages();
+      });
+    });
+  }
+
+  btnAddPage.addEventListener('click', () => addPageForm.classList.add('open'));
+  btnCancelPage.addEventListener('click', () => {
+    addPageForm.classList.remove('open');
+    document.getElementById('page-name').value = '';
+    document.getElementById('page-url').value = '';
+    document.getElementById('page-desc').value = '';
+  });
+  btnSavePage.addEventListener('click', async () => {
+    const name = document.getElementById('page-name').value.trim();
+    const url = document.getElementById('page-url').value.trim();
+    const description = document.getElementById('page-desc').value.trim();
+    const category = document.getElementById('page-category').value;
+    if (!name || !url) { alert('Name and URL are required.'); return; }
+    btnSavePage.disabled = true;
+    const { data: maxRow } = await supabase.from('kokiri_pages').select('sort_order').order('sort_order', { ascending: false }).limit(1).maybeSingle();
+    const { error } = await supabase.from('kokiri_pages').insert({
+      slug: slugify(name), name, url, description, category, sort_order: (maxRow?.sort_order ?? 0) + 1,
+    });
+    btnSavePage.disabled = false;
+    if (error) { alert('⚠ ' + error.message); return; }
+    btnCancelPage.click();
+    loadPages();
+  });
+
   initNavCollapse();
   await loadNav();
   await loadDoc();
+  await loadPages();
 </script>
 
 <script type="module" src="widget.js"></script>
