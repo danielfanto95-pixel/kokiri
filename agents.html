@@ -447,41 +447,77 @@ main { padding: 1.5rem; overflow-x: hidden; }
   }
 
   function renderMcpModal() {
-    const rows = mcpServers.map(s => `
+    const rows = mcpServers.map(s => {
+      const needsOauthConnect = s.auth_type === 'oauth' && !s.token_secret_name;
+      return `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:0.6rem;">
         <div style="display:flex;align-items:center;gap:0.6rem;">
           <strong style="flex:1;">${escapeHtml(s.name)}</strong>
+          <span style="font-family:var(--mono);font-size:0.65rem;color:var(--dim);text-transform:uppercase;">${s.auth_type}</span>
           <span style="font-family:var(--mono);font-size:0.7rem;color:${s.last_error ? '#e08a8a' : (s.last_tested_at ? 'var(--leaf-bright)' : 'var(--muted)')};">
             ${s.last_error ? '⚠ error' : (s.last_tested_at ? `✓ ${(s.tools_cache || []).length} tools` : 'not tested')}
           </span>
-          <button class="mcp-test" data-id="${s.id}" style="background:transparent;border:1px solid var(--border-bright);color:var(--leaf-bright);border-radius:5px;padding:0.2rem 0.5rem;font-size:0.72rem;cursor:pointer;">Test</button>
+          ${needsOauthConnect
+            ? `<button class="mcp-oauth-connect" data-id="${s.id}" style="background:var(--leaf);color:#0c120d;border:none;border-radius:5px;padding:0.2rem 0.6rem;font-size:0.72rem;cursor:pointer;font-weight:600;">Connect via OAuth</button>`
+            : `<button class="mcp-test" data-id="${s.id}" style="background:transparent;border:1px solid var(--border-bright);color:var(--leaf-bright);border-radius:5px;padding:0.2rem 0.5rem;font-size:0.72rem;cursor:pointer;">Test</button>`}
           <button class="mcp-del" data-id="${s.id}" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;">✕</button>
         </div>
         <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:0.3rem;">${escapeHtml(s.url)}</div>
         ${s.last_error ? `<div style="font-size:0.72rem;color:#e08a8a;margin-top:0.3rem;">${escapeHtml(s.last_error)}</div>` : ''}
         ${(s.tools_cache || []).length ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">Tools: ${(s.tools_cache || []).map(t => escapeHtml(t.name)).join(', ')}</div>` : ''}
       </div>
-    `).join('') || '<p style="color:var(--muted);font-size:0.85rem;">No MCP servers connected yet.</p>';
+    `;
+    }).join('') || '<p style="color:var(--muted);font-size:0.85rem;">No MCP servers connected yet.</p>';
 
     openModal(`
       <h2>🔌 MCP Servers</h2>
-      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Connect a remote MCP server (URL + optional bearer token) and its tools become available to your agents automatically — across every model in the cascade, not just ones with native function-calling. Local/stdio MCP servers (most <code style="font-family:var(--mono);">npx</code>-run ones) can't be reached from here — only remote, HTTP-reachable servers work.</p>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Connect a remote MCP server and its tools become available to your agents automatically — across every model in the cascade. Local/stdio MCP servers (most <code style="font-family:var(--mono);">npx</code>-run ones) can't be reached from here — only remote, HTTP-reachable servers work.</p>
 
       <div id="mcp-list">${rows}</div>
 
       <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;">
         <label>Name</label>
         <input id="mcp-name" placeholder="e.g. Notion, Zapier, my own MCP server">
-        <label>Server URL</label>
+        <label>Server URL (the MCP endpoint itself)</label>
         <input id="mcp-url" placeholder="https://...">
-        <label>Bearer Token (optional — leave blank for no-auth servers)</label>
-        <input id="mcp-token" type="password" placeholder="leave blank if the server needs no auth">
+        <label>Auth Type</label>
+        <select id="mcp-auth-type">
+          <option value="none">None</option>
+          <option value="bearer">Bearer Token</option>
+          <option value="oauth">OAuth (authorization code flow)</option>
+        </select>
+
+        <div id="mcp-bearer-fields">
+          <label>Bearer Token</label>
+          <input id="mcp-token" type="password" placeholder="the server's API token">
+        </div>
+
+        <div id="mcp-oauth-fields" style="display:none;">
+          <label>Client ID</label>
+          <input id="mcp-oauth-client-id" placeholder="from the provider's OAuth app settings">
+          <label>Client Secret</label>
+          <input id="mcp-oauth-client-secret" type="password" placeholder="from the provider's OAuth app settings">
+          <label>Authorize URL</label>
+          <input id="mcp-oauth-authorize-url" placeholder="https://provider.com/oauth/authorize">
+          <label>Token URL</label>
+          <input id="mcp-oauth-token-url" placeholder="https://provider.com/oauth/token">
+          <label>Scope (optional, space-separated)</label>
+          <input id="mcp-oauth-scope" placeholder="optional">
+          <p style="font-size:0.7rem;color:var(--muted);margin-top:0.2rem;">Register <code style="font-family:var(--mono);">https://danielfanto95-pixel.github.io/kokiri/oauth-callback.html</code> as the redirect URI in the provider's OAuth app settings. After saving, click "Connect via OAuth" on the server's row below to authorize it.</p>
+        </div>
+
         <div class="modal-actions">
           <button class="btn-cancel" id="mcp-cancel">Close</button>
           <button class="btn-save" id="mcp-add">+ Add Server</button>
         </div>
       </div>
     `);
+
+    const authTypeSel = document.getElementById('mcp-auth-type');
+    authTypeSel.addEventListener('change', () => {
+      document.getElementById('mcp-bearer-fields').style.display = authTypeSel.value === 'bearer' ? 'block' : 'none';
+      document.getElementById('mcp-oauth-fields').style.display = authTypeSel.value === 'oauth' ? 'block' : 'none';
+    });
 
     document.querySelectorAll('.mcp-test').forEach(btn => btn.addEventListener('click', async () => {
       btn.textContent = '…';
@@ -491,8 +527,27 @@ main { padding: 1.5rem; overflow-x: hidden; }
       await loadMcpServers();
       renderMcpModal();
     }));
+    document.querySelectorAll('.mcp-oauth-connect').forEach(btn => btn.addEventListener('click', async () => {
+      btn.textContent = '…';
+      btn.disabled = true;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/mcp-oauth-start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+          body: JSON.stringify({ server_id: btn.dataset.id }),
+        });
+        const json = await res.json();
+        if (!res.ok || json.error) throw new Error(json.error || 'Could not start OAuth flow.');
+        location.href = json.authUrl; // hand off to the provider's consent screen
+      } catch (e) {
+        alert('⚠ ' + e.message);
+        btn.textContent = 'Connect via OAuth';
+        btn.disabled = false;
+      }
+    }));
     document.querySelectorAll('.mcp-del').forEach(btn => btn.addEventListener('click', async () => {
-      if (!confirm('Remove this MCP server? Its stored token is deleted too.')) return;
+      if (!confirm('Remove this MCP server? Its stored credentials are deleted too.')) return;
       await supabase.from('kokiri_mcp_servers').delete().eq('id', btn.dataset.id);
       await loadMcpServers();
       renderMcpModal();
@@ -501,21 +556,48 @@ main { padding: 1.5rem; overflow-x: hidden; }
     document.getElementById('mcp-add').addEventListener('click', async () => {
       const name = document.getElementById('mcp-name').value.trim();
       const url = document.getElementById('mcp-url').value.trim();
-      const token = document.getElementById('mcp-token').value.trim();
+      const authType = authTypeSel.value;
       if (!name || !url) { alert('Name and Server URL are required.'); return; }
       const slug = slugifyMcp(name);
-      const secretName = token ? `mcp_token_${slug}` : null;
-      if (token) await supabase.rpc('set_secret', { secret_name: secretName, secret_value: token });
-      const { data: created, error } = await supabase.from('kokiri_mcp_servers').insert({
-        name, slug, url, auth_type: token ? 'bearer' : 'none', secret_name: secretName,
-      }).select().single();
+
+      let insertBody = { name, slug, url, auth_type: authType };
+
+      if (authType === 'bearer') {
+        const token = document.getElementById('mcp-token').value.trim();
+        if (token) {
+          const secretName = `mcp_token_${slug}`;
+          await supabase.rpc('set_secret', { secret_name: secretName, secret_value: token });
+          insertBody.secret_name = secretName;
+        }
+      } else if (authType === 'oauth') {
+        const clientId = document.getElementById('mcp-oauth-client-id').value.trim();
+        const clientSecret = document.getElementById('mcp-oauth-client-secret').value.trim();
+        const authorizeUrl = document.getElementById('mcp-oauth-authorize-url').value.trim();
+        const tokenUrl = document.getElementById('mcp-oauth-token-url').value.trim();
+        const scope = document.getElementById('mcp-oauth-scope').value.trim();
+        if (!clientId || !authorizeUrl || !tokenUrl) { alert('Client ID, Authorize URL, and Token URL are required for OAuth.'); return; }
+        insertBody.oauth_client_id = clientId;
+        insertBody.oauth_authorize_url = authorizeUrl;
+        insertBody.oauth_token_url = tokenUrl;
+        insertBody.oauth_scope = scope || null;
+        if (clientSecret) {
+          const secretName = `mcp_oauth_secret_${slug}`;
+          await supabase.rpc('set_secret', { secret_name: secretName, secret_value: clientSecret });
+          insertBody.secret_name = secretName;
+        }
+      }
+
+      const { data: created, error } = await supabase.from('kokiri_mcp_servers').insert(insertBody).select().single();
       if (error) { alert('⚠ ' + error.message); return; }
       await loadMcpServers();
       renderMcpModal();
-      // Auto-test on add so the tool list populates immediately.
-      try { await callMcpClient({ type: 'list_tools', server_id: created.id }); } catch { /* surfaced on the row */ }
-      await loadMcpServers();
-      renderMcpModal();
+
+      if (authType !== 'oauth') {
+        // Auto-test bearer/no-auth servers immediately so the tool list populates right away.
+        try { await callMcpClient({ type: 'list_tools', server_id: created.id }); } catch { /* surfaced on the row */ }
+        await loadMcpServers();
+        renderMcpModal();
+      }
     });
   }
 
