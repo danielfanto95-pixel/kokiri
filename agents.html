@@ -326,8 +326,8 @@ main { padding: 1.5rem; overflow-x: hidden; }
 
       <label>OpenRouter API Key ${settings.openrouter_key_configured ? '✓ set' : ''}</label>
       <input id="s-or-key" type="password" placeholder="${settings.openrouter_key_configured ? '•••••••• (leave blank to keep)' : 'sk-or-...'}">
-      <label>OpenRouter Free Model</label>
-      <input id="s-or-model" value="${settings.openrouter_model_display || 'openai/gpt-oss-20b:free'}">
+      <label>OpenRouter Free Models (comma-separated, tried in order — a 429/failure on one falls to the next)</label>
+      <input id="s-or-model" value="${settings.openrouter_model_display || 'openai/gpt-oss-20b:free,google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free,nvidia/nemotron-nano-9b-v2:free,google/gemma-4-26b-a4b-it:free'}">
 
       <label style="margin-top:1.4rem;color:var(--gold);">🎙 Deepgram Voice Agent — API Key ${settings.deepgram_key_configured ? '✓ set' : ''}</label>
       <input id="s-deepgram-key" type="password" placeholder="${settings.deepgram_key_configured ? '•••••••• (leave blank to keep)' : 'dg_...'}">
