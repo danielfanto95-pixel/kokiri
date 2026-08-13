@@ -16,10 +16,14 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
 .topbar {
-  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; position: relative;
   border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
 }
-.brand { font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap; }
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
 #btn-logout {
   margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
   padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem; white-space: nowrap;
@@ -82,7 +86,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 <body>
 
 <div class="topbar">
-  <div class="brand">Kokiri OS</div>
+  <a href="home.html" class="brand">Kokiri OS</a>
   <button id="btn-logout">Log Out</button>
 </div>
 

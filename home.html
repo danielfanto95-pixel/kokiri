@@ -22,7 +22,11 @@ body {
   display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
   border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
 }
-.brand { font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap; }
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
 #btn-logout {
   margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
   padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
@@ -91,7 +95,7 @@ main { flex: 1; padding: 2rem; min-width: 0; max-width: 900px; }
 <body>
 
 <div class="topbar">
-  <div class="brand">Kokiri</div>
+  <a href="home.html" class="brand">Kokiri</a>
   <button id="btn-logout">Log Out</button>
 </div>
 
