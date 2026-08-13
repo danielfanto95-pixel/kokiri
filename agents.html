@@ -230,6 +230,8 @@ main { padding: 1.5rem; overflow-x: hidden; }
   let currentAgent = null;
   let currentTab = 'tools';
   let settings = {};
+  let kokiriSheets = [];
+  let sheetNamesForPrompt = [];
 
   const TAB_CONFIG = {
     tools:    { table: 'agent_tools', label: 'Tools', titleField: 'name', subField: 'description', tagField: null },
@@ -269,6 +271,8 @@ main { padding: 1.5rem; overflow-x: hidden; }
   document.getElementById('btn-settings').addEventListener('click', () => {
     openModal(`
       <h2>⚙ Intelligence Settings</h2>
+      <label>Global Context & Instructions</label>
+      <textarea id="s-global-context" style="min-height:110px;" placeholder="Applies to every AI call across Kokiri — chat, agents, and the autonomous runner. e.g. tone, priorities, things to always/never do.">${escapeHtml(settings.global_context || '')}</textarea>
       <label>OmniRoute URL (local)</label>
       <input id="s-omni-url" value="${settings.omnirouter_url || 'http://localhost:20128'}">
       <label>OmniRoute Client Key (optional)</label>
@@ -283,6 +287,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
       </div>
     `);
     document.getElementById('m-save').addEventListener('click', async () => {
+      await saveSetting('global_context', document.getElementById('s-global-context').value.trim());
       await saveSetting('omnirouter_url', document.getElementById('s-omni-url').value.trim());
       await saveSetting('omnirouter_key', document.getElementById('s-omni-key').value.trim());
       await saveSetting('openrouter_api_key', document.getElementById('s-or-key').value.trim());
@@ -304,10 +309,12 @@ main { padding: 1.5rem; overflow-x: hidden; }
   // ---------- Agents ----------
   async function loadKokiriNav() {
     const [{ data: sheetData }, { data: dashData }] = await Promise.all([
-      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('kokiri_sheets').select('id, slug, name').order('sort_order'),
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
-    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    kokiriSheets = sheetData || [];
+    sheetNamesForPrompt = kokiriSheets.map(s => s.name);
+    document.getElementById('nav-sheets').innerHTML = kokiriSheets.map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('');
   }
 
@@ -559,21 +566,29 @@ main { padding: 1.5rem; overflow-x: hidden; }
 
   // ---------- Action protocol: the model can emit [ACTION]{...}[/ACTION] to act autonomously ----------
   function buildSystemPrompt(agentCtx) {
-    const roster = agents.map(a => a.name).join(', ') || '(none yet)';
+    const roster = agents.map(a => `${a.name} (${a.status})`).join(', ') || '(none yet)';
     const base = agentCtx
       ? `You are ${agentCtx.name}, an agent whose purpose is: ${agentCtx.purpose || 'general assistance'}.`
       : `You are Navi, the general coordinating intelligence for Kokiri, Daniel's personal agent dashboard.`;
-    return `${base} Respond helpfully and concisely.
+    const globalCtx = settings.global_context ? `\n\nGlobal context from Daniel (applies to everything you do here):\n${settings.global_context}\n` : '';
+    return `${base}${globalCtx} Respond helpfully and concisely.
 
 Known agents: ${roster}.
+Known Kokiri sheets: ${sheetNamesForPrompt.join(', ') || '(none)'}.
 
 You can take real actions by including EXACTLY ONE JSON block at the very end of your reply, in this exact format: [ACTION]{...}[/ACTION]
-Only include it when the user is clearly asking you to create/assign a task or create/modify an agent — never invent actions unprompted. Omit it entirely otherwise.
+Only include it when clearly warranted by the user's request — never invent actions unprompted. Omit it entirely otherwise.
 
 Valid action shapes:
 - {"type":"create_task","agent":"<exact agent name>","title":"<short title>","description":"<details>"}
 - {"type":"create_agent","name":"<name>","purpose":"<purpose>","icon":"<one emoji>","model_pref":"auto"}
 - {"type":"edit_agent","agent":"<exact existing agent name>","updates":{"purpose":"<optional>","status":"active|paused","model_pref":"<optional>","icon":"<optional>"}}
+- {"type":"query_data","source":"kokiri_rows","sheet":"<exact sheet name from the list above>"}  — look up rows from a Kokiri sheet
+- {"type":"query_data","source":"agent_tasks","agent":"<exact agent name>"}  — look up an agent's tasks
+- {"type":"query_data","source":"agent_timeline","agent":"<exact agent name>"}  — look up an agent's recent activity
+- {"type":"query_data","source":"notion_tasks"}  — look up synced Notion tasks
+
+Use query_data whenever answering the question actually requires real data you don't already have (e.g. "what's in my CRM", "what has Cowork been doing"). You'll get the data back and can then give a real answer in a follow-up turn — don't guess or make up data.
 
 Write your normal reply text first, then the [ACTION] block on its own if needed. Do not mention the raw JSON syntax to the user.`;
   }
@@ -586,30 +601,63 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     catch { return { cleanText, action: null }; }
   }
 
+  async function fetchQueryData(action) {
+    if (action.source === 'kokiri_rows' && action.sheet) {
+      const sheet = kokiriSheets.find(s => s.name.toLowerCase() === action.sheet.toLowerCase());
+      if (!sheet) return { error: `Unknown sheet "${action.sheet}"` };
+      const [{ data: cols }, { data: rows }] = await Promise.all([
+        supabase.from('kokiri_columns').select('name, column_key').eq('sheet_id', sheet.id).order('sort_order'),
+        supabase.from('kokiri_rows').select('data').eq('sheet_id', sheet.id).order('sort_order').limit(30),
+      ]);
+      return { sheet: sheet.name, columns: (cols || []).map(c => c.name), rows: (rows || []).map(r => r.data) };
+    }
+    if (action.source === 'agent_tasks' && action.agent) {
+      const agent = agents.find(a => a.name.toLowerCase() === action.agent.toLowerCase());
+      if (!agent) return { error: `Unknown agent "${action.agent}"` };
+      const { data } = await supabase.from('agent_tasks').select('title, status, description, created_at').eq('agent_id', agent.id).order('created_at', { ascending: false }).limit(20);
+      return { agent: agent.name, tasks: data || [] };
+    }
+    if (action.source === 'agent_timeline' && action.agent) {
+      const agent = agents.find(a => a.name.toLowerCase() === action.agent.toLowerCase());
+      if (!agent) return { error: `Unknown agent "${action.agent}"` };
+      const { data } = await supabase.from('agent_timeline').select('event_text, event_type, occurred_at').eq('agent_id', agent.id).order('occurred_at', { ascending: false }).limit(20);
+      return { agent: agent.name, timeline: data || [] };
+    }
+    if (action.source === 'notion_tasks') {
+      const { data } = await supabase.from('notion_tasks').select('title, status, url').order('last_synced_at', { ascending: false }).limit(30);
+      return { notion_tasks: data || [] };
+    }
+    return { error: 'Unrecognized query_data request.' };
+  }
+
   async function executeAction(action) {
     if (action.type === 'create_task') {
       const agent = agents.find(a => a.name.toLowerCase() === (action.agent || '').toLowerCase());
-      if (!agent) return `⚠ Couldn't find agent "${action.agent}" to assign the task to.`;
+      if (!agent) return { confirmation: `⚠ Couldn't find agent "${action.agent}" to assign the task to.` };
       await supabase.from('agent_tasks').insert({ agent_id: agent.id, title: action.title || 'Untitled task', description: action.description || '', status: 'todo' });
       if (currentAgent?.id === agent.id && currentTab === 'tasks') renderTabContent();
-      return `✓ Created task "${action.title}" for ${agent.name}.`;
+      return { confirmation: `✓ Created task "${action.title}" for ${agent.name}.` };
     }
     if (action.type === 'create_agent') {
-      const { data } = await supabase.from('agents').insert({
+      await supabase.from('agents').insert({
         name: action.name, purpose: action.purpose || '', icon: action.icon || '⚔️',
         model_pref: action.model_pref || 'auto', sort_order: agents.length + 1,
       }).select().single();
       await loadAgents();
       await loadKokiriNav();
-      return `✓ Created new agent "${action.name}".`;
+      return { confirmation: `✓ Created new agent "${action.name}".` };
     }
     if (action.type === 'edit_agent') {
       const agent = agents.find(a => a.name.toLowerCase() === (action.agent || '').toLowerCase());
-      if (!agent) return `⚠ Couldn't find agent "${action.agent}" to edit.`;
+      if (!agent) return { confirmation: `⚠ Couldn't find agent "${action.agent}" to edit.` };
       await supabase.from('agents').update(action.updates || {}).eq('id', agent.id);
       await loadAgents();
       if (currentAgent?.id === agent.id) { currentAgent = agents.find(a => a.id === agent.id); renderAgentHeader(); }
-      return `✓ Updated agent "${agent.name}".`;
+      return { confirmation: `✓ Updated agent "${agent.name}".` };
+    }
+    if (action.type === 'query_data') {
+      const data = await fetchQueryData(action);
+      return { queryResult: data };
     }
     return null;
   }
@@ -645,13 +693,30 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     try {
       const agentCtx = targetId ? agents.find(a => a.id === targetId) : null;
       const systemPrompt = buildSystemPrompt(agentCtx);
-      const reply = await callIntelligence(systemPrompt, text);
-      const { cleanText, action } = extractAction(reply.text);
+
+      // Pull recent history for real conversational memory.
+      const { data: history } = await supabase.from('chat_messages').select('role, content').eq('thread_id', currentThreadId).order('created_at', { ascending: true }).limit(20);
+      let messages = [{ role: 'system', content: systemPrompt }, ...(history || []).map(m => ({ role: m.role, content: m.content }))];
+
+      let reply = await callIntelligence(messages);
+      let { cleanText, action } = extractAction(reply.text);
       let finalText = cleanText;
+
       if (action) {
-        const actionResult = await executeAction(action);
-        if (actionResult) finalText += `\n\n${actionResult}`;
+        const result = await executeAction(action);
+        if (result?.confirmation) {
+          finalText += `\n\n${result.confirmation}`;
+        } else if (result?.queryResult) {
+          // Follow-up turn: give the model the requested data and get a real answer.
+          messages.push({ role: 'assistant', content: cleanText || '(looking up data...)' });
+          messages.push({ role: 'user', content: `Here is the data you requested:\n${JSON.stringify(result.queryResult).slice(0, 6000)}\n\nNow answer my original question using this data.` });
+          const followUp = await callIntelligence(messages);
+          const extracted = extractAction(followUp.text);
+          finalText = extracted.cleanText;
+          reply = followUp;
+        }
       }
+
       await supabase.from('chat_messages').insert({ thread_id: currentThreadId, role: 'assistant', content: finalText, model_used: reply.source });
       await loadChatLog(currentThreadId);
     } catch (err) {
@@ -666,17 +731,17 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
   });
 
-  async function callIntelligence(systemPrompt, userText) {
+  async function callIntelligence(messages) {
     // 1. Premium cascade first (Claude -> Gemini -> ChatGPT), via server-side proxy
     //    since those providers block direct browser calls (no CORS).
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 20000);
+      const t = setTimeout(() => ctrl.abort(), 25000);
       const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/chat-proxy', {
         method: 'POST', signal: ctrl.signal,
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
-        body: JSON.stringify({ systemPrompt, userText }),
+        body: JSON.stringify({ messages }),
       });
       clearTimeout(t);
       if (res.ok) {
@@ -694,7 +759,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
       const res = await fetch(omniUrl + '/v1/chat/completions', {
         method: 'POST', signal: ctrl.signal,
         headers: { 'Content-Type': 'application/json', ...(settings.omnirouter_key ? { Authorization: 'Bearer ' + settings.omnirouter_key } : {}) },
-        body: JSON.stringify({ model: 'auto/free', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userText }] }),
+        body: JSON.stringify({ model: 'auto/free', messages }),
       });
       clearTimeout(t);
       if (!res.ok) throw new Error('omni not ok');
@@ -703,24 +768,21 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     } catch {
       // 3. Free OpenRouter model, final fallback.
       if (!settings.openrouter_api_key) throw new Error('No intelligence available — set at least one API key (Claude/Gemini/ChatGPT/OpenRouter) in Settings, or run OmniRoute locally.');
-      return await callOpenRouterWithRetry(systemPrompt, userText);
+      return await callOpenRouterWithRetry(messages);
     }
   }
 
-  async function callOpenRouterWithRetry(systemPrompt, userText, attempt = 1) {
+  async function callOpenRouterWithRetry(messages, attempt = 1) {
     const maxAttempts = 3;
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + settings.openrouter_api_key },
-      body: JSON.stringify({
-        model: settings.openrouter_model || 'openai/gpt-oss-20b:free',
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userText }],
-      }),
+      body: JSON.stringify({ model: settings.openrouter_model || 'openai/gpt-oss-20b:free', messages }),
     });
     if (res.status === 429 && attempt < maxAttempts) {
       const retryAfter = parseFloat(res.headers.get('retry-after')) || (attempt * 2);
       await new Promise(r => setTimeout(r, retryAfter * 1000));
-      return callOpenRouterWithRetry(systemPrompt, userText, attempt + 1);
+      return callOpenRouterWithRetry(messages, attempt + 1);
     }
     if (!res.ok) throw new Error('OpenRouter error: ' + res.status + (res.status === 429 ? ' (rate limited — try again shortly)' : ''));
     const json = await res.json();
