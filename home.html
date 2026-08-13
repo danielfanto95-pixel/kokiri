@@ -34,13 +34,14 @@ body {
 #btn-logout:hover { border-color: var(--leaf); color: var(--text); }
 
 .layout { display: flex; min-height: calc(100vh - 57px); }
-main { flex: 1; padding: 2rem; min-width: 0; max-width: 900px; }
-.greeting { margin-bottom: 2rem; }
+main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: center; }
+.content-wrap { width: 100%; max-width: 760px; }
+.greeting { margin-bottom: 2rem; text-align: center; }
 .greeting h1 { font-family: var(--heading); font-size: 1.8rem; color: var(--leaf-bright); text-shadow: 0 0 16px rgba(124,197,118,0.25); }
 .greeting .date { font-family: var(--mono); font-size: 0.8rem; color: var(--dim); margin-top: 0.3rem; }
 
 .where-to { margin-bottom: 2.5rem; }
-.where-to h2 { font-family: var(--heading); font-size: 0.95rem; color: var(--muted); margin-bottom: 0.9rem; font-weight: 700; }
+.where-to h2 { font-family: var(--heading); font-size: 0.95rem; color: var(--muted); margin-bottom: 0.9rem; font-weight: 700; text-align: center; }
 .card-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .go-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.4rem;
@@ -52,7 +53,7 @@ main { flex: 1; padding: 2rem; min-width: 0; max-width: 900px; }
 .go-card .sub { font-size: 0.78rem; color: var(--muted); }
 
 .section { margin-bottom: 2.5rem; }
-.section h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 1rem; }
+.section h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 1rem; text-align: center; }
 .section h2 .count { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); font-weight: 400; margin-left: 0.5rem; }
 .item-row {
   display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.7rem 0.9rem; background: var(--surface);
@@ -101,40 +102,42 @@ main { flex: 1; padding: 2rem; min-width: 0; max-width: 900px; }
 
 <div class="layout">
   <main>
-    <div class="greeting">
-      <h1 id="greeting-text">Welcome back.</h1>
-      <div class="date" id="today-date"></div>
-    </div>
-
-    <div class="where-to">
-      <h2>Where would you like to go?</h2>
-      <div class="card-row">
-        <a href="app.html" class="go-card">
-          <div class="icon">🌿</div>
-          <div class="title">Kokiri</div>
-          <div class="sub">Your 20 tracked sheets — jobs, CRM, sources, schedule, and more.</div>
-        </a>
-        <a href="agents.html" class="go-card">
-          <div class="icon">⚔️</div>
-          <div class="title">Agents</div>
-          <div class="sub">Tools, tasks, timelines, triage, tribunal, and chat with intelligence.</div>
-        </a>
-        <a href="dashboards.html" class="go-card">
-          <div class="icon">📊</div>
-          <div class="title">Dashboards</div>
-          <div class="sub">Custom views, uploaded sources, AI-generated dashboards.</div>
-        </a>
+    <div class="content-wrap">
+      <div class="greeting">
+        <h1 id="greeting-text">Welcome back.</h1>
+        <div class="date" id="today-date"></div>
       </div>
-    </div>
 
-    <div class="section">
-      <h2>Today's To-Do's <span class="count" id="todo-count"></span></h2>
-      <div id="todo-list"><p class="empty">Loading…</p></div>
-    </div>
+      <div class="where-to">
+        <h2>Where would you like to go?</h2>
+        <div class="card-row">
+          <a href="app.html" class="go-card">
+            <div class="icon">🌿</div>
+            <div class="title">Kokiri</div>
+            <div class="sub">Your 20 tracked sheets — jobs, CRM, sources, schedule, and more.</div>
+          </a>
+          <a href="agents.html" class="go-card">
+            <div class="icon">⚔️</div>
+            <div class="title">Agents</div>
+            <div class="sub">Tools, tasks, timelines, triage, tribunal, and chat with intelligence.</div>
+          </a>
+          <a href="dashboards.html" class="go-card">
+            <div class="icon">📊</div>
+            <div class="title">Dashboards</div>
+            <div class="sub">Custom views, uploaded sources, AI-generated dashboards.</div>
+          </a>
+        </div>
+      </div>
 
-    <div class="section">
-      <h2>Notable Things <span class="count" id="notable-count"></span></h2>
-      <div id="notable-list"><p class="empty">Loading…</p></div>
+      <div class="section">
+        <h2>Today's To-Do's <span class="count" id="todo-count"></span></h2>
+        <div id="todo-list"><p class="empty">Loading…</p></div>
+      </div>
+
+      <div class="section">
+        <h2>Notable Things <span class="count" id="notable-count"></span></h2>
+        <div id="notable-list"><p class="empty">Loading…</p></div>
+      </div>
     </div>
   </main>
 
