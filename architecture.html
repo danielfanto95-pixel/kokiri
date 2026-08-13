@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: center; }
+.content-wrap { width: 100%; max-width: 820px; }
+.page-head { margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.page-head h1 { font-family: var(--heading); font-size: 1.5rem; color: var(--leaf-bright); flex: 1; }
+.mode-toggle {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer;
+}
+.mode-toggle:hover { border-color: var(--leaf); }
+.editor-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+textarea {
+  width: 100%; min-height: 520px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--mono); font-size: 0.85rem; line-height: 1.6; padding: 1rem; resize: vertical;
+}
+textarea:focus { outline: none; border-color: var(--leaf); }
+.preview {
+  min-height: 520px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem;
+  font-size: 0.9rem; line-height: 1.75; overflow-x: auto;
+}
+.preview h1, .preview h2 { font-family: var(--heading); color: var(--leaf-bright); margin: 1.4rem 0 0.6rem; }
+.preview h1 { font-size: 1.4rem; margin-top: 0; }
+.preview h2 { font-size: 1.1rem; }
+.preview p { margin-bottom: 0.8rem; color: var(--text); }
+.preview strong { color: var(--gold); }
+.preview code { font-family: var(--mono); background: var(--surface2); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; }
+.preview table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.85rem; }
+.preview th, .preview td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; }
+.preview th { background: var(--surface2); color: var(--leaf-bright); }
+.preview li { margin-left: 1.2rem; margin-bottom: 0.3rem; }
+.preview hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.editor-footer { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
+#btn-save {
+  background: var(--leaf); color: #0c120d; border: none; border-radius: 8px; padding: 0.7rem 1.5rem;
+  font-family: var(--heading); font-weight: 700; font-size: 0.85rem; cursor: pointer;
+}
+#btn-save:hover { background: var(--leaf-bright); }
+#btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-status { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="content-wrap">
+      <div class="page-head">
+        <h1>🏛️ Architecture</h1>
+        <button class="mode-toggle" id="btn-toggle-mode">👁 Preview</button>
+      </div>
+
+      <div class="editor-box">
+        <textarea id="arch-text" style="display:none;"></textarea>
+        <div class="preview" id="arch-preview"></div>
+        <div class="editor-footer">
+          <button id="btn-save" style="display:none;">Save</button>
+          <span class="save-status" id="save-status"></span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Architecture">Architecture<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link active" href="architecture.html">🏛️ System Architecture</a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('');
+  }
+
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+
+  // Minimal markdown -> HTML renderer (headings, bold, code, tables, lists, hr, links, paragraphs).
+  function renderMarkdown(md) {
+    const lines = md.split('\n');
+    let html = '';
+    let inTable = false, tableHeader = [];
+    let inList = false;
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      if (/^\s*\|/.test(line)) {
+        const cells = line.split('|').map(c => c.trim()).filter((c, idx, arr) => !(idx === 0 && c === '') && !(idx === arr.length - 1 && c === ''));
+        if (/^[-:\s|]+$/.test(line.replace(/\|/g, ''))) continue; // separator row
+        if (!inTable) { html += '<table><thead><tr>' + cells.map(c => `<th>${inline(c)}</th>`).join('') + '</tr></thead><tbody>'; inTable = true; }
+        else { html += '<tr>' + cells.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>'; }
+        continue;
+      } else if (inTable) { html += '</tbody></table>'; inTable = false; }
+
+      if (/^-{3,}$/.test(line.trim())) { html += '<hr>'; continue; }
+      if (/^## /.test(line)) { html += `<h2>${inline(line.slice(3))}</h2>`; continue; }
+      if (/^# /.test(line)) { html += `<h1>${inline(line.slice(2))}</h1>`; continue; }
+      if (/^\d+\.\s/.test(line) || /^-\s/.test(line)) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${inline(line.replace(/^(\d+\.|-)\s/, ''))}</li>`;
+        continue;
+      } else if (inList) { html += '</ul>'; inList = false; }
+
+      if (line.trim() === '') continue;
+      html += `<p>${inline(line)}</p>`;
+    }
+    if (inTable) html += '</tbody></table>';
+    if (inList) html += '</ul>';
+    return html;
+  }
+  function inline(text) {
+    return escapeHtml(text)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code>$1</code>')
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" style="color:var(--leaf);">$1</a>');
+  }
+
+  const DEFAULT_SEED = `# Kokiri — Architecture
+
+Last updated: 2026-08-14. This page is editable — update it yourself as things change, or ask Navi to.
+
+## What Kokiri Is
+
+A personal operations system with no traditional server: a public directory, a multi-sheet data workspace, an agent dashboard with autonomous execution, custom dashboards, and a site-wide AI assistant — all on free-tier infrastructure.
+
+Three layers: **Frontend** (static HTML/CSS/JS on GitHub Pages, no build step) · **Backend** (Supabase: Postgres + Auth + Edge Functions + pg_cron, free tier) · **Intelligence** (Claude/Gemini/ChatGPT/OpenRouter via a server-side proxy, plus OmniRoute for local/free use).
+
+## Pages
+
+| Page | Purpose |
+|---|---|
+| \`index.html\` | Public directory of all live projects — no login |
+| \`login.html\` | Sign in (self-signup permanently disabled after the first account) |
+| \`home.html\` | Landing page — quick nav, today's to-dos, notable activity, global context preview |
+| \`app.html\` | Kokiri OS — 20-tab dynamic spreadsheet engine |
+| \`agents.html\` | Agent Dashboard — agents, tools, tasks, timelines, triage, tribunal, chat with threads |
+| \`dashboards.html\` | Custom dashboards — widgets, uploaded data sources, AI-generated layouts |
+| \`context.html\` | Global Instructions & Context editor — applies to every AI call site-wide |
+| \`architecture.html\` | This page |
+| \`widget.js\` | Shared floating chat widget (Navi), embedded on every authenticated page |
+
+Every authenticated page shares the same right-hand nav: **Kokiri** (sheets) · **Agents** · **Dashboards** · **Context** · **Architecture** — collapsible per group, state remembered in localStorage.
+
+## Data Model
+
+**Kokiri OS (dynamic):** kokiri_sheets → kokiri_columns → kokiri_rows (values live in a data JSONB column keyed by column_key — adding a column is just an insert, no migration).
+
+**Agents (fixed schema):** agents with children agent_tools, agent_tasks, agent_timeline, agent_triage, agent_tribunal.
+
+**Dashboards:** dashboards → dashboard_widgets. Widgets pull from Kokiri sheets, agent tables, Notion tasks, or uploaded sources (dashboard_sources → dashboard_source_rows, parsed client-side from CSV/JSON).
+
+**Chat:** chat_threads (one per agent-or-general context, browsable/switchable) → chat_messages.
+
+**Notion sync:** notion_tasks — mirrored from a Notion database via the notion-sync Edge Function, with per-row "assign to agent" support.
+
+**Settings:** kokiri_settings (non-secret config: OmniRoute URL, global context, display prefs) — secrets never live here.
+
+## Auth & Access
+
+Single-user, enforced at the database trigger level (not just UI) — the trigger blocks any signup once one account exists. (A scoped multi-user permission system — profiles + user_permissions + a has_access() helper — was scaffolded but is currently paused/not activated; the single-user trigger is still in place.)
+
+Every table has RLS. Data tables check auth.role() = 'authenticated'.
+
+## Secrets — three tiers, deliberately
+
+1. **Vault, service_role-only** (get_secret()): the autonomous runner's OpenRouter key, and the cron_shared_secret that authenticates scheduled runs.
+2. **Vault, authenticated-writable** (set_secret()): Claude/Gemini/ChatGPT/OpenRouter/Notion API keys — the browser can write but never read them back; only server-side Edge Functions retrieve the actual value.
+3. **Plaintext kokiri_settings**: only genuinely non-secret config (OmniRoute URL, global context text).
+
+No provider key has ever lived in plaintext since the security hardening pass — everything routes through Vault.
+
+## Intelligence Architecture
+
+**Cascade order (deliberate — premium first, free as fallback):**
+1. chat-proxy Edge Function tries **Claude → Gemini → ChatGPT** (server-side, since those APIs block direct browser CORS) → falls back to **OpenRouter free** within the same function if no premium key is set.
+2. If the whole proxy is unreachable, the browser tries **OmniRoute** (localhost:20128 — only works when you're on the machine running it).
+3. If everything fails, a clear error is shown.
+
+**Conversational memory:** each chat call sends the last ~20 messages from the current thread, not just the latest message.
+
+**Live data access:** the model can emit a query_data action (sheet rows, agent tasks/timeline, Notion tasks) mid-conversation; the app fetches it and feeds it back for a grounded follow-up answer — not guessing.
+
+**Real actions:** create_task, create_agent, edit_agent, navigate (site-wide widget only) — a deliberately small, vetted action set, not open-ended write access.
+
+**Global context:** text set on context.html, prepended to every system prompt — chat, agents, and the autonomous runner alike.
+
+## Autonomous Execution
+
+agent-runner Edge Function, scheduled via pg_cron every 30 minutes: picks up to 3 todo tasks per active agent, reasons via OpenRouter (Vault key), logs the outcome to agent_timeline + agent_tribunal, flips the task to in_progress for human confirmation. **Reasoning/triage only — no real-world tool execution yet** (no email sending, no Notion/Sheets writes from agents themselves).
+
+Locked down with a random shared secret (x-kokiri-secret header) so only the real cron job can trigger it — verified via a 401 test against unauthenticated calls.
+
+## Site-Wide Widget (Navi)
+
+widget.js, included on every authenticated page: floating chat bubble, persistent thread across pages, voice input via the browser's native Web Speech API (Chromium-only, no external service), voice output via SpeechSynthesis, page-aware system prompt, same real-action set as the Agent Dashboard chat plus navigate.
+
+## Known Limitations
+
+- Agents can't perform real-world actions yet (Notion/Sheets/Gmail write execution is scoped but not built)
+- OmniRoute is local-only by nature — can't be reached by server-side functions or other devices
+- Multi-user permissions were scaffolded (profiles, scoped access) but paused before activation — still single-user
+- No automated backups on Supabase free tier
+- No MFA on the login yet
+
+## Cost
+
+GitHub Pages: $0. Supabase free tier (DB, Auth, Edge Functions, cron): $0 at current volume. OpenRouter free models: $0, rate-limited. Premium providers (Claude/Gemini/ChatGPT): pay-as-you-go once keys are added — not yet active. OmniRoute: electricity only.
+
+**Total recurring cost right now: $0/month.**
+`;
+
+  const textarea = document.getElementById('arch-text');
+  const previewEl = document.getElementById('arch-preview');
+  const statusEl = document.getElementById('save-status');
+  const saveBtn = document.getElementById('btn-save');
+  const toggleBtn = document.getElementById('btn-toggle-mode');
+  let editMode = false;
+
+  function renderPreview() { previewEl.innerHTML = renderMarkdown(textarea.value); }
+
+  toggleBtn.addEventListener('click', () => {
+    editMode = !editMode;
+    textarea.style.display = editMode ? 'block' : 'none';
+    previewEl.style.display = editMode ? 'none' : 'block';
+    saveBtn.style.display = editMode ? 'inline-block' : 'none';
+    toggleBtn.textContent = editMode ? '👁 Preview' : '✏️ Edit';
+    if (!editMode) renderPreview();
+  });
+
+  async function loadDoc() {
+    const { data } = await supabase.from('kokiri_settings').select('value, updated_at').eq('key', 'architecture_doc').maybeSingle();
+    if (data?.value) {
+      textarea.value = data.value;
+      statusEl.textContent = 'Last saved ' + new Date(data.updated_at).toLocaleString();
+    } else {
+      textarea.value = DEFAULT_SEED;
+      await supabase.from('kokiri_settings').upsert({ key: 'architecture_doc', value: DEFAULT_SEED, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      statusEl.textContent = 'Seeded with default architecture doc.';
+    }
+    renderPreview();
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    statusEl.textContent = 'Saving…';
+    const value = textarea.value;
+    const { error } = await supabase.from('kokiri_settings').upsert(
+      { key: 'architecture_doc', value, updated_at: new Date().toISOString() },
+      { onConflict: 'key' }
+    );
+    saveBtn.disabled = false;
+    statusEl.textContent = error ? '⚠ ' + error.message : '✓ Saved ' + new Date().toLocaleTimeString();
+  });
+
+  initNavCollapse();
+  await loadNav();
+  await loadDoc();
+</script>
+
+<script type="module" src="widget.js"></script>
+</body>
+</html>
