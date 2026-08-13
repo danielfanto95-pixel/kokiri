@@ -329,6 +329,27 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <label>OpenRouter Free Model</label>
       <input id="s-or-model" value="${settings.openrouter_model_display || 'openai/gpt-oss-20b:free'}">
 
+      <label style="margin-top:1.4rem;color:var(--gold);">🎙 Deepgram Voice Agent — API Key ${settings.deepgram_key_configured ? '✓ set' : ''}</label>
+      <input id="s-deepgram-key" type="password" placeholder="${settings.deepgram_key_configured ? '•••••••• (leave blank to keep)' : 'dg_...'}">
+      <label>Voice</label>
+      <select id="s-deepgram-voice">
+        ${[
+          ['aura-asteria-en', 'Asteria — female, US, conversational'],
+          ['aura-luna-en', 'Luna — female, US, soft'],
+          ['aura-stella-en', 'Stella — female, US, friendly'],
+          ['aura-athena-en', 'Athena — female, UK, professional'],
+          ['aura-hera-en', 'Hera — female, US, warm'],
+          ['aura-orion-en', 'Orion — male, US, approachable'],
+          ['aura-arcas-en', 'Arcas — male, US, natural'],
+          ['aura-perseus-en', 'Perseus — male, US, confident'],
+          ['aura-angus-en', 'Angus — male, Ireland, warm'],
+          ['aura-orpheus-en', 'Orpheus — male, US, professional'],
+          ['aura-helios-en', 'Helios — male, UK, calm'],
+          ['aura-zeus-en', 'Zeus — male, US, deep'],
+        ].map(([v, label]) => `<option value="${v}" ${(settings.deepgram_voice || 'aura-asteria-en') === v ? 'selected' : ''}>${label}</option>`).join('')}
+      </select>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">Powers voice input (speech-to-text via Deepgram Nova-2) and voice replies (text-to-speech via Deepgram Aura) in the Navi widget on every page — real transcription/synthesis, not the browser's built-in engine. Falls back to the browser's own speech APIs automatically if no key is set or a call fails. Get a key at <a href="https://console.deepgram.com" target="_blank" style="color:var(--cyan);">console.deepgram.com</a> (free tier includes credit).</p>
+
       <p style="font-size:0.72rem;color:var(--muted);margin-top:1rem;">Keys are written straight to Supabase Vault (encrypted, server-side only) — they never sit in a readable table, even this browser can't read them back.</p>
 
       <div class="modal-actions">
@@ -345,6 +366,8 @@ main { padding: 1.5rem; overflow-x: hidden; }
       await saveSecret('openrouter_api_key', document.getElementById('s-or-key').value.trim(), 'openrouter_key_configured');
       const orModel = document.getElementById('s-or-model').value.trim();
       if (orModel) { await saveSecret('openrouter_model', orModel); await saveSetting('openrouter_model_display', orModel); }
+      await saveSecret('deepgram_api_key', document.getElementById('s-deepgram-key').value.trim(), 'deepgram_key_configured');
+      await saveSetting('deepgram_voice', document.getElementById('s-deepgram-voice').value);
       updateStatusPills();
       pingOmni();
       closeModal();

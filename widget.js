@@ -1,7 +1,8 @@
 // Kokiri site-wide assistant widget — floating chat bubble present on every authenticated page.
 // Knows what page it's on, remembers conversation, can create/assign tasks, create/edit agents,
-// look up live Kokiri data, and navigate you around the site. Voice input/output via the browser's
-// built-in Web Speech API (free, no external service — only works in Chromium-based browsers).
+// look up live Kokiri data, and navigate you around the site. Voice input/output via Deepgram
+// (real STT/TTS, customizable voice, works in any browser) when a key is configured in Settings,
+// falling back automatically to the browser's built-in Web Speech API otherwise.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -45,7 +46,9 @@ styleEl.textContent = `
   background: #17201a; border: 1px solid rgba(163,214,140,0.14); color: #a8e79f; border-radius: 7px; cursor: pointer;
   font-size: 0.9rem; padding: 0 0.6rem; flex-shrink: 0;
 }
-#kokiri-widget-mic.listening { background: #e6c068; color: #0c120d; }
+#kokiri-widget-mic.listening { background: #e6c068; color: #0c120d; animation: kw-pulse 1.1s ease-in-out infinite; }
+#kokiri-widget-mic.processing { background: #6b8065; color: #0c120d; }
+@keyframes kw-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 #kokiri-widget-send:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 document.head.appendChild(styleEl);
@@ -83,6 +86,8 @@ let initialized = false;
 let threadId = null;
 let agentsCache = [];
 let sheetsCache = [];
+let deepgramVoice = 'aura-asteria-en';
+let deepgramConfigured = false;
 
 async function init() {
   if (initialized) return;
@@ -90,12 +95,17 @@ async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { document.getElementById('kokiri-widget-log').innerHTML = '<p style="color:#9db396;">Log in to chat with Navi.</p>'; return; }
 
-  const [{ data: agents }, { data: sheets }] = await Promise.all([
+  const [{ data: agents }, { data: sheets }, { data: settingsRows }] = await Promise.all([
     supabase.from('agents').select('id, name, purpose, status').order('sort_order'),
     supabase.from('kokiri_sheets').select('id, slug, name').order('sort_order'),
+    supabase.from('kokiri_settings').select('key, value').in('key', ['deepgram_voice', 'deepgram_key_configured']),
   ]);
   agentsCache = agents || [];
   sheetsCache = sheets || [];
+  (settingsRows || []).forEach(r => {
+    if (r.key === 'deepgram_voice' && r.value) deepgramVoice = r.value;
+    if (r.key === 'deepgram_key_configured') deepgramConfigured = r.value === 'true';
+  });
 
   let { data: thread } = await supabase.from('chat_threads').select('*').is('agent_id', null).eq('title', 'Site Assistant').maybeSingle();
   if (!thread) {
@@ -206,11 +216,38 @@ async function executeAction(action) {
 }
 
 let voiceOutputEnabled = false;
-function speak(text) {
-  if (!voiceOutputEnabled || !window.speechSynthesis) return;
-  const utter = new SpeechSynthesisUtterance(text.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/, ''));
+
+function speakBrowser(cleanText) {
+  if (!window.speechSynthesis) return;
+  const utter = new SpeechSynthesisUtterance(cleanText);
   utter.rate = 1.05;
   window.speechSynthesis.speak(utter);
+}
+
+async function speak(text) {
+  if (!voiceOutputEnabled) return;
+  const cleanText = text.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/, '').trim();
+  if (!cleanText) return;
+
+  if (!deepgramConfigured) { speakBrowser(cleanText); return; }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const res = await fetch(SUPABASE_URL + '/functions/v1/deepgram-tts', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ text: cleanText, voice: deepgramVoice }),
+    });
+    clearTimeout(t);
+    if (!res.ok) throw new Error('deepgram tts unavailable');
+    const blob = await res.blob();
+    const audio = new Audio(URL.createObjectURL(blob));
+    audio.play();
+  } catch {
+    speakBrowser(cleanText); // graceful fallback, same as the LLM cascade elsewhere in Kokiri
+  }
 }
 
 async function sendMessage(text) {
@@ -268,26 +305,87 @@ document.getElementById('kokiri-widget-input').addEventListener('keydown', (e) =
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('kokiri-widget-send').click(); }
 });
 
-// Voice input via the browser's built-in Web Speech API (Chromium-based browsers only — no external service).
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Voice input. Two paths:
+//  1. Deepgram (when configured in Settings): record with MediaRecorder, send the clip to the
+//     deepgram-stt Edge Function for real transcription (Nova-2) — works in any browser.
+//  2. Fallback: the browser's built-in SpeechRecognition (Chromium-based browsers only).
 const micBtn = document.getElementById('kokiri-widget-mic');
-if (SpeechRecognition) {
-  const recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.lang = 'en-US';
-  let listening = false;
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const hasMediaRecorder = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
 
-  micBtn.addEventListener('click', () => {
-    if (listening) { recognition.stop(); return; }
-    voiceOutputEnabled = true; // once you use voice in, we talk back too
-    recognition.start();
+async function transcribeWithDeepgram(blob) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(SUPABASE_URL + '/functions/v1/deepgram-stt', {
+    method: 'POST',
+    headers: { 'Content-Type': blob.type || 'audio/webm', 'x-audio-mimetype': blob.type || 'audio/webm', Authorization: 'Bearer ' + session.access_token },
+    body: blob,
   });
-  recognition.addEventListener('start', () => { listening = true; micBtn.classList.add('listening'); });
-  recognition.addEventListener('end', () => { listening = false; micBtn.classList.remove('listening'); });
-  recognition.addEventListener('result', (e) => {
-    const transcript = e.results[0][0].transcript;
-    sendMessage(transcript);
+  if (!res.ok) throw new Error('deepgram stt unavailable');
+  const json = await res.json();
+  if (!json.transcript) throw new Error('empty transcript');
+  return json.transcript;
+}
+
+let mediaRecorder = null;
+let recordedChunks = [];
+let recording = false;
+
+async function startDeepgramRecording() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+  mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  recordedChunks = [];
+  mediaRecorder.addEventListener('dataavailable', (e) => { if (e.data.size > 0) recordedChunks.push(e.data); });
+  mediaRecorder.addEventListener('stop', async () => {
+    stream.getTracks().forEach(tr => tr.stop());
+    recording = false;
+    micBtn.classList.remove('listening');
+    micBtn.classList.add('processing');
+    try {
+      const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+      const transcript = await transcribeWithDeepgram(blob);
+      sendMessage(transcript);
+    } catch {
+      micBtn.classList.remove('processing');
+      // Fall back to browser recognition for this attempt if available
+      if (SpeechRecognitionAPI) startBrowserRecognition();
+    } finally {
+      micBtn.classList.remove('processing');
+    }
+  });
+  mediaRecorder.start();
+  recording = true;
+  micBtn.classList.add('listening');
+}
+
+function stopDeepgramRecording() {
+  if (mediaRecorder && recording) mediaRecorder.stop();
+}
+
+let browserRecognition = null;
+let browserListening = false;
+function startBrowserRecognition() {
+  if (!SpeechRecognitionAPI) return;
+  browserRecognition = new SpeechRecognitionAPI();
+  browserRecognition.continuous = false;
+  browserRecognition.interimResults = false;
+  browserRecognition.lang = 'en-US';
+  browserRecognition.addEventListener('start', () => { browserListening = true; micBtn.classList.add('listening'); });
+  browserRecognition.addEventListener('end', () => { browserListening = false; micBtn.classList.remove('listening'); });
+  browserRecognition.addEventListener('result', (e) => sendMessage(e.results[0][0].transcript));
+  browserRecognition.start();
+}
+
+if (hasMediaRecorder || SpeechRecognitionAPI) {
+  micBtn.addEventListener('click', async () => {
+    voiceOutputEnabled = true; // once you use voice in, we talk back too
+    if (recording) { stopDeepgramRecording(); return; }
+    if (browserListening) { browserRecognition.stop(); return; }
+
+    if (deepgramConfigured && hasMediaRecorder) {
+      try { await startDeepgramRecording(); return; } catch { /* mic permission denied or unsupported — fall through */ }
+    }
+    startBrowserRecognition();
   });
 } else {
   micBtn.style.display = 'none';
