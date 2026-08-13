@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+  overflow-x: auto;
+}
+.brand { font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap; }
+.tabs { display: flex; gap: 0.3rem; flex: 1; overflow-x: auto; }
+.tab {
+  font-family: var(--mono); font-size: 0.76rem; color: var(--muted); background: transparent;
+  border: 1px solid transparent; border-radius: 6px; padding: 0.4rem 0.7rem; cursor: pointer; white-space: nowrap;
+}
+.tab:hover { color: var(--text); border-color: var(--border); }
+.tab.active { color: var(--leaf-bright); background: var(--surface2); border-color: var(--border-bright); }
+#btn-logout {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem; white-space: nowrap;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+main { padding: 1.5rem; }
+.sheet-head { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.sheet-head h2 { font-family: var(--heading); font-size: 1.3rem; color: var(--leaf-bright); }
+.action-btn {
+  font-family: var(--mono); font-size: 0.75rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer;
+}
+.action-btn:hover { border-color: var(--leaf); }
+
+.grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: max-content; }
+th, td {
+  border: 1px solid var(--border); padding: 0.55rem 0.75rem; text-align: left;
+  font-size: 0.82rem; vertical-align: top; max-width: 320px;
+}
+th {
+  background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright);
+  white-space: nowrap; position: sticky; top: 45px;
+}
+td { background: var(--surface); color: var(--text); min-width: 160px; }
+td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
+.row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.72rem; text-align: center; width: 30px; }
+.row-del:hover { color: var(--error, #f87171); }
+.empty-note { color: var(--muted); font-size: 0.85rem; padding: 2rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Kokiri OS</div>
+  <div class="tabs" id="tabs"></div>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<main>
+  <div class="sheet-head">
+    <h2 id="sheet-title">Loading…</h2>
+    <button class="action-btn" id="btn-add-row">+ Add Row</button>
+    <button class="action-btn" id="btn-add-col">+ Add Column</button>
+  </div>
+  <div class="grid-wrap"><table id="grid"></table></div>
+</main>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  let sheets = [];
+  let currentSheet = null;
+  let currentColumns = [];
+  let currentRows = [];
+
+  async function loadSheets() {
+    const { data, error } = await supabase.from('kokiri_sheets').select('*').order('sort_order');
+    if (error) { console.error(error); return; }
+    sheets = data;
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = sheets.map(s => `<button class="tab" data-slug="${s.slug}">${s.name}</button>`).join('');
+    tabsEl.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => selectSheet(btn.dataset.slug));
+    });
+    const hashSlug = window.location.hash.replace('#', '');
+    const initial = sheets.find(s => s.slug === hashSlug) || sheets[0];
+    if (initial) selectSheet(initial.slug);
+  }
+
+  async function selectSheet(slug) {
+    currentSheet = sheets.find(s => s.slug === slug);
+    if (!currentSheet) return;
+    window.location.hash = slug;
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.slug === slug));
+    document.getElementById('sheet-title').textContent = currentSheet.name;
+
+    const [{ data: cols }, { data: rows }] = await Promise.all([
+      supabase.from('kokiri_columns').select('*').eq('sheet_id', currentSheet.id).order('sort_order'),
+      supabase.from('kokiri_rows').select('*').eq('sheet_id', currentSheet.id).order('sort_order'),
+    ]);
+    currentColumns = cols || [];
+    currentRows = rows || [];
+    renderGrid();
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('grid');
+    if (currentColumns.length === 0) {
+      grid.innerHTML = '';
+      document.querySelector('.grid-wrap').innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start building this sheet.</p><table id="grid"></table>';
+      return;
+    }
+    let html = '<thead><tr><th class="row-del">×</th>';
+    for (const c of currentColumns) html += `<th>${escapeHtml(c.name)}</th>`;
+    html += '</tr></thead><tbody>';
+    for (const r of currentRows) {
+      html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
+      for (const c of currentColumns) {
+        const val = r.data?.[c.column_key] ?? '';
+        html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(val)}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    document.querySelector('.grid-wrap').innerHTML = `<table id="grid">${html}</table>`;
+    attachGridHandlers();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function attachGridHandlers() {
+    document.querySelectorAll('td[contenteditable="true"]').forEach(td => {
+      td.addEventListener('blur', async () => {
+        const tr = td.closest('tr');
+        const rowId = tr.dataset.rowId;
+        const colKey = td.dataset.colKey;
+        const newVal = td.textContent;
+        const row = currentRows.find(r => r.id === rowId);
+        if (!row) return;
+        row.data = { ...row.data, [colKey]: newVal };
+        await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+      });
+    });
+    document.querySelectorAll('[data-action="del-row"]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const tr = el.closest('tr');
+        const rowId = tr.dataset.rowId;
+        if (!confirm('Delete this row?')) return;
+        await supabase.from('kokiri_rows').delete().eq('id', rowId);
+        currentRows = currentRows.filter(r => r.id !== rowId);
+        renderGrid();
+      });
+    });
+  }
+
+  document.getElementById('btn-add-row').addEventListener('click', async () => {
+    if (!currentSheet) return;
+    const maxOrder = currentRows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_rows')
+      .insert({ sheet_id: currentSheet.id, data: {}, sort_order: maxOrder + 1 })
+      .select().single();
+    if (error) { alert(error.message); return; }
+    currentRows.push(data);
+    renderGrid();
+  });
+
+  document.getElementById('btn-add-col').addEventListener('click', async () => {
+    if (!currentSheet) return;
+    const name = prompt('New column name:');
+    if (!name) return;
+    const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
+    const maxOrder = currentColumns.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_columns')
+      .insert({ sheet_id: currentSheet.id, column_key: key, name, sort_order: maxOrder + 1 })
+      .select().single();
+    if (error) { alert(error.message); return; }
+    currentColumns.push(data);
+    renderGrid();
+  });
+
+  loadSheets();
+</script>
+
+</body>
+</html>
