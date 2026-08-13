@@ -252,9 +252,16 @@ main { padding: 1.5rem; overflow-x: hidden; }
     await supabase.from('kokiri_settings').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
     settings[key] = value;
   }
+  // Provider API keys go straight to Vault (encrypted, server-side only) — never stored in the plain settings table.
+  async function saveSecret(secretName, value, configuredFlagKey) {
+    if (!value) return;
+    await supabase.rpc('set_secret', { secret_name: secretName, secret_value: value });
+    if (configuredFlagKey) await saveSetting(configuredFlagKey, 'true');
+  }
 
   function updateStatusPills() {
-    document.getElementById('dot-openrouter').className = 'status-dot ' + (settings.openrouter_api_key ? 'on' : 'off');
+    const anyPremium = settings.anthropic_key_configured || settings.gemini_key_configured || settings.openai_key_configured;
+    document.getElementById('dot-openrouter').className = 'status-dot ' + (settings.openrouter_key_configured || anyPremium ? 'on' : 'off');
   }
 
   async function pingOmni() {
@@ -273,14 +280,28 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <h2>⚙ Intelligence Settings</h2>
       <label>Global Context & Instructions</label>
       <textarea id="s-global-context" style="min-height:110px;" placeholder="Applies to every AI call across Kokiri — chat, agents, and the autonomous runner. e.g. tone, priorities, things to always/never do.">${escapeHtml(settings.global_context || '')}</textarea>
+
       <label>OmniRoute URL (local)</label>
       <input id="s-omni-url" value="${settings.omnirouter_url || 'http://localhost:20128'}">
       <label>OmniRoute Client Key (optional)</label>
       <input id="s-omni-key" value="${settings.omnirouter_key || ''}">
-      <label>OpenRouter API Key</label>
-      <input id="s-or-key" type="password" value="${settings.openrouter_api_key || ''}" placeholder="sk-or-...">
+
+      <label style="margin-top:1.4rem;color:var(--gold);">Claude API Key ${settings.anthropic_key_configured ? '✓ set' : ''}</label>
+      <input id="s-claude-key" type="password" placeholder="${settings.anthropic_key_configured ? '•••••••• (leave blank to keep)' : 'sk-ant-...'}">
+
+      <label>Gemini API Key ${settings.gemini_key_configured ? '✓ set' : ''}</label>
+      <input id="s-gemini-key" type="password" placeholder="${settings.gemini_key_configured ? '•••••••• (leave blank to keep)' : 'AIza...'}">
+
+      <label>ChatGPT (OpenAI) API Key ${settings.openai_key_configured ? '✓ set' : ''}</label>
+      <input id="s-openai-key" type="password" placeholder="${settings.openai_key_configured ? '•••••••• (leave blank to keep)' : 'sk-...'}">
+
+      <label>OpenRouter API Key ${settings.openrouter_key_configured ? '✓ set' : ''}</label>
+      <input id="s-or-key" type="password" placeholder="${settings.openrouter_key_configured ? '•••••••• (leave blank to keep)' : 'sk-or-...'}">
       <label>OpenRouter Free Model</label>
-      <input id="s-or-model" value="${settings.openrouter_model || 'openai/gpt-oss-20b:free'}">
+      <input id="s-or-model" value="${settings.openrouter_model_display || 'openai/gpt-oss-20b:free'}">
+
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:1rem;">Keys are written straight to Supabase Vault (encrypted, server-side only) — they never sit in a readable table, even this browser can't read them back.</p>
+
       <div class="modal-actions">
         <button class="btn-cancel" id="m-cancel">Cancel</button>
         <button class="btn-save" id="m-save">Save</button>
@@ -290,8 +311,12 @@ main { padding: 1.5rem; overflow-x: hidden; }
       await saveSetting('global_context', document.getElementById('s-global-context').value.trim());
       await saveSetting('omnirouter_url', document.getElementById('s-omni-url').value.trim());
       await saveSetting('omnirouter_key', document.getElementById('s-omni-key').value.trim());
-      await saveSetting('openrouter_api_key', document.getElementById('s-or-key').value.trim());
-      await saveSetting('openrouter_model', document.getElementById('s-or-model').value.trim());
+      await saveSecret('anthropic_api_key', document.getElementById('s-claude-key').value.trim(), 'anthropic_key_configured');
+      await saveSecret('gemini_api_key', document.getElementById('s-gemini-key').value.trim(), 'gemini_key_configured');
+      await saveSecret('openai_api_key', document.getElementById('s-openai-key').value.trim(), 'openai_key_configured');
+      await saveSecret('openrouter_api_key', document.getElementById('s-or-key').value.trim(), 'openrouter_key_configured');
+      const orModel = document.getElementById('s-or-model').value.trim();
+      if (orModel) { await saveSecret('openrouter_model', orModel); await saveSetting('openrouter_model_display', orModel); }
       updateStatusPills();
       pingOmni();
       closeModal();
@@ -766,27 +791,10 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
       const json = await res.json();
       return { text: json.choices?.[0]?.message?.content || '(empty response)', source: 'omnirouter' };
     } catch {
-      // 3. Free OpenRouter model, final fallback.
-      if (!settings.openrouter_api_key) throw new Error('No intelligence available — set at least one API key (Claude/Gemini/ChatGPT/OpenRouter) in Settings, or run OmniRoute locally.');
-      return await callOpenRouterWithRetry(messages);
+      // Both premium cascade and OmniRoute are unavailable — nothing left to try.
+      // (chat-proxy already includes a free OpenRouter fallback server-side, so if we're here, that failed too.)
+      throw new Error('No intelligence available right now — check Settings for a configured key, or make sure OmniRoute is running locally, then try again.');
     }
-  }
-
-  async function callOpenRouterWithRetry(messages, attempt = 1) {
-    const maxAttempts = 3;
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + settings.openrouter_api_key },
-      body: JSON.stringify({ model: settings.openrouter_model || 'openai/gpt-oss-20b:free', messages }),
-    });
-    if (res.status === 429 && attempt < maxAttempts) {
-      const retryAfter = parseFloat(res.headers.get('retry-after')) || (attempt * 2);
-      await new Promise(r => setTimeout(r, retryAfter * 1000));
-      return callOpenRouterWithRetry(messages, attempt + 1);
-    }
-    if (!res.ok) throw new Error('OpenRouter error: ' + res.status + (res.status === 429 ? ' (rate limited — try again shortly)' : ''));
-    const json = await res.json();
-    return { text: json.choices?.[0]?.message?.content || '(empty response)', source: 'openrouter' };
   }
 
   function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
