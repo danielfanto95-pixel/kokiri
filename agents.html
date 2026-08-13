@@ -193,6 +193,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
     <div class="status-pill"><span class="status-dot" id="dot-omni"></span> OmniRoute</div>
     <div class="status-pill"><span class="status-dot" id="dot-ollama"></span> Ollama</div>
     <div class="status-pill"><span class="status-dot" id="dot-openrouter"></span> OpenRouter</div>
+    <button id="btn-mcp">🔌 MCP Servers</button>
     <button id="btn-settings">⚙ Settings</button>
   </div>
 </div>
@@ -333,6 +334,22 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <input id="s-ollama-model" value="${settings.ollama_model || ''}" placeholder="e.g. llama3.2, qwen2.5, mistral">
       <p style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Local, free, unlimited — no rate limits, no key needed. Only reachable while this browser is on the machine running Ollama, so it sits alongside OmniRoute as a last-resort fallback, after the premium/OpenRouter cascade.</p>
 
+      <h3 style="font-family:var(--heading);font-size:0.95rem;color:var(--gold);margin-top:1.6rem;border-top:1px solid var(--border);padding-top:1.2rem;">🔌 Connected Tools</h3>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem;">Real actions agents and the chat assistant can take — each gated behind its own key. Leave blank to leave that tool disconnected.</p>
+
+      <label>Notion API Key ${settings.notion_key_configured ? '✓ set' : ''}</label>
+      <input id="s-notion-key" type="password" placeholder="${settings.notion_key_configured ? '•••••••• (leave blank to keep)' : 'ntn_...'}">
+      <label>Notion Database ID</label>
+      <input id="s-notion-db" value="${settings.notion_database_id_display || ''}" placeholder="the database agents read/write tasks in">
+      <p style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">Share the target database with your integration in Notion first (••• → Connections), or calls will 403.</p>
+
+      <label style="margin-top:1rem;">Descript API Key ${settings.descript_key_configured ? '✓ set' : ''}</label>
+      <input id="s-descript-key" type="password" placeholder="${settings.descript_key_configured ? '•••••••• (leave blank to keep)' : 'from Descript → Settings → API Tokens'}">
+
+      <label style="margin-top:1rem;">Web Search / Research (Tavily) API Key ${settings.tavily_key_configured ? '✓ set' : ''}</label>
+      <input id="s-tavily-key" type="password" placeholder="${settings.tavily_key_configured ? '•••••••• (leave blank to keep)' : 'tvly-...'}">
+      <p style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">Free tier at <a href="https://tavily.com" target="_blank" style="color:var(--cyan);">tavily.com</a> — built for AI agents, generous no-card-required quota.</p>
+
       <label style="margin-top:1.4rem;color:var(--gold);">Claude API Key ${settings.anthropic_key_configured ? '✓ set' : ''}</label>
       <input id="s-claude-key" type="password" placeholder="${settings.anthropic_key_configured ? '•••••••• (leave blank to keep)' : 'sk-ant-...'}">
 
@@ -380,6 +397,11 @@ main { padding: 1.5rem; overflow-x: hidden; }
       await saveSetting('omnirouter_key', document.getElementById('s-omni-key').value.trim());
       await saveSetting('ollama_url', document.getElementById('s-ollama-url').value.trim());
       await saveSetting('ollama_model', document.getElementById('s-ollama-model').value.trim());
+      await saveSecret('notion_api_key', document.getElementById('s-notion-key').value.trim(), 'notion_key_configured');
+      const notionDb = document.getElementById('s-notion-db').value.trim();
+      if (notionDb) { await saveSecret('notion_database_id', notionDb); await saveSetting('notion_database_id_display', notionDb); }
+      await saveSecret('descript_api_key', document.getElementById('s-descript-key').value.trim(), 'descript_key_configured');
+      await saveSecret('tavily_api_key', document.getElementById('s-tavily-key').value.trim(), 'tavily_key_configured');
       await saveSecret('anthropic_api_key', document.getElementById('s-claude-key').value.trim(), 'anthropic_key_configured');
       await saveSecret('gemini_api_key', document.getElementById('s-gemini-key').value.trim(), 'gemini_key_configured');
       await saveSecret('openai_api_key', document.getElementById('s-openai-key').value.trim(), 'openai_key_configured');
@@ -402,6 +424,105 @@ main { padding: 1.5rem; overflow-x: hidden; }
   }
   function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
   document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); });
+
+  // ---------- MCP Servers ----------
+  let mcpServers = [];
+  function slugifyMcp(s) { return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || crypto.randomUUID().slice(0, 8); }
+
+  async function loadMcpServers() {
+    const { data } = await supabase.from('kokiri_mcp_servers').select('*').order('created_at');
+    mcpServers = data || [];
+  }
+
+  async function callMcpClient(body) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/mcp-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'mcp-client request failed');
+    return json;
+  }
+
+  function renderMcpModal() {
+    const rows = mcpServers.map(s => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <strong style="flex:1;">${escapeHtml(s.name)}</strong>
+          <span style="font-family:var(--mono);font-size:0.7rem;color:${s.last_error ? '#e08a8a' : (s.last_tested_at ? 'var(--leaf-bright)' : 'var(--muted)')};">
+            ${s.last_error ? '⚠ error' : (s.last_tested_at ? `✓ ${(s.tools_cache || []).length} tools` : 'not tested')}
+          </span>
+          <button class="mcp-test" data-id="${s.id}" style="background:transparent;border:1px solid var(--border-bright);color:var(--leaf-bright);border-radius:5px;padding:0.2rem 0.5rem;font-size:0.72rem;cursor:pointer;">Test</button>
+          <button class="mcp-del" data-id="${s.id}" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;">✕</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:0.3rem;">${escapeHtml(s.url)}</div>
+        ${s.last_error ? `<div style="font-size:0.72rem;color:#e08a8a;margin-top:0.3rem;">${escapeHtml(s.last_error)}</div>` : ''}
+        ${(s.tools_cache || []).length ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">Tools: ${(s.tools_cache || []).map(t => escapeHtml(t.name)).join(', ')}</div>` : ''}
+      </div>
+    `).join('') || '<p style="color:var(--muted);font-size:0.85rem;">No MCP servers connected yet.</p>';
+
+    openModal(`
+      <h2>🔌 MCP Servers</h2>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Connect a remote MCP server (URL + optional bearer token) and its tools become available to your agents automatically — across every model in the cascade, not just ones with native function-calling. Local/stdio MCP servers (most <code style="font-family:var(--mono);">npx</code>-run ones) can't be reached from here — only remote, HTTP-reachable servers work.</p>
+
+      <div id="mcp-list">${rows}</div>
+
+      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;">
+        <label>Name</label>
+        <input id="mcp-name" placeholder="e.g. Notion, Zapier, my own MCP server">
+        <label>Server URL</label>
+        <input id="mcp-url" placeholder="https://...">
+        <label>Bearer Token (optional — leave blank for no-auth servers)</label>
+        <input id="mcp-token" type="password" placeholder="leave blank if the server needs no auth">
+        <div class="modal-actions">
+          <button class="btn-cancel" id="mcp-cancel">Close</button>
+          <button class="btn-save" id="mcp-add">+ Add Server</button>
+        </div>
+      </div>
+    `);
+
+    document.querySelectorAll('.mcp-test').forEach(btn => btn.addEventListener('click', async () => {
+      btn.textContent = '…';
+      btn.disabled = true;
+      try { await callMcpClient({ type: 'list_tools', server_id: btn.dataset.id }); }
+      catch (e) { /* error already persisted to the row by mcp-client */ }
+      await loadMcpServers();
+      renderMcpModal();
+    }));
+    document.querySelectorAll('.mcp-del').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Remove this MCP server? Its stored token is deleted too.')) return;
+      await supabase.from('kokiri_mcp_servers').delete().eq('id', btn.dataset.id);
+      await loadMcpServers();
+      renderMcpModal();
+    }));
+    document.getElementById('mcp-cancel').addEventListener('click', closeModal);
+    document.getElementById('mcp-add').addEventListener('click', async () => {
+      const name = document.getElementById('mcp-name').value.trim();
+      const url = document.getElementById('mcp-url').value.trim();
+      const token = document.getElementById('mcp-token').value.trim();
+      if (!name || !url) { alert('Name and Server URL are required.'); return; }
+      const slug = slugifyMcp(name);
+      const secretName = token ? `mcp_token_${slug}` : null;
+      if (token) await supabase.rpc('set_secret', { secret_name: secretName, secret_value: token });
+      const { data: created, error } = await supabase.from('kokiri_mcp_servers').insert({
+        name, slug, url, auth_type: token ? 'bearer' : 'none', secret_name: secretName,
+      }).select().single();
+      if (error) { alert('⚠ ' + error.message); return; }
+      await loadMcpServers();
+      renderMcpModal();
+      // Auto-test on add so the tool list populates immediately.
+      try { await callMcpClient({ type: 'list_tools', server_id: created.id }); } catch { /* surfaced on the row */ }
+      await loadMcpServers();
+      renderMcpModal();
+    });
+  }
+
+  document.getElementById('btn-mcp').addEventListener('click', async () => {
+    await loadMcpServers();
+    renderMcpModal();
+  });
 
   // ---------- Agents ----------
   async function loadKokiriNav() {
@@ -684,10 +805,30 @@ Valid action shapes:
 - {"type":"query_data","source":"agent_tasks","agent":"<exact agent name>"}  — look up an agent's tasks
 - {"type":"query_data","source":"agent_timeline","agent":"<exact agent name>"}  — look up an agent's recent activity
 - {"type":"query_data","source":"notion_tasks"}  — look up synced Notion tasks
-
-Use query_data whenever answering the question actually requires real data you don't already have (e.g. "what's in my CRM", "what has Cowork been doing"). You'll get the data back and can then give a real answer in a follow-up turn — don't guess or make up data.
+${connectedToolsPrompt()}
+Use query_data or tool_call (read tools) whenever answering the question actually requires real data you don't already have (e.g. "what's in my CRM", "search the web for X", "what's in Notion"). You'll get the data back and can then give a real answer in a follow-up turn — don't guess or make up data.
 
 Write your normal reply text first, then the [ACTION] block on its own if needed. Do not mention the raw JSON syntax to the user.`;
+  }
+
+  function connectedToolsPrompt() {
+    const lines = [];
+    if (settings.tavily_key_configured) lines.push('- {"type":"tool_call","tool":"web_search","params":{"query":"<search query>"}}  — search the live web for current information (read)');
+    if (settings.notion_key_configured) {
+      lines.push('- {"type":"tool_call","tool":"notion_query","params":{}}  — list pages in the connected Notion database (read)');
+      lines.push('- {"type":"tool_call","tool":"notion_create_page","params":{"title":"<title>","content":"<optional body text>"}}  — create a new page in the connected Notion database (write)');
+    }
+    if (settings.descript_key_configured) {
+      lines.push('- {"type":"tool_call","tool":"descript_list_projects","params":{}}  — list Descript projects (read)');
+      lines.push('- {"type":"tool_call","tool":"descript_import_media","params":{"url":"<media url>","project_id":"<optional>","title":"<optional>"}}  — import media into Descript (write)');
+    }
+    for (const server of mcpServers) {
+      for (const tool of (server.tools_cache || [])) {
+        lines.push(`- {"type":"mcp_tool_call","server":"${server.name}","tool":"${tool.name}","arguments":{...}}  — ${tool.description || tool.name} (via MCP server "${server.name}")`);
+      }
+    }
+    if (!lines.length) return '';
+    return '\nConnected external tools (use tool_call/mcp_tool_call actions above the query_data ones when relevant):\n' + lines.join('\n') + '\n';
   }
 
   function extractAction(text) {
@@ -727,7 +868,40 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     return { error: 'Unrecognized query_data request.' };
   }
 
+  const READ_TOOLS = new Set(['web_search', 'notion_query', 'descript_list_projects']);
+
+  async function callAgentTool(tool, params) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/agent-tools', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ type: tool, params }),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || `${tool} failed`);
+    return json;
+  }
+
   async function executeAction(action) {
+    if (action.type === 'mcp_tool_call') {
+      const server = mcpServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
+      if (!server) return { confirmation: `⚠ Unknown MCP server "${action.server}".` };
+      try {
+        const { result } = await callMcpClient({ type: 'call_tool', server_id: server.id, tool_name: action.tool, arguments: action.arguments || {} });
+        return { queryResult: { mcp_server: server.name, mcp_tool: action.tool, result } };
+      } catch (e) {
+        return { confirmation: `⚠ ${server.name}/${action.tool} failed: ${e.message}` };
+      }
+    }
+    if (action.type === 'tool_call') {
+      try {
+        const result = await callAgentTool(action.tool, action.params || {});
+        if (READ_TOOLS.has(action.tool)) return { queryResult: { tool: action.tool, ...result } };
+        return { confirmation: `✓ ${action.tool} succeeded: ${JSON.stringify(result).slice(0, 200)}` };
+      } catch (e) {
+        return { confirmation: `⚠ ${action.tool} failed: ${e.message}` };
+      }
+    }
     if (action.type === 'create_task') {
       const agent = agents.find(a => a.name.toLowerCase() === (action.agent || '').toLowerCase());
       if (!agent) return { confirmation: `⚠ Couldn't find agent "${action.agent}" to assign the task to.` };
@@ -912,6 +1086,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
   await loadKokiriNav();
   await loadAgents();
   await loadThreads(null);
+  await loadMcpServers();
   pingOmni();
   pingOllama();
 </script>

@@ -89,6 +89,7 @@ let sheetsCache = [];
 let deepgramVoice = 'aura-asteria-en';
 let deepgramConfigured = false;
 let localSettings = {};
+let mcpServers = [];
 
 async function init() {
   if (initialized) return;
@@ -96,13 +97,15 @@ async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { document.getElementById('kokiri-widget-log').innerHTML = '<p style="color:#9db396;">Log in to chat with Navi.</p>'; return; }
 
-  const [{ data: agents }, { data: sheets }, { data: settingsRows }] = await Promise.all([
+  const [{ data: agents }, { data: sheets }, { data: settingsRows }, { data: mcpData }] = await Promise.all([
     supabase.from('agents').select('id, name, purpose, status').order('sort_order'),
     supabase.from('kokiri_sheets').select('id, slug, name').order('sort_order'),
-    supabase.from('kokiri_settings').select('key, value').in('key', ['deepgram_voice', 'deepgram_key_configured', 'omnirouter_url', 'omnirouter_key', 'ollama_url', 'ollama_model']),
+    supabase.from('kokiri_settings').select('key, value').in('key', ['deepgram_voice', 'deepgram_key_configured', 'omnirouter_url', 'omnirouter_key', 'ollama_url', 'ollama_model', 'notion_key_configured', 'descript_key_configured', 'tavily_key_configured']),
+    supabase.from('kokiri_mcp_servers').select('id, name, tools_cache'),
   ]);
   agentsCache = agents || [];
   sheetsCache = sheets || [];
+  mcpServers = mcpData || [];
   (settingsRows || []).forEach(r => {
     if (r.key === 'deepgram_voice' && r.value) deepgramVoice = r.value;
     if (r.key === 'deepgram_key_configured') deepgramConfigured = r.value === 'true';
@@ -145,8 +148,31 @@ Valid action shapes:
 - {"type":"query_data","source":"kokiri_rows","sheet":"<exact sheet name>"}
 - {"type":"query_data","source":"agent_tasks","agent":"<exact agent name>"}
 - {"type":"navigate","page":"home|app|agents|dashboards|context"}
+${mcpToolsPrompt()}
+Use navigate when the user asks to go somewhere. Use query_data/mcp_tool_call when answering requires real data you don't have — you'll get a follow-up turn with the data. Write your reply text first, then the action block if needed. Never mention the raw JSON to the user.`;
+}
 
-Use navigate when the user asks to go somewhere. Use query_data when answering requires real data you don't have — you'll get a follow-up turn with the data. Write your reply text first, then the action block if needed. Never mention the raw JSON to the user.`;
+function mcpToolsPrompt() {
+  const lines = [];
+  for (const server of mcpServers) {
+    for (const tool of (server.tools_cache || [])) {
+      lines.push(`- {"type":"mcp_tool_call","server":"${server.name}","tool":"${tool.name}","arguments":{...}}  — ${tool.description || tool.name} (via MCP server "${server.name}")`);
+    }
+  }
+  if (!lines.length) return '';
+  return '\nConnected external tools (via MCP servers registered in Settings):\n' + lines.join('\n') + '\n';
+}
+
+async function callMcpClient(body) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(SUPABASE_URL + '/functions/v1/mcp-client', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) throw new Error(json.error || 'mcp-client request failed');
+  return json;
 }
 
 async function callIntelligence(messages) {
@@ -228,6 +254,16 @@ async function fetchQueryData(action) {
 const PAGE_URLS = { home: 'home.html', app: 'app.html', agents: 'agents.html', dashboards: 'dashboards.html', context: 'context.html' };
 
 async function executeAction(action) {
+  if (action.type === 'mcp_tool_call') {
+    const server = mcpServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
+    if (!server) return { confirmation: `⚠ Unknown MCP server "${action.server}".` };
+    try {
+      const { result } = await callMcpClient({ type: 'call_tool', server_id: server.id, tool_name: action.tool, arguments: action.arguments || {} });
+      return { queryResult: { mcp_server: server.name, mcp_tool: action.tool, result } };
+    } catch (e) {
+      return { confirmation: `⚠ ${server.name}/${action.tool} failed: ${e.message}` };
+    }
+  }
   if (action.type === 'navigate' && PAGE_URLS[action.page]) {
     setTimeout(() => { location.href = PAGE_URLS[action.page]; }, 700);
     return { confirmation: `→ Taking you to ${PAGE_NAMES[PAGE_URLS[action.page]] || action.page}...` };
