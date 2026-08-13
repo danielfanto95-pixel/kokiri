@@ -662,6 +662,26 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
   });
 
   async function callIntelligence(systemPrompt, userText) {
+    // 1. Premium cascade first (Claude -> Gemini -> ChatGPT), via server-side proxy
+    //    since those providers block direct browser calls (no CORS).
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 20000);
+      const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/chat-proxy', {
+        method: 'POST', signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({ systemPrompt, userText }),
+      });
+      clearTimeout(t);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.text) return json;
+      }
+      // 503 no_provider_available (no premium keys set), or any other failure -> fall through to free models.
+    } catch { /* fall through */ }
+
+    // 2. OmniRoute (local, free) — only reachable if Daniel is on the machine running it.
     const omniUrl = (settings.omnirouter_url || 'http://localhost:20128').replace(/\/$/, '');
     try {
       const ctrl = new AbortController();
@@ -676,7 +696,8 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
       const json = await res.json();
       return { text: json.choices?.[0]?.message?.content || '(empty response)', source: 'omnirouter' };
     } catch {
-      if (!settings.openrouter_api_key) throw new Error('OmniRoute unreachable and no OpenRouter key set — open Settings to add one.');
+      // 3. Free OpenRouter model, final fallback.
+      if (!settings.openrouter_api_key) throw new Error('No intelligence available — set at least one API key (Claude/Gemini/ChatGPT/OpenRouter) in Settings, or run OmniRoute locally.');
       return await callOpenRouterWithRetry(systemPrompt, userText);
     }
   }
