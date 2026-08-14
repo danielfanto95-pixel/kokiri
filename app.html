@@ -81,6 +81,37 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 .nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
 .nav-link .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--leaf); flex-shrink: 0; opacity: 0.6; }
 @media (max-width: 900px) { .nav-side { display: none; } }
+
+/* Repository */
+.repo-toolbar { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+.repo-filter {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px;
+  padding: 0.4rem 0.7rem; font-family: inherit; font-size: 0.8rem;
+}
+.repo-dropzone {
+  border: 2px dashed var(--border-bright); border-radius: 12px; padding: 2rem; text-align: center;
+  color: var(--muted); font-size: 0.85rem; margin-bottom: 1.5rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.repo-dropzone:hover, .repo-dropzone.dragover { border-color: var(--leaf); background: var(--surface2); color: var(--text); }
+.repo-dropzone .big { font-size: 1.8rem; margin-bottom: 0.4rem; }
+.repo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.9rem; }
+.repo-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.4rem; transition: border-color 0.15s;
+}
+.repo-card:hover { border-color: var(--border-bright); }
+.repo-card .repo-icon { font-size: 1.8rem; }
+.repo-card .repo-name { font-weight: 600; font-size: 0.85rem; word-break: break-word; }
+.repo-card .repo-meta { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+.repo-card .repo-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+.repo-card-actions { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.4rem; }
+.repo-card-actions button {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px;
+  padding: 0.3rem 0; font-size: 0.72rem; cursor: pointer;
+}
+.repo-card-actions button:hover { border-color: var(--leaf); }
+.repo-card-actions .repo-del:hover { border-color: #f87171; color: #f87171; }
+.repo-upload-progress { font-family: var(--mono); font-size: 0.75rem; color: var(--leaf-bright); margin-bottom: 1rem; }
 </style>
 </head>
 <body>
@@ -92,12 +123,39 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 
 <div class="layout">
   <main>
-    <div class="sheet-head">
-      <h2 id="sheet-title">Loading…</h2>
-      <button class="action-btn" id="btn-add-row">+ Add Row</button>
-      <button class="action-btn" id="btn-add-col">+ Add Column</button>
+    <div id="sheet-view">
+      <div class="sheet-head">
+        <h2 id="sheet-title">Loading…</h2>
+        <button class="action-btn" id="btn-add-row">+ Add Row</button>
+        <button class="action-btn" id="btn-add-col">+ Add Column</button>
+      </div>
+      <div class="grid-wrap"><table id="grid"></table></div>
     </div>
-    <div class="grid-wrap"><table id="grid"></table></div>
+
+    <div id="repository-view" style="display:none;">
+      <div class="sheet-head">
+        <h2>📁 Repository</h2>
+      </div>
+      <div class="repo-toolbar">
+        <select class="repo-filter" id="repo-filter">
+          <option value="">All types</option>
+          <option>Document</option>
+          <option>Spreadsheet</option>
+          <option>Video</option>
+          <option>Image</option>
+          <option>PDF</option>
+          <option>Other</option>
+        </select>
+        <input class="repo-filter" id="repo-search" placeholder="Search files…" style="flex:1;min-width:160px;">
+      </div>
+      <div class="repo-dropzone" id="repo-dropzone">
+        <div class="big">📤</div>
+        <div>Drag & drop files here, or click to choose — documents, spreadsheets, videos, images, PDFs, anything.</div>
+        <input type="file" id="repo-file-input" multiple style="display:none;">
+      </div>
+      <div class="repo-upload-progress" id="repo-upload-progress" style="display:none;"></div>
+      <div class="repo-grid" id="repo-grid"></div>
+    </div>
   </main>
 
   <nav class="nav-side">
@@ -112,6 +170,12 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     <div class="nav-group">
       <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
       <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Repository">Repository<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <div class="nav-link" id="nav-repository"><span class="dot"></span>📁 All Files</div>
+      </div>
     </div>
     <div class="nav-group">
       <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
@@ -164,15 +228,145 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     const navDashboards = document.getElementById('nav-dashboards');
     navDashboards.innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('');
 
+    document.getElementById('nav-repository').addEventListener('click', selectRepository);
+
     const hashSlug = window.location.hash.replace('#', '');
+    if (hashSlug === 'repository') { selectRepository(); return; }
     const initial = sheets.find(s => s.slug === hashSlug) || sheets[0];
     if (initial) selectSheet(initial.slug);
   }
+
+  // ---------- Repository ----------
+  const REPO_BUCKET = 'kokiri-repository';
+  let documents = [];
+  let repoFilterCategory = '';
+  let repoSearchTerm = '';
+
+  const CATEGORY_ICON = { Document: '📄', Spreadsheet: '📊', Video: '🎬', Image: '🖼️', PDF: '📕', Other: '📦' };
+
+  function categoryFor(mimeType, filename) {
+    const ext = (filename.split('.').pop() || '').toLowerCase();
+    if (mimeType?.startsWith('image/')) return 'Image';
+    if (mimeType?.startsWith('video/')) return 'Video';
+    if (mimeType === 'application/pdf' || ext === 'pdf') return 'PDF';
+    if (['xlsx', 'xls', 'csv', 'ods', 'numbers'].includes(ext) || mimeType?.includes('spreadsheet')) return 'Spreadsheet';
+    if (['doc', 'docx', 'txt', 'md', 'rtf', 'pages', 'odt'].includes(ext) || mimeType?.startsWith('text/') || mimeType?.includes('document')) return 'Document';
+    return 'Other';
+  }
+
+  function formatBytes(n) {
+    if (!n) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return n.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+  }
+
+  async function selectRepository() {
+    window.location.hash = 'repository';
+    document.getElementById('sheet-view').style.display = 'none';
+    document.getElementById('repository-view').style.display = '';
+    document.querySelectorAll('#nav-sheets .nav-link').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-repository').classList.add('active');
+    await loadDocuments();
+  }
+
+  async function loadDocuments() {
+    const { data } = await supabase.from('kokiri_documents').select('*').order('created_at', { ascending: false });
+    documents = data || [];
+    renderRepository();
+  }
+
+  function renderRepository() {
+    const grid = document.getElementById('repo-grid');
+    const filtered = documents.filter(d =>
+      (!repoFilterCategory || d.category === repoFilterCategory) &&
+      (!repoSearchTerm || d.name.toLowerCase().includes(repoSearchTerm.toLowerCase()))
+    );
+    if (!filtered.length) {
+      grid.innerHTML = '<p class="empty-note">No files yet — drop something above to get started.</p>';
+      return;
+    }
+    grid.innerHTML = filtered.map(d => `
+      <div class="repo-card" data-id="${d.id}">
+        <div class="repo-icon">${CATEGORY_ICON[d.category] || '📦'}</div>
+        <div class="repo-name">${escapeHtml(d.name)}</div>
+        <div class="repo-meta">${d.category} · ${formatBytes(d.size_bytes)} · ${new Date(d.created_at).toLocaleDateString()}</div>
+        ${d.description ? `<div class="repo-desc">${escapeHtml(d.description)}</div>` : ''}
+        <div class="repo-card-actions">
+          <button data-action="download" data-id="${d.id}">⬇ Download</button>
+          <button data-action="delete" data-id="${d.id}" class="repo-del">✕ Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('[data-action="download"]').forEach(btn => btn.addEventListener('click', () => downloadDocument(btn.dataset.id)));
+    grid.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteDocument(btn.dataset.id)));
+  }
+
+  async function downloadDocument(id) {
+    const doc = documents.find(d => d.id === id);
+    if (!doc) return;
+    const { data, error } = await supabase.storage.from(REPO_BUCKET).createSignedUrl(doc.storage_path, 60);
+    if (error) { alert('⚠ ' + error.message); return; }
+    window.open(data.signedUrl, '_blank');
+  }
+
+  async function deleteDocument(id) {
+    const doc = documents.find(d => d.id === id);
+    if (!doc) return;
+    if (!confirm(`Delete "${doc.name}"? This can't be undone.`)) return;
+    await supabase.storage.from(REPO_BUCKET).remove([doc.storage_path]);
+    await supabase.from('kokiri_documents').delete().eq('id', id);
+    documents = documents.filter(d => d.id !== id);
+    renderRepository();
+  }
+
+  async function uploadFiles(fileList) {
+    const files = Array.from(fileList);
+    if (!files.length) return;
+    const progressEl = document.getElementById('repo-upload-progress');
+    progressEl.style.display = 'block';
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      progressEl.textContent = `Uploading ${i + 1}/${files.length}: ${file.name}…`;
+      const storagePath = `${crypto.randomUUID()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from(REPO_BUCKET).upload(storagePath, file);
+      if (uploadError) { alert(`⚠ Failed to upload ${file.name}: ${uploadError.message}`); continue; }
+      const category = categoryFor(file.type, file.name);
+      await supabase.from('kokiri_documents').insert({
+        name: file.name, category, mime_type: file.type || null, size_bytes: file.size, storage_path: storagePath,
+      });
+    }
+    progressEl.style.display = 'none';
+    await loadDocuments();
+  }
+
+  function initRepositoryUpload() {
+    const dropzone = document.getElementById('repo-dropzone');
+    const fileInput = document.getElementById('repo-file-input');
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => { uploadFiles(fileInput.files); fileInput.value = ''; });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      uploadFiles(e.dataTransfer.files);
+    });
+    document.getElementById('repo-filter').addEventListener('change', (e) => { repoFilterCategory = e.target.value; renderRepository(); });
+    document.getElementById('repo-search').addEventListener('input', (e) => { repoSearchTerm = e.target.value; renderRepository(); });
+  }
+  initRepositoryUpload();
 
   async function selectSheet(slug) {
     currentSheet = sheets.find(s => s.slug === slug);
     if (!currentSheet) return;
     window.location.hash = slug;
+    document.getElementById('sheet-view').style.display = '';
+    document.getElementById('repository-view').style.display = 'none';
+    document.getElementById('nav-repository').classList.remove('active');
     document.querySelectorAll('#nav-sheets .nav-link').forEach(b => b.classList.toggle('active', b.dataset.slug === slug));
     document.getElementById('sheet-title').textContent = currentSheet.name;
 
