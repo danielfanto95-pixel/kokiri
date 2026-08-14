@@ -72,6 +72,18 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .item-row .content .meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
 .empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 
+.brief-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.3rem 1.4rem; margin-bottom: 2.5rem; }
+.brief-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+.brief-head h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); flex: 1; }
+.brief-source { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); text-transform: uppercase; }
+#btn-read-brief {
+  background: transparent; border: 1px solid var(--border-bright); color: var(--leaf-bright);
+  border-radius: 7px; padding: 0.35rem 0.7rem; font-size: 0.75rem; cursor: pointer;
+}
+#btn-read-brief:hover { background: var(--surface2); }
+#btn-read-brief.speaking { color: var(--gold); border-color: rgba(230,192,106,0.4); }
+.brief-text { font-size: 0.88rem; color: var(--text); line-height: 1.7; }
+
 .stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-bottom: 1.2rem; }
 .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; text-align: center; }
 .stat-box .num { font-family: var(--heading); font-size: 1.5rem; font-weight: 800; color: var(--leaf-bright); }
@@ -160,6 +172,15 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
             <div class="sub">Custom views, uploaded sources, AI-generated dashboards.</div>
           </a>
         </div>
+      </div>
+
+      <div class="brief-card">
+        <div class="brief-head">
+          <h2>🗓 Daily Meeting Brief</h2>
+          <span class="brief-source" id="brief-source"></span>
+          <button id="btn-read-brief">🔊 Read it</button>
+        </div>
+        <div class="brief-text" id="brief-text">Loading…</div>
       </div>
 
       <div class="stats-strip" id="stats-strip">
@@ -437,17 +458,12 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     window.speechSynthesis.speak(utter);
   }
 
-  document.getElementById('btn-read-report').addEventListener('click', async () => {
-    const btn = document.getElementById('btn-read-report');
-    const report = activeReportTab === 'daily' ? dailyReport : weeklyReport;
-    if (!report) return;
-
+  async function speakText(text, btn, idleLabel) {
     btn.classList.add('speaking');
     btn.textContent = '🔊 Reading…';
+    const finish = () => { btn.classList.remove('speaking'); btn.textContent = idleLabel; };
 
-    const finish = () => { btn.classList.remove('speaking'); btn.textContent = '🔊 Have Navi read it'; };
-
-    if (!deepgramConfigured) { speakBrowser(report.text); finish(); return; }
+    if (!deepgramConfigured) { speakBrowser(text); finish(); return; }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -456,7 +472,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/deepgram-tts', {
         method: 'POST', signal: ctrl.signal,
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
-        body: JSON.stringify({ text: report.text, voice: deepgramVoice }),
+        body: JSON.stringify({ text, voice: deepgramVoice }),
       });
       clearTimeout(t);
       if (!res.ok) throw new Error('deepgram tts unavailable');
@@ -467,16 +483,131 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       audio.play();
       return;
     } catch {
-      speakBrowser(report.text); // graceful fallback, same pattern as the widget
+      speakBrowser(text); // graceful fallback, same pattern as the widget
     }
     finish();
+  }
+
+  document.getElementById('btn-read-report').addEventListener('click', () => {
+    const report = activeReportTab === 'daily' ? dailyReport : weeklyReport;
+    if (report) speakText(report.text, document.getElementById('btn-read-report'), '🔊 Have Navi read it');
+  });
+
+  // ---------- Meetings sheet (kokiri_sheets/slug=meetings) — persists briefs + report snapshots ----------
+  let meetingsSheetId = null;
+  async function getMeetingsSheetId() {
+    const { data } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'meetings').maybeSingle();
+    return data?.id || null;
+  }
+
+  async function findMeetingRow(dateStr, type) {
+    if (!meetingsSheetId) return null;
+    const { data } = await supabase.from('kokiri_rows').select('id, data').eq('sheet_id', meetingsSheetId).order('created_at', { ascending: false }).limit(60);
+    return (data || []).find(r => r.data?.date === dateStr && r.data?.type === type) || null;
+  }
+
+  async function saveMeetingRow(dateStr, type, summary, details) {
+    if (!meetingsSheetId) return;
+    await supabase.from('kokiri_rows').insert({
+      sheet_id: meetingsSheetId,
+      data: { date: dateStr, type, summary, details: details || '' },
+    });
+  }
+
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function weekStr() {
+    const d = new Date();
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    return `${d.getFullYear()}-W${week}`;
+  }
+
+  // ---------- Daily Meeting Brief — AI-authored via the intelligence cascade, deterministic fallback ----------
+  async function callBriefIntelligence(prompt) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 20000);
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/chat-proxy', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ messages: [
+        { role: 'system', content: 'You are Navi, Daniel\'s chief-of-staff assistant. Write a short, warm, prioritized daily meeting brief (4-6 sentences) from the data given. Lead with what matters most today. No headers, no bullet points, no markdown — plain spoken prose, like a real briefing.' },
+        { role: 'user', content: prompt },
+      ] }),
+    });
+    clearTimeout(t);
+    if (!res.ok) throw new Error('brief generation unavailable');
+    const json = await res.json();
+    if (!json.text) throw new Error('empty brief');
+    return json.text.trim();
+  }
+
+  function deterministicBrief(pendingCount, openTriageCount, statsData) {
+    return `Good ${new Date().getHours() < 18 ? 'day' : 'evening'}. You have ${pendingCount} pending task${pendingCount === 1 ? '' : 's'} across ${statsData.activeAgents} active agent${statsData.activeAgents === 1 ? '' : 's'}` +
+      (openTriageCount ? `, and ${openTriageCount} open triage item${openTriageCount === 1 ? '' : 's'} worth a look` : '') +
+      `. Estimated API spend this week is $${statsData.cost7d.toFixed(2)}. Check the Daily Report below for what moved since yesterday.`;
+  }
+
+  async function loadMeetingBrief(agentsList, statsData) {
+    const dateStr = todayStr();
+    const sourceEl = document.getElementById('brief-source');
+    const textEl = document.getElementById('brief-text');
+
+    const existing = await findMeetingRow(dateStr, 'daily_brief');
+    if (existing) {
+      textEl.textContent = existing.data.summary;
+      sourceEl.textContent = 'saved earlier today';
+      return existing.data.summary;
+    }
+
+    const { data: pending } = await supabase.from('agent_tasks').select('title, agent_id, priority').in('status', ['todo', 'in_progress']).order('created_at', { ascending: false }).limit(10);
+    const { data: openTriage } = await supabase.from('agent_triage').select('issue_text').eq('status', 'open').limit(5);
+    const agentName = id => agentsList.find(a => a.id === id)?.name || 'an agent';
+
+    const prompt = `Active agents: ${statsData.activeAgents}. Pending tasks (${(pending || []).length}): ${(pending || []).map(t => `"${t.title}" (${agentName(t.agent_id)}, ${t.priority})`).join('; ') || 'none'}. Open triage issues: ${(openTriage || []).map(t => t.issue_text).join('; ') || 'none'}. Estimated API cost this week: $${statsData.cost7d.toFixed(2)}.`;
+
+    let brief;
+    let source = 'Navi';
+    try {
+      brief = await callBriefIntelligence(prompt);
+    } catch {
+      brief = deterministicBrief((pending || []).length, (openTriage || []).length, statsData);
+      source = 'summary';
+    }
+
+    textEl.textContent = brief;
+    sourceEl.textContent = source === 'Navi' ? 'written by Navi' : source;
+    await saveMeetingRow(dateStr, 'daily_brief', brief, prompt);
+    return brief;
+  }
+
+  document.getElementById('btn-read-brief').addEventListener('click', () => {
+    const text = document.getElementById('brief-text').textContent;
+    if (text && text !== 'Loading…') speakText(text, document.getElementById('btn-read-brief'), '🔊 Read it');
   });
 
   const { agents } = await loadNav();
   await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings()]);
+  meetingsSheetId = await getMeetingsSheetId();
+
+  const statsSnapshot = {
+    activeAgents: Number(document.getElementById('stat-active-agents').textContent) || 0,
+    cost7d: Number((document.getElementById('stat-cost-7d').textContent || '$0').replace('$', '')) || 0,
+  };
+  await loadMeetingBrief(agents, statsSnapshot);
+
   dailyReport = await buildDailyReport(agents);
   weeklyReport = await buildWeeklyReport(agents);
   renderReport('daily');
+
+  // Log today's/this week's report snapshots to the Meetings sheet, once per period.
+  const dStr = todayStr(), wStr = weekStr();
+  if (!(await findMeetingRow(dStr, 'daily_report'))) {
+    await saveMeetingRow(dStr, 'daily_report', dailyReport.text, dailyReport.html);
+  }
+  if (!(await findMeetingRow(wStr, 'weekly_report'))) {
+    await saveMeetingRow(wStr, 'weekly_report', weeklyReport.text, weeklyReport.html);
+  }
 </script>
 
 <script type="module" src="ambience.js"></script>
