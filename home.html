@@ -72,6 +72,31 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .item-row .content .meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
 .empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 
+.stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-bottom: 1.2rem; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; text-align: center; }
+.stat-box .num { font-family: var(--heading); font-size: 1.5rem; font-weight: 800; color: var(--leaf-bright); }
+.stat-box .label { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.2rem; }
+
+.report-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem 1.4rem; }
+.report-tabs { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.report-tab {
+  background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 7px;
+  padding: 0.4rem 0.9rem; font-family: var(--heading); font-weight: 700; font-size: 0.8rem; cursor: pointer;
+}
+.report-tab.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); }
+#btn-read-report {
+  margin-left: auto; background: transparent; border: 1px solid var(--border-bright); color: var(--leaf-bright);
+  border-radius: 7px; padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+}
+#btn-read-report:hover { background: var(--surface2); }
+#btn-read-report.speaking { color: var(--gold); border-color: rgba(230,192,106,0.4); }
+.report-body h3 { font-family: var(--heading); font-size: 0.88rem; color: var(--leaf-bright); margin: 0.9rem 0 0.4rem; }
+.report-body h3:first-child { margin-top: 0; }
+.report-body p { font-size: 0.85rem; color: var(--text); line-height: 1.6; margin-bottom: 0.3rem; }
+.report-body ul { margin: 0.3rem 0 0.3rem 1.2rem; }
+.report-body li { font-size: 0.84rem; color: var(--muted); margin-bottom: 0.2rem; }
+.report-body .stat-line { color: var(--leaf-bright); font-weight: 600; }
+
 .context-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.3rem;
   font-size: 0.85rem; color: var(--muted); line-height: 1.6; white-space: pre-wrap;
@@ -134,6 +159,24 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
             <div class="title">Dashboards</div>
             <div class="sub">Custom views, uploaded sources, AI-generated dashboards.</div>
           </a>
+        </div>
+      </div>
+
+      <div class="stats-strip" id="stats-strip">
+        <div class="stat-box"><div class="num" id="stat-active-agents">—</div><div class="label">Active Agents</div></div>
+        <div class="stat-box"><div class="num" id="stat-pending-tasks">—</div><div class="label">Pending Tasks</div></div>
+        <div class="stat-box"><div class="num" id="stat-open-triage">—</div><div class="label">Open Triage</div></div>
+        <div class="stat-box"><div class="num" id="stat-cost-7d">—</div><div class="label">Est. Cost (7d)</div></div>
+      </div>
+
+      <div class="section">
+        <div class="report-card">
+          <div class="report-tabs">
+            <button class="report-tab active" id="tab-daily">📅 Daily Report</button>
+            <button class="report-tab" id="tab-weekly">🗓 Weekly Report</button>
+            <button id="btn-read-report">🔊 Have Navi read it</button>
+          </div>
+          <div class="report-body" id="report-body"><p class="empty">Loading…</p></div>
         </div>
       </div>
 
@@ -293,8 +336,147 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     el.innerHTML = `<div class="context-card">${escapeHtml(preview)}</div><a class="context-edit-link" href="context.html">📝 Edit →</a>`;
   }
 
+  // ---------- Important Stats ----------
+  async function loadStats() {
+    const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const [{ data: activeAgents }, { data: pendingTasks }, { data: openTriage }, { data: usage7d }] = await Promise.all([
+      supabase.from('agents').select('id').eq('status', 'active'),
+      supabase.from('agent_tasks').select('id').in('status', ['todo', 'in_progress']),
+      supabase.from('agent_triage').select('id').eq('status', 'open'),
+      supabase.from('kokiri_usage_log').select('estimated_cost_usd').gte('created_at', since7d),
+    ]);
+    document.getElementById('stat-active-agents').textContent = (activeAgents || []).length;
+    document.getElementById('stat-pending-tasks').textContent = (pendingTasks || []).length;
+    document.getElementById('stat-open-triage').textContent = (openTriage || []).length;
+    const cost = (usage7d || []).reduce((sum, r) => sum + (Number(r.estimated_cost_usd) || 0), 0);
+    document.getElementById('stat-cost-7d').textContent = '$' + cost.toFixed(2);
+  }
+
+  // ---------- Daily / Weekly Reports ----------
+  let dailyReport = null, weeklyReport = null, activeReportTab = 'daily';
+
+  async function buildDailyReport(agentsList) {
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const [{ data: completed }, { data: created }, { data: timeline }] = await Promise.all([
+      supabase.from('agent_tasks').select('title, agent_id, updated_at').eq('status', 'done').gte('updated_at', since),
+      supabase.from('agent_tasks').select('title, agent_id, created_at').gte('created_at', since),
+      supabase.from('agent_timeline').select('event_text, event_type, agent_id, occurred_at').gte('occurred_at', since).order('occurred_at', { ascending: false }),
+    ]);
+    const agentName = id => agentsList.find(a => a.id === id)?.name || 'an agent';
+    const automatedRuns = (timeline || []).filter(t => t.event_type === 'automated_run');
+
+    const html = `
+      <h3>✅ Completed (${(completed || []).length})</h3>
+      ${(completed || []).length ? `<ul>${completed.map(t => `<li>${escapeHtml(t.title)} — ${escapeHtml(agentName(t.agent_id))}</li>`).join('')}</ul>` : '<p>Nothing marked done in the last 24 hours.</p>'}
+      <h3>🆕 New Tasks (${(created || []).length})</h3>
+      ${(created || []).length ? `<ul>${created.map(t => `<li>${escapeHtml(t.title)} — ${escapeHtml(agentName(t.agent_id))}</li>`).join('')}</ul>` : '<p>No new tasks created today.</p>'}
+      <h3>🤖 Automated Runs (${automatedRuns.length})</h3>
+      ${automatedRuns.length ? `<ul>${automatedRuns.slice(0, 8).map(t => `<li>${escapeHtml(agentName(t.agent_id))}: ${escapeHtml(t.event_text.slice(0, 140))}</li>`).join('')}</ul>` : '<p>No autonomous runs logged today.</p>'}
+    `;
+    const text = `Daily report for today. ${(completed || []).length} task${(completed || []).length === 1 ? '' : 's'} completed. ${(created || []).length} new task${(created || []).length === 1 ? '' : 's'} created. ${automatedRuns.length} automated agent run${automatedRuns.length === 1 ? '' : 's'} logged.` +
+      (completed?.length ? ` Completed: ${completed.map(t => t.title).join(', ')}.` : '') +
+      (automatedRuns.length ? ` Recent automated activity: ${automatedRuns.slice(0, 3).map(t => t.event_text).join('. ')}.` : '');
+    return { html, text };
+  }
+
+  async function buildWeeklyReport(agentsList) {
+    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const [{ data: completed }, { data: created }, { data: timeline }, { data: usage }] = await Promise.all([
+      supabase.from('agent_tasks').select('title, agent_id').eq('status', 'done').gte('updated_at', since),
+      supabase.from('agent_tasks').select('id').gte('created_at', since),
+      supabase.from('agent_timeline').select('agent_id').gte('occurred_at', since),
+      supabase.from('kokiri_usage_log').select('estimated_cost_usd, source').gte('created_at', since),
+    ]);
+    const agentName = id => agentsList.find(a => a.id === id)?.name || 'an agent';
+    const counts = {};
+    (timeline || []).forEach(t => { counts[t.agent_id] = (counts[t.agent_id] || 0) + 1; });
+    const busiest = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    const cost = (usage || []).reduce((sum, r) => sum + (Number(r.estimated_cost_usd) || 0), 0);
+
+    const html = `
+      <h3>📈 This Week</h3>
+      <p><span class="stat-line">${(completed || []).length}</span> tasks completed · <span class="stat-line">${(created || []).length}</span> new tasks · <span class="stat-line">${(timeline || []).length}</span> agent activity events</p>
+      <h3>🏆 Busiest Agent</h3>
+      <p>${busiest ? escapeHtml(agentName(busiest[0])) + ` — ${busiest[1]} events` : 'No agent activity logged this week.'}</p>
+      <h3>💳 API Usage</h3>
+      <p><span class="stat-line">$${cost.toFixed(4)}</span> estimated across ${(usage || []).length} call${(usage || []).length === 1 ? '' : 's'} <a href="context.html" style="color:var(--leaf);font-size:0.78rem;">(full breakdown →)</a></p>
+      <h3>✅ Completed This Week</h3>
+      ${(completed || []).length ? `<ul>${completed.slice(0, 12).map(t => `<li>${escapeHtml(t.title)} — ${escapeHtml(agentName(t.agent_id))}</li>`).join('')}</ul>` : '<p>Nothing completed this week yet.</p>'}
+    `;
+    const text = `Weekly report. ${(completed || []).length} tasks completed this week, ${(created || []).length} new tasks created, and ${(timeline || []).length} total agent activity events.` +
+      (busiest ? ` The busiest agent was ${agentName(busiest[0])} with ${busiest[1]} events.` : '') +
+      ` Estimated API cost this week was $${cost.toFixed(2)}.` +
+      (completed?.length ? ` Tasks completed: ${completed.slice(0, 8).map(t => t.title).join(', ')}.` : '');
+    return { html, text };
+  }
+
+  function renderReport(tab) {
+    activeReportTab = tab;
+    document.getElementById('tab-daily').classList.toggle('active', tab === 'daily');
+    document.getElementById('tab-weekly').classList.toggle('active', tab === 'weekly');
+    const report = tab === 'daily' ? dailyReport : weeklyReport;
+    document.getElementById('report-body').innerHTML = report ? report.html : '<p class="empty">Loading…</p>';
+  }
+  document.getElementById('tab-daily').addEventListener('click', () => renderReport('daily'));
+  document.getElementById('tab-weekly').addEventListener('click', () => renderReport('weekly'));
+
+  // ---------- "Have Navi read it" — Deepgram TTS with browser fallback (mirrors widget.js) ----------
+  let deepgramVoice = 'aura-asteria-en', deepgramConfigured = false;
+  async function loadVoiceSettings() {
+    const { data } = await supabase.from('kokiri_settings').select('key, value').in('key', ['deepgram_voice', 'deepgram_key_configured']);
+    (data || []).forEach(r => {
+      if (r.key === 'deepgram_voice' && r.value) deepgramVoice = r.value;
+      if (r.key === 'deepgram_key_configured') deepgramConfigured = r.value === 'true';
+    });
+  }
+
+  function speakBrowser(text) {
+    if (!window.speechSynthesis) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1.05;
+    window.speechSynthesis.speak(utter);
+  }
+
+  document.getElementById('btn-read-report').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-read-report');
+    const report = activeReportTab === 'daily' ? dailyReport : weeklyReport;
+    if (!report) return;
+
+    btn.classList.add('speaking');
+    btn.textContent = '🔊 Reading…';
+
+    const finish = () => { btn.classList.remove('speaking'); btn.textContent = '🔊 Have Navi read it'; };
+
+    if (!deepgramConfigured) { speakBrowser(report.text); finish(); return; }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 15000);
+      const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/deepgram-tts', {
+        method: 'POST', signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({ text: report.text, voice: deepgramVoice }),
+      });
+      clearTimeout(t);
+      if (!res.ok) throw new Error('deepgram tts unavailable');
+      const blob = await res.blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      audio.addEventListener('ended', finish);
+      audio.addEventListener('error', finish);
+      audio.play();
+      return;
+    } catch {
+      speakBrowser(report.text); // graceful fallback, same pattern as the widget
+    }
+    finish();
+  });
+
   const { agents } = await loadNav();
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview()]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings()]);
+  dailyReport = await buildDailyReport(agents);
+  weeklyReport = await buildWeeklyReport(agents);
+  renderReport('daily');
 </script>
 
 <script type="module" src="widget.js"></script>
