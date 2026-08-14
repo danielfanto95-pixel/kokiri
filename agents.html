@@ -194,6 +194,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
     <div class="status-pill"><span class="status-dot" id="dot-ollama"></span> Ollama</div>
     <div class="status-pill"><span class="status-dot" id="dot-openrouter"></span> OpenRouter</div>
     <button id="btn-mcp">🔌 MCP Servers</button>
+    <button id="btn-api">🌐 API Servers</button>
     <button id="btn-settings">⚙ Settings</button>
   </div>
 </div>
@@ -458,25 +459,76 @@ main { padding: 1.5rem; overflow-x: hidden; }
     location.href = json.authUrl; // hand off to the provider's login/consent screen — same UX as claude.ai connectors
   }
 
-  function renderMcpModal() {
+  // Servers we've confirmed the shape of this session — quick-fill, not a guarantee every field still applies.
+  const MCP_KNOWN_SERVERS = [
+    { name: 'Higgsfield', url: 'https://mcp.higgsfield.ai/mcp', note: 'OAuth auto-discovery works end to end.' },
+    { name: 'Buffer', url: 'https://mcp.buffer.com/mcp', note: 'Needs a manual Bearer Token — get one at publish.buffer.com/settings/api.' },
+    { name: 'Zapier', url: 'https://mcp.zapier.com/api/v1/connect', note: 'Needs a manual Bearer Token from your Zapier MCP dashboard (covers Gmail/Drive/Calendar + 9000 more apps).' },
+  ];
+
+  function mcpRowState(s) {
+    if (s.auth_type === 'oauth' && s.token_secret_name) return 'connected-oauth';
+    if (s.oauth_authorize_url && !s.token_secret_name) return 'oauth-ready';
+    if (s.last_tested_at && !s.last_error) return 'connected';
+    if (s.last_error) return 'needs-auth';
+    return 'untested';
+  }
+
+  function renderMcpModal(authFormOpenFor) {
     const rows = mcpServers.map(s => {
-      const needsOauthConnect = s.auth_type === 'oauth' && !s.token_secret_name;
+      const state = mcpRowState(s);
+      const badge = {
+        'connected-oauth': { text: `✓ ${(s.tools_cache || []).length} tools (OAuth)`, color: 'var(--leaf-bright)' },
+        'connected': { text: `✓ ${(s.tools_cache || []).length} tools`, color: 'var(--leaf-bright)' },
+        'oauth-ready': { text: '🔑 login required', color: 'var(--gold)' },
+        'needs-auth': { text: '⚠ needs auth', color: '#e08a8a' },
+        'untested': { text: 'not connected', color: 'var(--muted)' },
+      }[state];
+      const btnLabel = { 'connected-oauth': 'Test', 'connected': 'Test', 'oauth-ready': 'Finish Login', 'needs-auth': 'Retry', 'untested': 'Connect' }[state];
+      const btnPrimary = state === 'oauth-ready';
+
       return `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:0.6rem;">
         <div style="display:flex;align-items:center;gap:0.6rem;">
           <strong style="flex:1;">${escapeHtml(s.name)}</strong>
-          <span style="font-family:var(--mono);font-size:0.7rem;color:${s.last_error ? '#e08a8a' : (s.last_tested_at ? 'var(--leaf-bright)' : 'var(--muted)')};">
-            ${s.last_error ? '⚠ needs auth' : (s.last_tested_at ? `✓ ${(s.tools_cache || []).length} tools` : 'not connected')}
-          </span>
-          <button class="mcp-connect" data-id="${s.id}" data-needs-oauth="${needsOauthConnect}" style="background:${needsOauthConnect ? 'var(--leaf)' : 'transparent'};color:${needsOauthConnect ? '#0c120d' : 'var(--leaf-bright)'};border:1px solid var(--border-bright);border-radius:5px;padding:0.2rem 0.6rem;font-size:0.72rem;cursor:pointer;font-weight:600;">${needsOauthConnect ? 'Connect' : 'Test'}</button>
+          <span style="font-family:var(--mono);font-size:0.7rem;color:${badge.color};">${badge.text}</span>
+          <button class="mcp-connect" data-id="${s.id}" data-state="${state}" style="background:${btnPrimary ? 'var(--leaf)' : 'transparent'};color:${btnPrimary ? '#0c120d' : 'var(--leaf-bright)'};border:1px solid var(--border-bright);border-radius:5px;padding:0.2rem 0.6rem;font-size:0.72rem;cursor:pointer;font-weight:600;">${btnLabel}</button>
+          ${state === 'needs-auth' ? `<button class="mcp-add-token" data-id="${s.id}" style="background:transparent;border:1px solid var(--border-bright);color:var(--gold);border-radius:5px;padding:0.2rem 0.6rem;font-size:0.72rem;cursor:pointer;">+ Add Token</button>` : ''}
           <button class="mcp-del" data-id="${s.id}" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;">✕</button>
         </div>
         <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:0.3rem;">${escapeHtml(s.url)}</div>
         ${s.last_error ? `<div style="font-size:0.72rem;color:#e08a8a;margin-top:0.3rem;">${escapeHtml(s.last_error)}</div>` : ''}
         ${(s.tools_cache || []).length ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">Tools: ${(s.tools_cache || []).map(t => escapeHtml(t.name)).join(', ')}</div>` : ''}
+
+        ${authFormOpenFor === s.id ? `
+        <div style="border-top:1px solid var(--border);margin-top:0.7rem;padding-top:0.7rem;">
+          <label style="font-size:0.75rem;">Auth Type</label>
+          <select class="mcp-inline-auth-type" data-id="${s.id}">
+            <option value="bearer">Bearer Token</option>
+            <option value="oauth">OAuth (manual — I have Client ID/Secret/endpoints)</option>
+          </select>
+          <div class="mcp-inline-bearer-fields" data-id="${s.id}">
+            <label style="font-size:0.75rem;">Token</label>
+            <input class="mcp-inline-token" data-id="${s.id}" type="password" placeholder="the server's API token">
+          </div>
+          <div class="mcp-inline-oauth-fields" data-id="${s.id}" style="display:none;">
+            <label style="font-size:0.75rem;">Client ID</label>
+            <input class="mcp-inline-oauth-client-id" data-id="${s.id}" placeholder="from the provider's OAuth app settings">
+            <label style="font-size:0.75rem;">Client Secret</label>
+            <input class="mcp-inline-oauth-client-secret" data-id="${s.id}" type="password" placeholder="optional">
+            <label style="font-size:0.75rem;">Authorize URL</label>
+            <input class="mcp-inline-oauth-authorize-url" data-id="${s.id}" placeholder="https://provider.com/oauth/authorize">
+            <label style="font-size:0.75rem;">Token URL</label>
+            <input class="mcp-inline-oauth-token-url" data-id="${s.id}" placeholder="https://provider.com/oauth/token">
+          </div>
+          <button class="mcp-inline-save" data-id="${s.id}" style="margin-top:0.4rem;background:var(--leaf);color:#0c120d;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-family:var(--heading);font-weight:700;font-size:0.78rem;cursor:pointer;">Save & Connect</button>
+        </div>
+        ` : ''}
       </div>
     `;
     }).join('') || '<p style="color:var(--muted);font-size:0.85rem;">No MCP servers connected yet.</p>';
+
+    const presetButtons = MCP_KNOWN_SERVERS.map(p => `<button class="mcp-preset" data-name="${escapeHtml(p.name)}" data-url="${escapeHtml(p.url)}" title="${escapeHtml(p.note)}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:0.3rem 0.7rem;font-size:0.75rem;cursor:pointer;">${escapeHtml(p.name)}</button>`).join(' ');
 
     openModal(`
       <h2>🔌 MCP Servers</h2>
@@ -485,6 +537,9 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <div id="mcp-list">${rows}</div>
 
       <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;">
+        <label>Known servers (click to quick-fill)</label>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.8rem;">${presetButtons}</div>
+
         <label>Name</label>
         <input id="mcp-name" placeholder="e.g. Notion, Zapier, my own MCP server">
         <label>Server URL (the MCP endpoint itself)</label>
@@ -526,6 +581,11 @@ main { padding: 1.5rem; overflow-x: hidden; }
       </div>
     `);
 
+    document.querySelectorAll('.mcp-preset').forEach(btn => btn.addEventListener('click', () => {
+      document.getElementById('mcp-name').value = btn.dataset.name;
+      document.getElementById('mcp-url').value = btn.dataset.url;
+    }));
+
     const advToggle = document.getElementById('mcp-advanced-toggle');
     const advFields = document.getElementById('mcp-advanced-fields');
     advToggle.addEventListener('click', () => { advFields.style.display = advFields.style.display === 'none' ? 'block' : 'none'; });
@@ -536,18 +596,23 @@ main { padding: 1.5rem; overflow-x: hidden; }
       document.getElementById('mcp-oauth-fields').style.display = authTypeSel.value === 'oauth' ? 'block' : 'none';
     });
 
+    document.querySelectorAll('.mcp-inline-auth-type').forEach(sel => sel.addEventListener('change', () => {
+      document.querySelector(`.mcp-inline-bearer-fields[data-id="${sel.dataset.id}"]`).style.display = sel.value === 'bearer' ? 'block' : 'none';
+      document.querySelector(`.mcp-inline-oauth-fields[data-id="${sel.dataset.id}"]`).style.display = sel.value === 'oauth' ? 'block' : 'none';
+    }));
+
     document.querySelectorAll('.mcp-connect').forEach(btn => btn.addEventListener('click', async () => {
       const serverId = btn.dataset.id;
+      const state = btn.dataset.state;
       btn.textContent = '…';
       btn.disabled = true;
 
-      if (btn.dataset.needsOauth === 'true') {
+      if (state === 'oauth-ready') {
         try { await startMcpOauth(serverId); }
-        catch (e) { alert('⚠ ' + e.message); btn.textContent = 'Connect'; btn.disabled = false; }
+        catch (e) { alert('⚠ ' + e.message); btn.textContent = 'Finish Login'; btn.disabled = false; }
         return;
       }
 
-      // Plain connectivity test first — covers no-auth and already-connected bearer/oauth servers.
       try {
         await callMcpClient({ type: 'list_tools', server_id: serverId });
         await loadMcpServers();
@@ -557,14 +622,48 @@ main { padding: 1.5rem; overflow-x: hidden; }
         const server = mcpServers.find(s => s.id === serverId);
         const looksLikeAuthError = /\b(401|403)\b/.test(e.message || '');
         if (server?.auth_type === 'none' && looksLikeAuthError) {
-          // Server needs auth and none is configured yet — try automatic OAuth discovery, same as claude.ai's flow.
           try { await startMcpOauth(serverId); return; }
-          catch (e2) {
-            alert('⚠ This server needs authentication and automatic discovery didn\'t work:\n\n' + e2.message);
-          }
+          catch { /* discovery failure already persisted to the row */ }
         }
         await loadMcpServers();
-        renderMcpModal(); // error already persisted to the row by mcp-client
+        renderMcpModal();
+      }
+    }));
+    document.querySelectorAll('.mcp-add-token').forEach(btn => btn.addEventListener('click', () => renderMcpModal(btn.dataset.id)));
+    document.querySelectorAll('.mcp-inline-save').forEach(btn => btn.addEventListener('click', async () => {
+      const serverId = btn.dataset.id;
+      const authType = document.querySelector(`.mcp-inline-auth-type[data-id="${serverId}"]`).value;
+      const server = mcpServers.find(s => s.id === serverId);
+      let updateBody = { auth_type: authType, last_error: null };
+
+      if (authType === 'bearer') {
+        const token = document.querySelector(`.mcp-inline-token[data-id="${serverId}"]`).value.trim();
+        if (!token) { alert('Enter a token.'); return; }
+        const secretName = `mcp_token_${server.slug}`;
+        await supabase.rpc('set_secret', { secret_name: secretName, secret_value: token });
+        updateBody.secret_name = secretName;
+        await supabase.from('kokiri_mcp_servers').update(updateBody).eq('id', serverId);
+        await loadMcpServers();
+        renderMcpModal();
+        try { await callMcpClient({ type: 'list_tools', server_id: serverId }); } catch { /* surfaced on row */ }
+        await loadMcpServers();
+        renderMcpModal();
+      } else {
+        const clientId = document.querySelector(`.mcp-inline-oauth-client-id[data-id="${serverId}"]`).value.trim();
+        const clientSecret = document.querySelector(`.mcp-inline-oauth-client-secret[data-id="${serverId}"]`).value.trim();
+        const authorizeUrl = document.querySelector(`.mcp-inline-oauth-authorize-url[data-id="${serverId}"]`).value.trim();
+        const tokenUrl = document.querySelector(`.mcp-inline-oauth-token-url[data-id="${serverId}"]`).value.trim();
+        if (!clientId || !authorizeUrl || !tokenUrl) { alert('Client ID, Authorize URL, and Token URL are required.'); return; }
+        updateBody.oauth_client_id = clientId;
+        updateBody.oauth_authorize_url = authorizeUrl;
+        updateBody.oauth_token_url = tokenUrl;
+        if (clientSecret) {
+          const secretName = `mcp_oauth_secret_${server.slug}`;
+          await supabase.rpc('set_secret', { secret_name: secretName, secret_value: clientSecret });
+          updateBody.secret_name = secretName;
+        }
+        await supabase.from('kokiri_mcp_servers').update(updateBody).eq('id', serverId);
+        try { await startMcpOauth(serverId); } catch (e) { alert('⚠ ' + e.message); await loadMcpServers(); renderMcpModal(); }
       }
     }));
     document.querySelectorAll('.mcp-del').forEach(btn => btn.addEventListener('click', async () => {
@@ -617,9 +716,15 @@ main { padding: 1.5rem; overflow-x: hidden; }
         // Manual OAuth details already provided — go straight to the provider's login screen.
         try { await startMcpOauth(created.id); } catch (e) { alert('⚠ ' + e.message); }
       } else {
-        // "none"/bearer: test immediately. If it turns out the server needs auth, the row's
-        // Connect button will offer auto-discovery next click.
-        try { await callMcpClient({ type: 'list_tools', server_id: created.id }); } catch { /* surfaced on the row */ }
+        // "none"/bearer: test immediately, chaining into auto-discovery on an auth-shaped failure —
+        // covers the common one-click happy path (like Higgsfield) in a single Add.
+        try {
+          await callMcpClient({ type: 'list_tools', server_id: created.id });
+        } catch (e) {
+          if (/\b(401|403)\b/.test(e.message || '')) {
+            try { await startMcpOauth(created.id); return; } catch { /* failure persisted to row */ }
+          }
+        }
         await loadMcpServers();
         renderMcpModal();
       }
@@ -629,6 +734,214 @@ main { padding: 1.5rem; overflow-x: hidden; }
   document.getElementById('btn-mcp').addEventListener('click', async () => {
     await loadMcpServers();
     renderMcpModal();
+  });
+
+  // ---------- Generic API Servers (non-MCP) ----------
+  let apiServers = [];
+  let apiActionsByServer = {}; // server_id -> [actions]
+
+  async function loadApiServers() {
+    const [{ data: servers }, { data: actions }] = await Promise.all([
+      supabase.from('kokiri_api_servers').select('*').order('created_at'),
+      supabase.from('kokiri_api_actions').select('*').order('created_at'),
+    ]);
+    apiServers = servers || [];
+    apiActionsByServer = {};
+    (actions || []).forEach(a => {
+      (apiActionsByServer[a.server_id] = apiActionsByServer[a.server_id] || []).push(a);
+    });
+  }
+
+  async function callApiClient(body) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/api-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'api-client request failed');
+    return json;
+  }
+
+  function renderApiModal(openActionsForServerId) {
+    const serverRows = apiServers.map(s => {
+      const actions = apiActionsByServer[s.id] || [];
+      const showActions = s.id === openActionsForServerId;
+      return `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <strong style="flex:1;">${escapeHtml(s.name)}</strong>
+          <span style="font-family:var(--mono);font-size:0.65rem;color:var(--dim);text-transform:uppercase;">${s.auth_type}</span>
+          <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);">${actions.length} action${actions.length === 1 ? '' : 's'}</span>
+          <button class="api-toggle-actions" data-id="${s.id}" style="background:transparent;border:1px solid var(--border-bright);color:var(--leaf-bright);border-radius:5px;padding:0.2rem 0.5rem;font-size:0.72rem;cursor:pointer;">${showActions ? 'Hide' : 'Manage Actions'}</button>
+          <button class="api-del" data-id="${s.id}" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;">✕</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:0.3rem;">${escapeHtml(s.base_url)}</div>
+        ${actions.length ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">${actions.map(a => `${escapeHtml(a.method)} ${escapeHtml(a.name)}`).join(' · ')}</div>` : ''}
+
+        ${showActions ? `
+        <div style="border-top:1px solid var(--border);margin-top:0.7rem;padding-top:0.7rem;">
+          ${actions.map(a => `
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+              <span style="font-family:var(--mono);font-size:0.7rem;color:var(--leaf-bright);width:3.2rem;">${escapeHtml(a.method)}</span>
+              <span style="flex:1;font-size:0.8rem;">${escapeHtml(a.name)} <span style="color:var(--muted);font-size:0.72rem;">${escapeHtml(a.path)}</span></span>
+              <button class="api-action-del" data-id="${a.id}" data-server-id="${s.id}" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem;">✕</button>
+            </div>
+          `).join('') || '<p style="color:var(--muted);font-size:0.78rem;">No actions defined yet.</p>'}
+
+          <div style="margin-top:0.6rem;">
+            <label style="font-size:0.75rem;">Action Name</label>
+            <input class="api-new-action-name" data-server-id="${s.id}" placeholder="e.g. send_email, create_booking">
+            <label style="font-size:0.75rem;">Description (helps agents know when to use it)</label>
+            <input class="api-new-action-desc" data-server-id="${s.id}" placeholder="e.g. Send an email to a client">
+            <div style="display:flex;gap:0.5rem;">
+              <div style="flex:0 0 90px;">
+                <label style="font-size:0.75rem;">Method</label>
+                <select class="api-new-action-method" data-server-id="${s.id}">
+                  <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+                </select>
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:0.75rem;">Path (relative, {{placeholders}} allowed)</label>
+                <input class="api-new-action-path" data-server-id="${s.id}" placeholder="/v1/messages/{{id}}">
+              </div>
+            </div>
+            <label style="font-size:0.75rem;">Body Template (JSON, POST/PUT/PATCH only — {{placeholders}} allowed)</label>
+            <textarea class="api-new-action-body" data-server-id="${s.id}" rows="2" placeholder='{"to":"{{to}}","subject":"{{subject}}"}'></textarea>
+            <button class="api-add-action" data-server-id="${s.id}" style="margin-top:0.4rem;background:var(--leaf);color:#0c120d;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-family:var(--heading);font-weight:700;font-size:0.78rem;cursor:pointer;">+ Add Action</button>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+    }).join('') || '<p style="color:var(--muted);font-size:0.85rem;">No API servers connected yet.</p>';
+
+    openModal(`
+      <h2>🌐 API Servers</h2>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">For services that don't speak MCP — connect any REST API directly. Define one or more "actions" per server (an HTTP method + path + optional body/query template with <code style="font-family:var(--mono);">{{placeholders}}</code>), and agents can call them by name.</p>
+
+      <div id="api-list">${serverRows}</div>
+
+      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;">
+        <label>Name</label>
+        <input id="api-name" placeholder="e.g. Stripe, my own backend">
+        <label>Base URL</label>
+        <input id="api-base-url" placeholder="https://api.example.com">
+        <label>Auth Type</label>
+        <select id="api-auth-type">
+          <option value="none">None</option>
+          <option value="bearer">Bearer Token (Authorization: Bearer …)</option>
+          <option value="header">Custom Header (e.g. X-API-Key)</option>
+          <option value="basic">Basic Auth (username + password)</option>
+        </select>
+        <div id="api-bearer-fields" style="display:none;">
+          <label>Bearer Token</label>
+          <input id="api-token" type="password" placeholder="the API's token">
+        </div>
+        <div id="api-header-fields" style="display:none;">
+          <label>Header Name</label>
+          <input id="api-header-name" placeholder="e.g. X-API-Key">
+          <label>Header Value</label>
+          <input id="api-header-value" type="password" placeholder="the API key">
+        </div>
+        <div id="api-basic-fields" style="display:none;">
+          <label>Username</label>
+          <input id="api-basic-user" placeholder="username">
+          <label>Password</label>
+          <input id="api-basic-pass" type="password" placeholder="password">
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" id="api-cancel">Close</button>
+          <button class="btn-save" id="api-add">+ Add Server</button>
+        </div>
+      </div>
+    `);
+
+    const apiAuthSel = document.getElementById('api-auth-type');
+    apiAuthSel.addEventListener('change', () => {
+      document.getElementById('api-bearer-fields').style.display = apiAuthSel.value === 'bearer' ? 'block' : 'none';
+      document.getElementById('api-header-fields').style.display = apiAuthSel.value === 'header' ? 'block' : 'none';
+      document.getElementById('api-basic-fields').style.display = apiAuthSel.value === 'basic' ? 'block' : 'none';
+    });
+
+    document.querySelectorAll('.api-toggle-actions').forEach(btn => btn.addEventListener('click', () => {
+      renderApiModal(openActionsForServerId === btn.dataset.id ? null : btn.dataset.id);
+    }));
+    document.querySelectorAll('.api-del').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Remove this API server and all its defined actions?')) return;
+      await supabase.from('kokiri_api_servers').delete().eq('id', btn.dataset.id);
+      await loadApiServers();
+      renderApiModal();
+    }));
+    document.querySelectorAll('.api-action-del').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_api_actions').delete().eq('id', btn.dataset.id);
+      await loadApiServers();
+      renderApiModal(btn.dataset.serverId);
+    }));
+    document.querySelectorAll('.api-add-action').forEach(btn => btn.addEventListener('click', async () => {
+      const serverId = btn.dataset.serverId;
+      const name = document.querySelector(`.api-new-action-name[data-server-id="${serverId}"]`).value.trim();
+      const description = document.querySelector(`.api-new-action-desc[data-server-id="${serverId}"]`).value.trim();
+      const method = document.querySelector(`.api-new-action-method[data-server-id="${serverId}"]`).value;
+      const path = document.querySelector(`.api-new-action-path[data-server-id="${serverId}"]`).value.trim();
+      const bodyRaw = document.querySelector(`.api-new-action-body[data-server-id="${serverId}"]`).value.trim();
+      if (!name || !path) { alert('Action name and path are required.'); return; }
+      let body_template = null;
+      if (bodyRaw) {
+        try { body_template = JSON.parse(bodyRaw); }
+        catch { alert('Body Template must be valid JSON.'); return; }
+      }
+      const { error } = await supabase.from('kokiri_api_actions').insert({ server_id: serverId, name, description, method, path, body_template });
+      if (error) { alert('⚠ ' + error.message); return; }
+      await loadApiServers();
+      renderApiModal(serverId);
+    }));
+    document.getElementById('api-cancel').addEventListener('click', closeModal);
+    document.getElementById('api-add').addEventListener('click', async () => {
+      const name = document.getElementById('api-name').value.trim();
+      const baseUrl = document.getElementById('api-base-url').value.trim();
+      const authType = apiAuthSel.value;
+      if (!name || !baseUrl) { alert('Name and Base URL are required.'); return; }
+      const slug = slugifyMcp(name);
+
+      let insertBody = { name, slug, base_url: baseUrl, auth_type: authType };
+
+      if (authType === 'bearer') {
+        const token = document.getElementById('api-token').value.trim();
+        if (token) {
+          const secretName = `api_token_${slug}`;
+          await supabase.rpc('set_secret', { secret_name: secretName, secret_value: token });
+          insertBody.secret_name = secretName;
+        }
+      } else if (authType === 'header') {
+        const headerName = document.getElementById('api-header-name').value.trim();
+        const headerValue = document.getElementById('api-header-value').value.trim();
+        if (!headerName || !headerValue) { alert('Header Name and Value are both required.'); return; }
+        const secretName = `api_header_${slug}`;
+        await supabase.rpc('set_secret', { secret_name: secretName, secret_value: headerValue });
+        insertBody.auth_header_name = headerName;
+        insertBody.secret_name = secretName;
+      } else if (authType === 'basic') {
+        const user = document.getElementById('api-basic-user').value.trim();
+        const pass = document.getElementById('api-basic-pass').value.trim();
+        if (!user || !pass) { alert('Username and Password are both required.'); return; }
+        const secretName = `api_basic_${slug}`;
+        await supabase.rpc('set_secret', { secret_name: secretName, secret_value: pass });
+        insertBody.basic_username = user;
+        insertBody.secret_name = secretName;
+      }
+
+      const { error } = await supabase.from('kokiri_api_servers').insert(insertBody);
+      if (error) { alert('⚠ ' + error.message); return; }
+      await loadApiServers();
+      renderApiModal();
+    });
+  }
+
+  document.getElementById('btn-api').addEventListener('click', async () => {
+    await loadApiServers();
+    renderApiModal();
   });
 
   // ---------- Agents ----------
@@ -934,8 +1247,13 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
         lines.push(`- {"type":"mcp_tool_call","server":"${server.name}","tool":"${tool.name}","arguments":{...}}  — ${tool.description || tool.name} (via MCP server "${server.name}")`);
       }
     }
+    for (const server of apiServers) {
+      for (const action of (apiActionsByServer[server.id] || [])) {
+        lines.push(`- {"type":"api_action_call","server":"${server.name}","action":"${action.name}","arguments":{...}}  — ${action.description || action.name} (${action.method} via API server "${server.name}")`);
+      }
+    }
     if (!lines.length) return '';
-    return '\nConnected external tools (use tool_call/mcp_tool_call actions above the query_data ones when relevant):\n' + lines.join('\n') + '\n';
+    return '\nConnected external tools (use tool_call/mcp_tool_call/api_action_call actions above the query_data ones when relevant):\n' + lines.join('\n') + '\n';
   }
 
   function extractAction(text) {
@@ -990,6 +1308,18 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
   }
 
   async function executeAction(action) {
+    if (action.type === 'api_action_call') {
+      const server = apiServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
+      if (!server) return { confirmation: `⚠ Unknown API server "${action.server}".` };
+      const apiAction = (apiActionsByServer[server.id] || []).find(a => a.name.toLowerCase() === (action.action || '').toLowerCase());
+      if (!apiAction) return { confirmation: `⚠ Unknown action "${action.action}" on "${server.name}".` };
+      try {
+        const result = await callApiClient({ type: 'call_action', action_id: apiAction.id, arguments: action.arguments || {} });
+        return { queryResult: { api_server: server.name, api_action: apiAction.name, ...result } };
+      } catch (e) {
+        return { confirmation: `⚠ ${server.name}/${apiAction.name} failed: ${e.message}` };
+      }
+    }
     if (action.type === 'mcp_tool_call') {
       const server = mcpServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
       if (!server) return { confirmation: `⚠ Unknown MCP server "${action.server}".` };
@@ -1194,6 +1524,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
   await loadAgents();
   await loadThreads(null);
   await loadMcpServers();
+  await loadApiServers();
   pingOmni();
   pingOllama();
 </script>

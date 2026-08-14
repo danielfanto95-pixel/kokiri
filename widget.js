@@ -90,6 +90,8 @@ let deepgramVoice = 'aura-asteria-en';
 let deepgramConfigured = false;
 let localSettings = {};
 let mcpServers = [];
+let apiServers = [];
+let apiActionsByServer = {};
 
 async function init() {
   if (initialized) return;
@@ -97,15 +99,20 @@ async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { document.getElementById('kokiri-widget-log').innerHTML = '<p style="color:#9db396;">Log in to chat with Navi.</p>'; return; }
 
-  const [{ data: agents }, { data: sheets }, { data: settingsRows }, { data: mcpData }] = await Promise.all([
+  const [{ data: agents }, { data: sheets }, { data: settingsRows }, { data: mcpData }, { data: apiServerData }, { data: apiActionData }] = await Promise.all([
     supabase.from('agents').select('id, name, purpose, status').order('sort_order'),
     supabase.from('kokiri_sheets').select('id, slug, name').order('sort_order'),
     supabase.from('kokiri_settings').select('key, value').in('key', ['deepgram_voice', 'deepgram_key_configured', 'omnirouter_url', 'omnirouter_key', 'ollama_url', 'ollama_model', 'notion_key_configured', 'descript_key_configured', 'tavily_key_configured']),
     supabase.from('kokiri_mcp_servers').select('id, name, tools_cache'),
+    supabase.from('kokiri_api_servers').select('id, name'),
+    supabase.from('kokiri_api_actions').select('*'),
   ]);
   agentsCache = agents || [];
   sheetsCache = sheets || [];
   mcpServers = mcpData || [];
+  apiServers = apiServerData || [];
+  apiActionsByServer = {};
+  (apiActionData || []).forEach(a => { (apiActionsByServer[a.server_id] = apiActionsByServer[a.server_id] || []).push(a); });
   (settingsRows || []).forEach(r => {
     if (r.key === 'deepgram_voice' && r.value) deepgramVoice = r.value;
     if (r.key === 'deepgram_key_configured') deepgramConfigured = r.value === 'true';
@@ -159,8 +166,13 @@ function mcpToolsPrompt() {
       lines.push(`- {"type":"mcp_tool_call","server":"${server.name}","tool":"${tool.name}","arguments":{...}}  — ${tool.description || tool.name} (via MCP server "${server.name}")`);
     }
   }
+  for (const server of apiServers) {
+    for (const action of (apiActionsByServer[server.id] || [])) {
+      lines.push(`- {"type":"api_action_call","server":"${server.name}","action":"${action.name}","arguments":{...}}  — ${action.description || action.name} (${action.method} via API server "${server.name}")`);
+    }
+  }
   if (!lines.length) return '';
-  return '\nConnected external tools (via MCP servers registered in Settings):\n' + lines.join('\n') + '\n';
+  return '\nConnected external tools (via MCP/API servers registered in Settings):\n' + lines.join('\n') + '\n';
 }
 
 async function callMcpClient(body) {
@@ -172,6 +184,18 @@ async function callMcpClient(body) {
   });
   const json = await res.json();
   if (!res.ok || json.error) throw new Error(json.error || 'mcp-client request failed');
+  return json;
+}
+
+async function callApiClient(body) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(SUPABASE_URL + '/functions/v1/api-client', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) throw new Error(json.error || 'api-client request failed');
   return json;
 }
 
@@ -254,6 +278,18 @@ async function fetchQueryData(action) {
 const PAGE_URLS = { home: 'home.html', app: 'app.html', agents: 'agents.html', dashboards: 'dashboards.html', context: 'context.html' };
 
 async function executeAction(action) {
+  if (action.type === 'api_action_call') {
+    const server = apiServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
+    if (!server) return { confirmation: `⚠ Unknown API server "${action.server}".` };
+    const apiAction = (apiActionsByServer[server.id] || []).find(a => a.name.toLowerCase() === (action.action || '').toLowerCase());
+    if (!apiAction) return { confirmation: `⚠ Unknown action "${action.action}" on "${server.name}".` };
+    try {
+      const result = await callApiClient({ type: 'call_action', action_id: apiAction.id, arguments: action.arguments || {} });
+      return { queryResult: { api_server: server.name, api_action: apiAction.name, ...result } };
+    } catch (e) {
+      return { confirmation: `⚠ ${server.name}/${apiAction.name} failed: ${e.message}` };
+    }
+  }
   if (action.type === 'mcp_tool_call') {
     const server = mcpServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
     if (!server) return { confirmation: `⚠ Unknown MCP server "${action.server}".` };
