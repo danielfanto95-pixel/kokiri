@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Operations Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
+.page-head { margin-bottom: 1.3rem; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; }
+
+.op-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; overflow: hidden; }
+.op-head {
+  display: flex; align-items: center; gap: 0.7rem; padding: 0.9rem 1.1rem; cursor: pointer; user-select: none;
+  border-bottom: 1px solid transparent;
+}
+.op-head:hover { background: var(--surface2); }
+.op-section.open .op-head { border-bottom-color: var(--border); }
+.op-head .op-icon { font-size: 1.2rem; }
+.op-head h2 { font-family: var(--heading); font-size: 1rem; color: var(--leaf-bright); flex: 1; }
+.op-head .op-count { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+.op-head .chevron { transition: transform 0.15s; font-size: 0.7rem; color: var(--muted); }
+.op-section.open .op-head .chevron { transform: rotate(90deg); }
+.op-body { display: none; padding: 1rem 1.1rem 1.2rem; }
+.op-section.open .op-body { display: block; }
+
+.op-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; }
+.op-toolbar button {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer;
+}
+.op-toolbar button:hover { border-color: var(--leaf); }
+
+.op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; min-width: max-content; }
+th, td {
+  border: 1px solid var(--border); padding: 0.5rem 0.65rem; text-align: left;
+  font-size: 0.8rem; vertical-align: top; max-width: 280px;
+}
+th {
+  background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright);
+  white-space: nowrap; font-size: 0.72rem;
+}
+td { background: var(--surface); color: var(--text); min-width: 130px; }
+td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
+.row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 26px; }
+.row-del:hover { color: #f87171; }
+.empty-note { color: var(--muted); font-size: 0.82rem; padding: 1.2rem; text-align: center; }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <h1>🗂️ Operations Dashboard</h1>
+      <p>CRM, Ads, Content, Affiliates, Weekly/Daily Reports, Calendar, and Tasks — all editable, all in one place. Click a section header to expand/collapse; state is remembered.</p>
+    </div>
+    <div id="op-sections"></div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Repository">Repository<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="app.html#repository">📁 All Files</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Architecture">Architecture<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="architecture.html">🏛️ System Architecture</a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
+      + `<a class="nav-link active" href="operations.html">🗂️ Operations Dashboard</a>`;
+  }
+
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+
+  // ---------- Operations sections — 8 editable mini-grids, each backed by its own kokiri_sheet ----------
+  const SECTIONS = [
+    { slug: 'crm', icon: '🧑‍🤝‍🧑', title: 'CRM' },
+    { slug: 'ads', icon: '📣', title: 'Ads' },
+    { slug: 'content', icon: '🎬', title: 'Content' },
+    { slug: 'affiliates-performance', icon: '🤝', title: 'Affiliates Performance' },
+    { slug: 'weekly-report-dash', icon: '🗓', title: 'Weekly Report' },
+    { slug: 'daily-report-dash', icon: '📅', title: 'Daily Report' },
+    { slug: 'calendar-schedule', icon: '📆', title: 'Calendar / Schedule' },
+    { slug: 'tasks-dashboard', icon: '✅', title: 'Tasks' },
+  ];
+
+  function collapsedKey(slug) { return 'kokiri_ops_collapsed_' + slug; }
+
+  async function mountSection(cfg) {
+    const container = document.createElement('div');
+    container.className = 'op-section';
+    container.id = 'op-' + cfg.slug;
+    // Default: closed on first visit; remembers open/closed after that.
+    const wasOpened = localStorage.getItem(collapsedKey(cfg.slug)) === 'open';
+    if (wasOpened) container.classList.add('open');
+
+    container.innerHTML = `
+      <div class="op-head">
+        <span class="op-icon">${cfg.icon}</span>
+        <h2>${escapeHtml(cfg.title)}</h2>
+        <span class="op-count" id="count-${cfg.slug}"></span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="${cfg.slug}">+ Add Row</button>
+          <button data-action="add-col" data-slug="${cfg.slug}">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-wrap-${cfg.slug}"><p class="empty-note">Loading…</p></div>
+      </div>
+    `;
+    document.getElementById('op-sections').appendChild(container);
+
+    container.querySelector('.op-head').addEventListener('click', () => {
+      const nowOpen = container.classList.toggle('open');
+      localStorage.setItem(collapsedKey(cfg.slug), nowOpen ? 'open' : 'closed');
+    });
+
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', cfg.slug).maybeSingle();
+    if (!sheet) {
+      document.getElementById('grid-wrap-' + cfg.slug).innerHTML = '<p class="empty-note">Sheet not found.</p>';
+      return;
+    }
+
+    let columns = [], rows = [];
+    async function loadData() {
+      const [{ data: cols }, { data: rowData }] = await Promise.all([
+        supabase.from('kokiri_columns').select('*').eq('sheet_id', sheet.id).order('sort_order'),
+        supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order'),
+      ]);
+      columns = cols || [];
+      rows = rowData || [];
+      renderGrid();
+    }
+
+    function renderGrid() {
+      document.getElementById('count-' + cfg.slug).textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
+      const wrap = document.getElementById('grid-wrap-' + cfg.slug);
+      if (!columns.length) {
+        wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>';
+        return;
+      }
+      let html = '<table><thead><tr><th class="row-del">×</th>';
+      for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
+      html += '</tr></thead><tbody>';
+      for (const r of rows) {
+        html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
+        for (const c of columns) {
+          const val = r.data?.[c.column_key] ?? '';
+          html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(val)}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+      attachGridHandlers(wrap);
+    }
+
+    function attachGridHandlers(wrap) {
+      wrap.querySelectorAll('td[contenteditable="true"]').forEach(td => {
+        td.addEventListener('blur', async () => {
+          const tr = td.closest('tr');
+          const rowId = tr.dataset.rowId;
+          const colKey = td.dataset.colKey;
+          const row = rows.find(r => r.id === rowId);
+          if (!row) return;
+          row.data = { ...row.data, [colKey]: td.textContent };
+          await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+        });
+      });
+      wrap.querySelectorAll('[data-action="del-row"]').forEach(el => {
+        el.addEventListener('click', async () => {
+          const tr = el.closest('tr');
+          const rowId = tr.dataset.rowId;
+          if (!confirm('Delete this row?')) return;
+          await supabase.from('kokiri_rows').delete().eq('id', rowId);
+          rows = rows.filter(r => r.id !== rowId);
+          renderGrid();
+        });
+      });
+    }
+
+    container.querySelector('[data-action="add-row"]').addEventListener('click', async () => {
+      const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: {}, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      rows.push(data);
+      renderGrid();
+    });
+    container.querySelector('[data-action="add-col"]').addEventListener('click', async () => {
+      const name = prompt('New column name:');
+      if (!name) return;
+      const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
+      const maxOrder = columns.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: key, name, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      columns.push(data);
+      renderGrid();
+    });
+
+    await loadData();
+  }
+
+  initNavCollapse();
+  await loadNav();
+  for (const cfg of SECTIONS) await mountSection(cfg);
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>

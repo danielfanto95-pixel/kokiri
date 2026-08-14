@@ -210,8 +210,8 @@ td { background: var(--bg); }
   function renderDashNav() {
     document.getElementById('nav-dashboards').innerHTML = dashboardsList.map(d =>
       `<div class="nav-link ${currentDashboard?.id === d.id ? 'active' : ''}" data-id="${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</div>`
-    ).join('');
-    document.querySelectorAll('#nav-dashboards .nav-link').forEach(el => {
+    ).join('') + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a>`;
+    document.querySelectorAll('#nav-dashboards .nav-link[data-id]').forEach(el => {
       el.addEventListener('click', () => selectDashboard(el.dataset.id));
     });
   }
