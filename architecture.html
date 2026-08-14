@@ -308,6 +308,20 @@ textarea:focus { outline: none; border-color: var(--leaf); }
 
 Last updated: 2026-08-14. This page is editable — update it yourself as things change, or ask Navi to.
 
+## Why This Exists (Raison d'être)
+
+Kokiri exists to solve one specific problem: too many disconnected tools, no single place that actually knows what's going on, and AI that can chat but can't act. It's a personal answer to "what would it look like if I actually had a chief of staff" — something that holds every list, every task, every agent's history, and every external connection in one place, and can reason over all of it instead of just retrieving it. The CLAUDE.md orchestrator instructions this system runs under — plan, delegate, verify, store knowledge, minimize cost — aren't abstract; Kokiri is what happens when you actually build that.
+
+Three commitments shaped how it's built, not just what it does:
+
+**One place, not another silo.** Every scattered tool — the old Google Sheet, Notion, bookmarks spread across a dozen services — either gets pulled in or connected, so there's one surface to check instead of five. That's why the 20-tab spreadsheet mirrors the original source sheet exactly, and why MCP/API server connections exist — the goal was never "replace everything," it was "stop needing to open six tabs to know what's going on."
+
+**Agents that can act, not just answer.** A chatbot that only talks is a search box with extra steps. Kokiri's agents can query real data, take real actions (create tasks, edit records, call connected services), and now reach into genuinely external systems — Notion, Zapier, custom APIs, MCP servers — the same way a human assistant would reach for a tool. The action set is deliberately narrow and reviewable rather than open-ended, because trust in autonomous systems has to be earned incrementally, not assumed on day one. That's also why real-world write access (email, calendar, Notion writes from agents themselves) is rolling out slowly and deliberately rather than all at once.
+
+**Free until it has to be free-er.** Every piece runs on free infrastructure by default — GitHub Pages, Supabase's free tier, free LLM fallbacks (OpenRouter, Ollama) — cost is something you opt into (a premium model key, a paid MCP service) rather than an assumed baseline. That's not a limitation being tolerated; it's the actual design constraint: the system should never cost more than the value it returns, and it should keep working even at zero dollars a month.
+
+The result is closer to an operating system for one person's work than a dashboard: sheets for data, agents for execution, a global context block that keeps every AI call — chat, autonomous runs, voice — aligned with what actually matters right now, a growing set of real-world connections, and a running record (the Meetings sheet, daily/weekly reports, agent timelines) of what happened and why, so nothing has to be re-explained twice.
+
 ## What Kokiri Is
 
 A personal operations system with no traditional server: a public directory, a multi-sheet data workspace, an agent dashboard with autonomous execution, custom dashboards, and a site-wide AI assistant — all on free-tier infrastructure.
