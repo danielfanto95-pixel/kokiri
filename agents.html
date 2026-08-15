@@ -195,6 +195,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
     <div class="status-pill"><span class="status-dot" id="dot-openrouter"></span> OpenRouter</div>
     <button id="btn-mcp">🔌 MCP Servers</button>
     <button id="btn-api">🌐 API Servers</button>
+    <button id="btn-messaging">💬 Messaging</button>
     <button id="btn-settings">⚙ Settings</button>
   </div>
 </div>
@@ -955,6 +956,103 @@ main { padding: 1.5rem; overflow-x: hidden; }
     await loadApiServers();
     renderApiModal();
   });
+
+  // ---------- Messaging (Telegram / Slack / WhatsApp -> Navi) ----------
+  const FN_BASE = 'https://qahriykfwknuoqctsaek.supabase.co/functions/v1';
+
+  function randomToken() { return crypto.randomUUID().replace(/-/g, ''); }
+
+  async function renderMessagingModal() {
+    const { data: rows } = await supabase.from('kokiri_settings').select('key, value').in('key', [
+      'telegram_key_configured', 'slack_key_configured', 'whatsapp_key_configured', 'whatsapp_verify_token_display',
+    ]);
+    const flags = {};
+    (rows || []).forEach(r => flags[r.key] = r.value);
+
+    openModal(`
+      <h2>💬 Messaging — Talk to Navi Anywhere</h2>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1.2rem;">Message Navi from Telegram, Slack, or WhatsApp and get the same intelligence, memory, and actions as the in-app chat — each platform gets its own conversation thread.</p>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;">
+        <label style="color:var(--gold);">✈️ Telegram ${flags.telegram_key_configured ? '✓ connected' : ''}</label>
+        <p style="font-size:0.72rem;color:var(--muted);margin:0.2rem 0 0.6rem;">Create a bot with <a href="https://t.me/BotFather" target="_blank" style="color:var(--cyan);">@BotFather</a> on Telegram (send <code style="font-family:var(--mono);">/newbot</code>), copy the token it gives you, paste it below. Kokiri registers the webhook automatically — nothing to paste into Telegram yourself.</p>
+        <input id="s-telegram-token" type="password" placeholder="${flags.telegram_key_configured ? '•••••••• (leave blank to keep)' : '123456:ABC-DEF...'}">
+        <button class="btn-save" id="btn-save-telegram" style="margin-top:0.5rem;padding:0.4rem 0.9rem;font-size:0.78rem;">Save &amp; Connect</button>
+        <span id="telegram-status" style="font-size:0.72rem;color:var(--muted);margin-left:0.5rem;"></span>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;">
+        <label style="color:var(--gold);">💬 Slack ${flags.slack_key_configured ? '✓ connected' : ''}</label>
+        <p style="font-size:0.72rem;color:var(--muted);margin:0.2rem 0 0.6rem;">Create an app at <a href="https://api.slack.com/apps" target="_blank" style="color:var(--cyan);">api.slack.com/apps</a> → Event Subscriptions → enable, paste the URL below as the Request URL → subscribe to bot events <code style="font-family:var(--mono);">message.im</code> and <code style="font-family:var(--mono);">app_mention</code> → install the app to your workspace → copy the Bot User OAuth Token and Signing Secret (Basic Information page) here.</p>
+        <div style="font-family:var(--mono);font-size:0.72rem;color:var(--leaf-bright);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.6rem;word-break:break-all;">${FN_BASE}/slack-webhook</div>
+        <input id="s-slack-token" type="password" placeholder="${flags.slack_key_configured ? '•••••••• (leave blank to keep)' : 'Bot User OAuth Token (xoxb-...)'}">
+        <input id="s-slack-signing-secret" type="password" placeholder="Signing Secret" style="margin-top:0.5rem;">
+        <button class="btn-save" id="btn-save-slack" style="margin-top:0.5rem;padding:0.4rem 0.9rem;font-size:0.78rem;">Save</button>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;">
+        <label style="color:var(--gold);">📱 WhatsApp ${flags.whatsapp_key_configured ? '✓ connected' : ''}</label>
+        <p style="font-size:0.72rem;color:var(--muted);margin:0.2rem 0 0.6rem;">In Meta for Developers, create/open a WhatsApp Business app → API Setup for the access token + phone number ID → App Settings → Basic for the App Secret. Under WhatsApp → Configuration, paste the webhook URL and verify token below, then Verify and Save.</p>
+        <div style="font-family:var(--mono);font-size:0.72rem;color:var(--leaf-bright);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.7rem;margin-bottom:0.6rem;word-break:break-all;">${FN_BASE}/whatsapp-webhook</div>
+        <label style="font-size:0.75rem;">Verify Token (pick anything, use the same value in Meta's dashboard)</label>
+        <input id="s-whatsapp-verify-token" value="${flags.whatsapp_verify_token_display || randomToken()}">
+        <input id="s-whatsapp-access-token" type="password" placeholder="${flags.whatsapp_key_configured ? '•••••••• (leave blank to keep)' : 'Access Token'}" style="margin-top:0.5rem;">
+        <input id="s-whatsapp-phone-id" placeholder="Phone Number ID" style="margin-top:0.5rem;">
+        <input id="s-whatsapp-app-secret" type="password" placeholder="App Secret" style="margin-top:0.5rem;">
+        <button class="btn-save" id="btn-save-whatsapp" style="margin-top:0.5rem;padding:0.4rem 0.9rem;font-size:0.78rem;">Save</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" id="messaging-cancel">Close</button>
+      </div>
+    `);
+
+    document.getElementById('messaging-cancel').addEventListener('click', closeModal);
+
+    document.getElementById('btn-save-telegram').addEventListener('click', async () => {
+      const token = document.getElementById('s-telegram-token').value.trim();
+      const statusEl = document.getElementById('telegram-status');
+      if (!token) { alert('Paste your bot token first.'); return; }
+      statusEl.textContent = 'Connecting…';
+      const webhookSecret = randomToken();
+      await supabase.rpc('set_secret', { secret_name: 'telegram_bot_token', secret_value: token });
+      await supabase.rpc('set_secret', { secret_name: 'telegram_webhook_secret', secret_value: webhookSecret });
+      await saveSetting('telegram_key_configured', 'true');
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(FN_BASE + '/telegram-webhook')}&secret_token=${webhookSecret}`);
+        const json = await res.json();
+        statusEl.textContent = json.ok ? '✓ Webhook registered — message your bot now.' : '⚠ ' + (json.description || 'setWebhook failed');
+      } catch (e) {
+        statusEl.textContent = '⚠ Could not reach Telegram: ' + e.message;
+      }
+    });
+
+    document.getElementById('btn-save-slack').addEventListener('click', async () => {
+      const token = document.getElementById('s-slack-token').value.trim();
+      const signingSecret = document.getElementById('s-slack-signing-secret').value.trim();
+      if (token) await supabase.rpc('set_secret', { secret_name: 'slack_bot_token', secret_value: token });
+      if (signingSecret) await supabase.rpc('set_secret', { secret_name: 'slack_signing_secret', secret_value: signingSecret });
+      if (token || signingSecret) await saveSetting('slack_key_configured', 'true');
+      alert('✓ Saved. Now paste the webhook URL into your Slack app\'s Event Subscriptions page if you haven\'t already.');
+      renderMessagingModal();
+    });
+
+    document.getElementById('btn-save-whatsapp').addEventListener('click', async () => {
+      const verifyToken = document.getElementById('s-whatsapp-verify-token').value.trim();
+      const accessToken = document.getElementById('s-whatsapp-access-token').value.trim();
+      const phoneId = document.getElementById('s-whatsapp-phone-id').value.trim();
+      const appSecret = document.getElementById('s-whatsapp-app-secret').value.trim();
+      if (verifyToken) { await supabase.rpc('set_secret', { secret_name: 'whatsapp_verify_token', secret_value: verifyToken }); await saveSetting('whatsapp_verify_token_display', verifyToken); }
+      if (accessToken) await supabase.rpc('set_secret', { secret_name: 'whatsapp_access_token', secret_value: accessToken });
+      if (phoneId) await supabase.rpc('set_secret', { secret_name: 'whatsapp_phone_number_id', secret_value: phoneId });
+      if (appSecret) await supabase.rpc('set_secret', { secret_name: 'whatsapp_app_secret', secret_value: appSecret });
+      if (accessToken || phoneId) await saveSetting('whatsapp_key_configured', 'true');
+      alert('✓ Saved. Now click "Verify and Save" on the WhatsApp Configuration page in Meta for Developers.');
+      renderMessagingModal();
+    });
+  }
+
+  document.getElementById('btn-messaging').addEventListener('click', renderMessagingModal);
 
   // ---------- Agents ----------
   async function loadKokiriNav() {
