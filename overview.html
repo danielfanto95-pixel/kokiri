@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — System Overview</title>
+<meta name="description" content="An architectural walkthrough of Kokiri, a personal AI operations system: model-agnostic agents, tool integration, and a shared context layer.">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a10; --panel: #0a1420; --panel2: #0e1c2c;
+    --border: rgba(94,224,255,0.16); --border-bright: rgba(94,224,255,0.4);
+    --cyan: #5ee0ff; --cyan-bright: #9ff5ff; --gold: #ffd76a;
+    --text: #d8ecf4; --muted: #6f93a3; --dim: #3d5866;
+    --heading: 'Orbitron', sans-serif; --body: 'Rajdhani', sans-serif; --mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--body); font-size: 16px;
+    margin: 0; line-height: 1.65;
+  }
+  a { color: var(--cyan); }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+
+  header.hero { text-align: center; padding: 2rem 0 3rem; border-bottom: 1px solid var(--border); margin-bottom: 3rem; }
+  header.hero .kicker { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.8rem; }
+  header.hero h1 { font-family: var(--heading); font-weight: 900; font-size: 2.4rem; color: var(--cyan-bright); text-shadow: 0 0 24px rgba(94,224,255,0.4); margin: 0 0 0.8rem; letter-spacing: 0.02em; }
+  header.hero p.sub { color: var(--muted); font-size: 1.15rem; max-width: 620px; margin: 0 auto; }
+  .note-box { background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 8px; padding: 1rem 1.2rem; margin-top: 1.8rem; font-size: 0.88rem; color: var(--muted); text-align: left; max-width: 620px; margin-left: auto; margin-right: auto; }
+  .note-box strong { color: var(--text); }
+
+  nav.toc { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.4rem 1.6rem; margin-bottom: 3rem; }
+  nav.toc .toc-label { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); margin-bottom: 0.7rem; }
+  nav.toc ol { margin: 0; padding-left: 1.3rem; columns: 2; column-gap: 2rem; }
+  nav.toc li { margin-bottom: 0.4rem; font-size: 0.92rem; }
+  nav.toc a { text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  section.chapter { margin-bottom: 3.5rem; scroll-margin-top: 1.5rem; }
+  section.chapter .chapter-num { font-family: var(--mono); font-size: 0.75rem; color: var(--gold); letter-spacing: 0.1em; }
+  section.chapter h2 { font-family: var(--heading); font-weight: 800; font-size: 1.5rem; color: var(--cyan-bright); margin: 0.3rem 0 1rem; }
+  section.chapter h3 { font-family: var(--heading); font-weight: 700; font-size: 1.05rem; color: var(--text); margin: 1.6rem 0 0.7rem; }
+  section.chapter p { margin: 0 0 1rem; }
+  section.chapter ul, section.chapter ol.plain { margin: 0 0 1rem; padding-left: 1.4rem; }
+  section.chapter li { margin-bottom: 0.4rem; }
+  code, .inline-code { font-family: var(--mono); font-size: 0.85em; background: var(--panel2); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.4rem; color: var(--cyan-bright); }
+
+  .diagram { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.3rem 1.5rem; margin: 1.2rem 0; font-family: var(--mono); font-size: 0.82rem; color: var(--muted); overflow-x: auto; white-space: pre; line-height: 1.5; }
+  .diagram .hl { color: var(--cyan-bright); }
+  .diagram .hl2 { color: var(--gold); }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.9rem; margin: 1rem 0 1.4rem; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card .icon { font-size: 1.3rem; margin-bottom: 0.4rem; }
+  .card h4 { font-family: var(--heading); font-size: 0.9rem; color: var(--gold); margin: 0 0 0.4rem; }
+  .card p { font-size: 0.85rem; color: var(--muted); margin: 0; }
+
+  .example-box { background: var(--panel2); border: 1px dashed var(--border-bright); border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0; font-size: 0.9rem; }
+  .example-box .tag { font-family: var(--mono); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); display: block; margin-bottom: 0.5rem; }
+
+  table.matrix { width: 100%; border-collapse: collapse; margin: 1rem 0 1.4rem; font-size: 0.85rem; }
+  table.matrix th, table.matrix td { border: 1px solid var(--border); padding: 0.55rem 0.7rem; text-align: left; }
+  table.matrix th { background: var(--panel2); color: var(--gold); font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  table.matrix td { color: var(--muted); }
+  table.matrix td:first-child { color: var(--text); font-weight: 600; }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0 1.2rem; }
+  .pill { font-family: var(--mono); font-size: 0.72rem; padding: 0.3rem 0.7rem; border-radius: 100px; border: 1px solid var(--border-bright); color: var(--cyan); background: var(--panel2); }
+
+  footer.closing { text-align: center; padding-top: 2.5rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; }
+  footer.closing .kicker { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); margin-bottom: 0.6rem; }
+
+  @media (max-width: 640px) {
+    nav.toc ol { columns: 1; }
+    header.hero h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">System Walkthrough</div>
+    <h1>Kokiri</h1>
+    <p class="sub">A personal AI operations system: one shared context layer, model-agnostic intelligence, and agents that can actually take action — not just chat.</p>
+    <div class="note-box">
+      <strong>A note on this page:</strong> this is a guided tour of the system's architecture and design decisions, written for review rather than daily use. All examples below (business names, numbers, keys, conversations) are illustrative placeholders — the real system runs on a single private Supabase project with a single authenticated user, and no actual account data appears anywhere on this page.
+    </div>
+  </header>
+
+  <nav class="toc">
+    <div class="toc-label">Contents</div>
+    <ol>
+      <li><a href="#why">Why This Exists</a></li>
+      <li><a href="#architecture">System Architecture</a></li>
+      <li><a href="#agents">The Agent Model</a></li>
+      <li><a href="#intelligence">Model-Agnostic Intelligence</a></li>
+      <li><a href="#actions">The Action Protocol</a></li>
+      <li><a href="#tools">Tool Integration (MCP &amp; REST)</a></li>
+      <li><a href="#context">Context Scoping</a></li>
+      <li><a href="#messaging">Multi-Channel Access</a></li>
+      <li><a href="#security">Security Model</a></li>
+      <li><a href="#surfaces">Applied Surfaces</a></li>
+      <li><a href="#reflection">Design Reflection</a></li>
+    </ol>
+  </nav>
+
+  <section class="chapter" id="why">
+    <div class="chapter-num">01</div>
+    <h2>Why This Exists</h2>
+    <p>Most people who use AI tools end up with a scattered set of them: one chat window for writing, another app for scheduling, a separate dashboard for tracking a business, disconnected browser tabs for each service they use. Every tool starts from zero — no memory of yesterday's conversation, no awareness of what any other tool knows.</p>
+    <p>Kokiri started from a different premise: what if there were <em>one place</em> a person's operational life lived — their tasks, their business data, their communications — and a layer of AI "agents" that could read and act on all of it, regardless of which underlying model happened to be answering at the time?</p>
+    <p>The guiding idea is closer to <strong>chief-of-staff than chatbot</strong>. A chief of staff doesn't need to be re-briefed every conversation. They remember context, they know which specialist to loop in, and — critically — they can actually go do the thing, not just describe how you might do it yourself.</p>
+    <p>A secondary, equally deliberate goal: stay <strong>free until it has to be free-er</strong>. The system is built to run entirely on free-tier infrastructure and free language models by default, only reaching for paid intelligence when the task genuinely demands it. That constraint shaped almost every architectural decision below.</p>
+  </section>
+
+  <section class="chapter" id="architecture">
+    <div class="chapter-num">02</div>
+    <h2>System Architecture</h2>
+    <p>Kokiri is a static frontend (plain HTML/CSS/JavaScript, no build step, no framework) hosted on free static hosting, talking directly to a managed backend-as-a-service platform that provides the database, authentication, serverless functions, and file storage.</p>
+    <div class="diagram">┌─────────────────────────────────────────────────────────┐
+│  <span class="hl">Static Frontend</span>  (HTML / JS, no build step, free hosting) │
+│  dashboard · sheets · dashboards · repository · portals   │
+└───────────────────────────┬─────────────────────────────┘
+                             │  direct client calls
+                             ▼
+┌─────────────────────────────────────────────────────────┐
+│  <span class="hl">Backend Platform</span>  (managed Postgres + Auth + Storage)     │
+│                                                             │
+│  <span class="hl2">Postgres</span>        rows-as-data model, row-level security     │
+│  <span class="hl2">Auth</span>            single authenticated owner account         │
+│  <span class="hl2">Vault</span>           encrypted secret storage, tiered access    │
+│  <span class="hl2">Storage</span>         private file bucket (documents/media)      │
+│  <span class="hl2">Edge Functions</span>  serverless request handlers (see below)    │
+│  <span class="hl2">Scheduler</span>       cron-style jobs for recurring work         │
+└───────────────────────────┬─────────────────────────────┘
+                             │  outbound HTTP
+                             ▼
+┌─────────────────────────────────────────────────────────┐
+│  <span class="hl">External Services</span>                                        │
+│  LLM providers · messaging platforms · third-party APIs   │
+│  · MCP-compatible tool servers                             │
+└─────────────────────────────────────────────────────────┘</div>
+    <p>Every "feature" in Kokiri — a dashboard, a chat surface, a webhook — is really just a thin client over this same backend. There is no separate application server; the serverless functions <em>are</em> the application server, and they're stateless by design: every request re-fetches whatever context it needs from Postgres, so there's nothing to keep in sync and nothing that can silently drift out of date.</p>
+    <h3>Data model philosophy</h3>
+    <p>Rather than hard-coding a schema for every kind of tracked thing (a CRM table, an ads table, a content calendar table...), the core of the system uses one generic three-table pattern: a <em>sheet</em> defines a named collection, <em>columns</em> define its schema, and <em>rows</em> hold flexible key-value data. Every dashboard in the system — CRM, ad performance, content calendar, task board — is the same generic spreadsheet engine pointed at a different sheet. New tracked categories don't require new code, just a new sheet definition.</p>
+  </section>
+
+  <section class="chapter" id="agents">
+    <div class="chapter-num">03</div>
+    <h2>The Agent Model</h2>
+    <p>An "agent" in Kokiri is deliberately lightweight: a row in a table with a name, a purpose, an icon, a status, and a model preference. Creating an agent doesn't generate any new code — it just adds data that a single shared function reads.</p>
+    <div class="example-box">
+      <span class="tag">Illustrative example</span>
+      An agent named <strong>"Scout"</strong> with the purpose <em>"monitor inbound leads and draft first-touch replies"</em> is, structurally, nothing more than one row: <code>{ name: "Scout", purpose: "...", status: "active", model_pref: "auto" }</code>. Everything Scout is able to do comes from the shared systems described in the rest of this page, not from anything unique written for Scout.
+    </div>
+    <p>Every agent conversation is assembled fresh, on every message, by one prompt-building function. That function pulls in:</p>
+    <ul>
+      <li>The agent's own name and stated purpose</li>
+      <li>A global context block the system owner maintains once, centrally (see <a href="#context">Context Scoping</a> — this can be included or withheld per agent)</li>
+      <li>The list of other agents that exist, so agents can hand off or reference each other</li>
+      <li>Whichever data sheets and external tools that specific agent has been granted access to</li>
+    </ul>
+    <p>This means updating one piece of shared context — say, a change in operating hours or a new standing instruction — propagates to every agent's next reply immediately, without touching any agent individually.</p>
+  </section>
+
+  <section class="chapter" id="intelligence">
+    <div class="chapter-num">04</div>
+    <h2>Model-Agnostic Intelligence</h2>
+    <p>The assembled prompt is deliberately decoupled from any specific language model. A request cascades through tiers until one succeeds:</p>
+    <div class="diagram">  request
+     │
+     ▼
+  <span class="hl">Tier 1 — Premium / free-router models</span>   (cloud, tried first)
+     │  on timeout / rate-limit / failure
+     ▼
+  <span class="hl">Tier 2 — Free community-hosted models</span>   (cloud, no cost)
+     │  on timeout / failure
+     ▼
+  <span class="hl">Tier 3 — Locally-run open models</span>        (self-hosted, no cost, no external dependency)
+     │
+     ▼
+  first successful reply wins</div>
+    <p>The practical effect is that the system essentially never hard-fails on "the AI is unavailable" — it degrades gracefully through progressively cheaper (and eventually free, local) intelligence rather than stopping. The prompt itself, the tools available, and the actions the model can take are identical regardless of which tier answered; only response quality varies.</p>
+  </section>
+
+  <section class="chapter" id="actions">
+    <div class="chapter-num">05</div>
+    <h2>The Action Protocol</h2>
+    <p>The single biggest design decision in the system: rather than relying on a specific provider's native "function calling" feature (which varies or doesn't exist across free models), Kokiri defines its own minimal, provider-agnostic action grammar. Any model — expensive or free, hosted or local — can trigger a real action by ending its reply with one small JSON block.</p>
+    <div class="example-box">
+      <span class="tag">Illustrative model output</span>
+      <code>Got it — I've logged that as a new task for Scout.<br>[ACTION]{"type":"create_task","agent":"Scout","title":"Follow up with new lead","description":"..."}[/ACTION]</code>
+    </div>
+    <p>The frontend/backend code parses that block out of the reply, executes the corresponding real operation (inserting a task, querying live data, calling an external tool), strips the raw JSON from what the user actually sees, and — for read operations — feeds the result back to the model in a follow-up turn so it can answer using real data instead of guessing.</p>
+    <p>Because this protocol lives entirely in the prompt and a small amount of parsing code, it works identically whether the reply came from a frontier model or a free, locally-run one — which is what makes the free-tier fallback cascade viable without losing capability.</p>
+  </section>
+
+  <section class="chapter" id="tools">
+    <div class="chapter-num">06</div>
+    <h2>Tool Integration (MCP &amp; REST)</h2>
+    <p>Two complementary integration layers let agents reach outside the system:</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="icon">🔌</div>
+        <h4>MCP Client</h4>
+        <p>A from-scratch client implementing the Model Context Protocol: JSON-RPC session negotiation, remote tool discovery, and OAuth 2.0 with dynamic client registration and PKCE for servers that require it — the same open protocol used by several mainstream AI assistants, so any compliant third-party tool server can be connected without custom integration code.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🌐</div>
+        <h4>Generic REST Connector</h4>
+        <p>For the far larger number of services that don't speak MCP: a template-substitution connector where a defined "action" (endpoint, method, auth type, body shape) becomes callable by name, with credentials always resolved server-side and never exposed to the model or the browser.</p>
+      </div>
+    </div>
+    <p>From the model's perspective, both are exposed identically through the same action grammar described above — it doesn't need to know or care whether a given capability is backed by MCP or a plain REST call.</p>
+  </section>
+
+  <section class="chapter" id="context">
+    <div class="chapter-num">07</div>
+    <h2>Context Scoping</h2>
+    <p>By default, every agent shares the same global context and the same set of connected tools — deliberately, since the whole point is a unified operating picture. But some agents should legitimately see less. An agent handling one narrow function shouldn't necessarily have standing access to every data sheet or every connected service.</p>
+    <p>Each agent can be switched from <strong>Global</strong> access to <strong>Custom</strong>, at which point an explicit checklist controls exactly what that agent's prompt is allowed to reference: which data sheets, which tool servers, and whether the shared global context text is included at all.</p>
+    <table class="matrix">
+      <tr><th>Layer</th><th>What it does</th></tr>
+      <tr><td>Prompt-level</td><td>A scoped agent's system prompt simply omits anything outside its granted scope — it has no way to know an out-of-scope sheet or tool exists.</td></tr>
+      <tr><td>Execution-level</td><td>Independent of what the prompt says, the function that actually executes a requested action re-checks the agent's granted scope and rejects anything outside it — a defense-in-depth measure against a model attempting an out-of-scope call regardless of prompt wording.</td></tr>
+    </table>
+    <p>This turns "one shared brain" into "one shared brain, selectively partitioned per role" without needing separate credentials, separate databases, or separate deployments per agent.</p>
+  </section>
+
+  <section class="chapter" id="messaging">
+    <div class="chapter-num">08</div>
+    <h2>Multi-Channel Access</h2>
+    <p>The same intelligence, memory, and action capability available in the web dashboard is also reachable from ordinary messaging apps, so the system doesn't require sitting at a desk to use.</p>
+    <div class="pill-row">
+      <span class="pill">✈️ Telegram</span>
+      <span class="pill">💬 Slack</span>
+      <span class="pill">📱 WhatsApp</span>
+    </div>
+    <p>Each platform's webhook verifies the inbound request is authentic (a shared-secret header, or an HMAC signature over the raw request body, depending on the platform's own security model), then hands the message to the same underlying conversation engine the dashboard uses. One conversation thread is kept per platform-and-contact pair, with recent history fed back in on every message — the same threading and memory model as the in-app chat, just reachable from a phone's default messaging apps instead of a browser tab.</p>
+    <p>Because webhook handlers must typically acknowledge receipt within a few seconds (a platform-imposed constraint, not a Kokiri one), the actual language-model round-trip runs in the background after an immediate acknowledgment is sent — so a slower model tier never causes the platform to treat the message as failed.</p>
+  </section>
+
+  <section class="chapter" id="security">
+    <div class="chapter-num">09</div>
+    <h2>Security Model</h2>
+    <p>Secrets (API keys, tokens, signing secrets) are handled with a deliberate three-tier model rather than one blanket policy, because "how a secret is written" and "how it's read back" need different guarantees:</p>
+    <table class="matrix">
+      <tr><th>Tier</th><th>Read access</th><th>Used for</th></tr>
+      <tr><td>Server-only vault</td><td>Backend service role only — never the browser, never the model</td><td>Platform signing secrets, tokens that must never be exposed client-side</td></tr>
+      <tr><td>Write-only vault</td><td>The owner's browser can write a new secret, but nothing can ever read the raw value back out afterward</td><td>Third-party API keys pasted in through a settings panel</td></tr>
+      <tr><td>Plaintext config</td><td>Readable by the frontend, by design</td><td>Genuinely non-secret configuration (a model name, a feature flag)</td></tr>
+    </table>
+    <p>A consequence worth naming explicitly: verifying that a stored credential actually works can never be done by reading it back out for inspection — that path is intentionally blocked. Verification instead happens server-side, by making a real request with the stored credential and returning only the outcome (success or failure, an HTTP status) — never the credential itself.</p>
+    <p>Access control at the data layer is enforced by the backend platform's row-level security, scoped to a single authenticated owner account — this is intentionally a single-tenant system, not a multi-user product; anything resembling external client or affiliate "logins" elsewhere in the system are internal views for the owner, not real separate accounts.</p>
+  </section>
+
+  <section class="chapter" id="surfaces">
+    <div class="chapter-num">10</div>
+    <h2>Applied Surfaces</h2>
+    <p>The architecture above supports a set of concrete, everyday surfaces built on top of it:</p>
+    <div class="card-grid">
+      <div class="card"><div class="icon">🏠</div><h4>Home</h4><p>Daily/weekly auto-generated reports, a daily meeting brief, at-a-glance operational stats.</p></div>
+      <div class="card"><div class="icon">🗂️</div><h4>Operations</h4><p>Collapsible, independently editable dashboards — CRM, ads, content, tasks, and more — each backed by the generic sheet engine.</p></div>
+      <div class="card"><div class="icon">🚪</div><h4>Portals</h4><p>Role-specific internal views (affiliate / client / ads) over the same underlying data, with computed summary stats.</p></div>
+      <div class="card"><div class="icon">📁</div><h4>Repository</h4><p>A private document store — files, spreadsheets, video, images, PDFs — with categorized browsing and search.</p></div>
+      <div class="card"><div class="icon">🗓️</div><h4>Meetings Log</h4><p>A persisted, deduplicated record of every generated daily brief and report, so nothing is regenerated (or re-billed) twice in a day.</p></div>
+      <div class="card"><div class="icon">📨</div><h4>Conversations</h4><p>Full transcript history across every connected messaging platform, browsable by contact.</p></div>
+    </div>
+  </section>
+
+  <section class="chapter" id="reflection">
+    <div class="chapter-num">11</div>
+    <h2>Design Reflection</h2>
+    <p>A few decisions in this system were deliberate trade-offs rather than obvious defaults, and are probably the most interesting parts to interrogate:</p>
+    <h3>Provider-agnostic action grammar over native function calling</h3>
+    <p>Native tool-calling APIs are more structured and better-supported, but tying the system to one provider's implementation would have broken the free-tier fallback cascade — many free-hosted models don't reliably support it. A plain-text convention parsed by the application itself is less elegant, but it's what makes "never hard-fail on availability" actually true.</p>
+    <h3>A generic sheet engine instead of purpose-built schemas</h3>
+    <p>Building a dedicated CRM table, a dedicated ads table, and so on would have been more "correct" relationally, but would also mean every new tracked category is a schema migration and new UI code. The generic sheet/column/row model trades some data-integrity guarantees (weaker typing, no foreign-key relationships between sheets) for the ability to add an entirely new tracked category as pure data, in seconds, with zero new code.</p>
+    <h3>Single-tenant by design</h3>
+    <p>The system deliberately does not attempt multi-user access control, real external client accounts, or tenant isolation — those are a substantially larger and different engineering problem (real authentication for other humans, permission boundaries, data isolation guarantees) that this system does not currently solve, and "portal" surfaces are explicitly internal views rather than a claim otherwise.</p>
+    <h3>Defense-in-depth over trusting the model</h3>
+    <p>Context scoping and the credential-verification pattern both reflect the same underlying stance: treat the model's output as untrusted input, not as a privileged instruction. The enforcement lives in the deterministic code path, not in prompt wording — the prompt shapes behavior, but the code is what actually decides what's allowed to happen.</p>
+  </section>
+
+  <footer class="closing">
+    <div class="kicker">End of walkthrough</div>
+    <p>Kokiri is an actively evolving personal system, built and maintained by its sole user. This page describes its architecture as of the most recent update, not a finished or static product.</p>
+  </footer>
+
+</div>
+</body>
+</html>
