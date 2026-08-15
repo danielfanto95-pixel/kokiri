@@ -1238,6 +1238,46 @@ main { padding: 1.5rem; overflow-x: hidden; }
     });
   }
 
+  function contextScopeFields(scope, mode) {
+    scope = scope || {};
+    const sheetsChecked = new Set(scope.sheets || []);
+    const mcpChecked = new Set(scope.mcp_servers || []);
+    const apiChecked = new Set(scope.api_servers || []);
+    const toolsChecked = new Set(scope.tools || []);
+    const toolOptions = [];
+    if (settings.tavily_key_configured) toolOptions.push(['web_search', 'Web Search (Tavily)']);
+    if (settings.notion_key_configured) toolOptions.push(['notion_query', 'Notion (read)'], ['notion_create_page', 'Notion (create page)']);
+    if (settings.descript_key_configured) toolOptions.push(['descript_list_projects', 'Descript (list)'], ['descript_import_media', 'Descript (import)']);
+    return `
+      <div id="context-scope-fields" style="display:${mode === 'custom' ? 'block' : 'none'};border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.8rem;margin-top:0.4rem;max-height:260px;overflow-y:auto;">
+        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;"><input type="checkbox" id="cs-global" ${scope.global_context ? 'checked' : ''}> Global Context text</label>
+        ${kokiriSheets.length ? `<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--muted);">Sheets</div>` + kokiriSheets.map(s => `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;"><input type="checkbox" class="cs-sheet" value="${s.id}" ${sheetsChecked.has(s.id) ? 'checked' : ''}> ${escapeHtml(s.name)}</label>`).join('') : ''}
+        ${mcpServers.length ? `<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--muted);">MCP Servers</div>` + mcpServers.map(s => `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;"><input type="checkbox" class="cs-mcp" value="${s.id}" ${mcpChecked.has(s.id) ? 'checked' : ''}> ${escapeHtml(s.name)}</label>`).join('') : ''}
+        ${apiServers.length ? `<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--muted);">API Servers</div>` + apiServers.map(s => `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;"><input type="checkbox" class="cs-api" value="${s.id}" ${apiChecked.has(s.id) ? 'checked' : ''}> ${escapeHtml(s.name)}</label>`).join('') : ''}
+        ${toolOptions.length ? `<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--muted);">Built-in Tools</div>` + toolOptions.map(([key, label]) => `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;"><input type="checkbox" class="cs-tool" value="${key}" ${toolsChecked.has(key) ? 'checked' : ''}> ${escapeHtml(label)}</label>`).join('') : ''}
+        ${(!kokiriSheets.length && !mcpServers.length && !apiServers.length && !toolOptions.length) ? '<p style="font-size:0.72rem;color:var(--muted);">No sheets or tools connected yet — this agent will only see its own purpose and roster info.</p>' : ''}
+      </div>
+    `;
+  }
+
+  function readContextScope() {
+    return {
+      global_context: document.getElementById('cs-global')?.checked || false,
+      sheets: Array.from(document.querySelectorAll('.cs-sheet:checked')).map(el => el.value),
+      mcp_servers: Array.from(document.querySelectorAll('.cs-mcp:checked')).map(el => el.value),
+      api_servers: Array.from(document.querySelectorAll('.cs-api:checked')).map(el => el.value),
+      tools: Array.from(document.querySelectorAll('.cs-tool:checked')).map(el => el.value),
+    };
+  }
+
+  function attachContextModeToggle() {
+    const sel = document.getElementById('f6');
+    if (!sel) return;
+    sel.addEventListener('change', () => {
+      document.getElementById('context-scope-fields').style.display = sel.value === 'custom' ? 'block' : 'none';
+    });
+  }
+
   function editAgentFlow() {
     const a = currentAgent;
     openModal(`
@@ -1247,16 +1287,26 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <label>Purpose</label><textarea id="f3">${escapeHtml(a.purpose || '')}</textarea>
       <label>Model Preference</label><input id="f4" value="${escapeHtml(a.model_pref || 'auto')}">
       <label>Status</label><select id="f5"><option ${a.status==='active'?'selected':''}>active</option><option ${a.status==='paused'?'selected':''}>paused</option></select>
+      <label>Context Access</label>
+      <select id="f6">
+        <option value="global" ${a.context_mode !== 'custom' ? 'selected' : ''}>Global — full context &amp; all connected tools</option>
+        <option value="custom" ${a.context_mode === 'custom' ? 'selected' : ''}>Custom — choose exactly what it can see below</option>
+      </select>
+      ${contextScopeFields(a.context_scope, a.context_mode)}
       <div class="modal-actions"><button class="btn-cancel" id="m-cancel">Cancel</button><button class="btn-save" id="m-save">Save</button></div>
     `);
+    attachContextModeToggle();
     document.getElementById('m-cancel').addEventListener('click', closeModal);
     document.getElementById('m-save').addEventListener('click', async () => {
+      const contextMode = document.getElementById('f6').value;
       const updates = {
         icon: document.getElementById('f1').value.trim() || '⚔️',
         name: document.getElementById('f2').value.trim(),
         purpose: document.getElementById('f3').value.trim(),
         model_pref: document.getElementById('f4').value.trim(),
         status: document.getElementById('f5').value,
+        context_mode: contextMode,
+        context_scope: contextMode === 'custom' ? readContextScope() : {},
       };
       await supabase.from('agents').update(updates).eq('id', a.id);
       closeModal();
@@ -1279,17 +1329,27 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <label>Name</label><input id="f2" placeholder="e.g. Scout">
       <label>Purpose</label><textarea id="f3" placeholder="What does this agent do?"></textarea>
       <label>Model Preference</label><input id="f4" value="auto">
+      <label>Context Access</label>
+      <select id="f6">
+        <option value="global">Global — full context &amp; all connected tools</option>
+        <option value="custom">Custom — choose exactly what it can see below</option>
+      </select>
+      ${contextScopeFields({}, 'global')}
       <div class="modal-actions"><button class="btn-cancel" id="m-cancel">Cancel</button><button class="btn-save" id="m-save">Create</button></div>
     `);
+    attachContextModeToggle();
     document.getElementById('m-cancel').addEventListener('click', closeModal);
     document.getElementById('m-save').addEventListener('click', async () => {
       const name = document.getElementById('f2').value.trim();
       if (!name) return;
+      const contextMode = document.getElementById('f6').value;
       const { data } = await supabase.from('agents').insert({
         icon: document.getElementById('f1').value.trim() || '⚔️',
         name, purpose: document.getElementById('f3').value.trim(),
         model_pref: document.getElementById('f4').value.trim() || 'auto',
         sort_order: agents.length + 1,
+        context_mode: contextMode,
+        context_scope: contextMode === 'custom' ? readContextScope() : {},
       }).select().single();
       closeModal();
       await loadAgents();
@@ -1377,11 +1437,18 @@ main { padding: 1.5rem; overflow-x: hidden; }
     const base = agentCtx
       ? `You are ${agentCtx.name}, an agent whose purpose is: ${agentCtx.purpose || 'general assistance'}.`
       : `You are Navi, the general coordinating intelligence for Kokiri, Daniel's personal agent dashboard.`;
-    const globalCtx = settings.global_context ? `\n\nGlobal context from Daniel (applies to everything you do here):\n${settings.global_context}\n` : '';
+    const scoped = !!(agentCtx && agentCtx.context_mode === 'custom');
+    const scope = scoped ? (agentCtx.context_scope || {}) : null;
+    const includeGlobal = !scoped || scope.global_context;
+    const globalCtx = (includeGlobal && settings.global_context) ? `\n\nGlobal context from Daniel (applies to everything you do here):\n${settings.global_context}\n` : '';
+    const visibleSheets = scoped ? kokiriSheets.filter(s => (scope.sheets || []).includes(s.id)) : kokiriSheets;
+    const sheetLine = visibleSheets.length
+      ? `Known Kokiri sheets: ${visibleSheets.map(s => s.name).join(', ')}.`
+      : (scoped ? `You have not been given access to any Kokiri sheets.` : `Known Kokiri sheets: (none).`);
     return `${base}${globalCtx} Respond helpfully and concisely.
 
 Known agents: ${roster}.
-Known Kokiri sheets: ${sheetNamesForPrompt.join(', ') || '(none)'}.
+${sheetLine}
 
 You can take real actions by including EXACTLY ONE JSON block at the very end of your reply, in this exact format: [ACTION]{...}[/ACTION]
 Only include it when clearly warranted by the user's request — never invent actions unprompted. Omit it entirely otherwise.
@@ -1390,33 +1457,38 @@ Valid action shapes:
 - {"type":"create_task","agent":"<exact agent name>","title":"<short title>","description":"<details>"}
 - {"type":"create_agent","name":"<name>","purpose":"<purpose>","icon":"<one emoji>","model_pref":"auto"}
 - {"type":"edit_agent","agent":"<exact existing agent name>","updates":{"purpose":"<optional>","status":"active|paused","model_pref":"<optional>","icon":"<optional>"}}
-- {"type":"query_data","source":"kokiri_rows","sheet":"<exact sheet name from the list above>"}  — look up rows from a Kokiri sheet
+${visibleSheets.length ? '- {"type":"query_data","source":"kokiri_rows","sheet":"<exact sheet name from the list above>"}  — look up rows from a Kokiri sheet' : ''}
 - {"type":"query_data","source":"agent_tasks","agent":"<exact agent name>"}  — look up an agent's tasks
 - {"type":"query_data","source":"agent_timeline","agent":"<exact agent name>"}  — look up an agent's recent activity
-- {"type":"query_data","source":"notion_tasks"}  — look up synced Notion tasks
-${connectedToolsPrompt()}
+${(!scoped || (scope.tools || []).includes('notion_query')) ? '- {"type":"query_data","source":"notion_tasks"}  — look up synced Notion tasks' : ''}
+${connectedToolsPrompt(scoped ? scope : null)}
 Use query_data or tool_call (read tools) whenever answering the question actually requires real data you don't already have (e.g. "what's in my CRM", "search the web for X", "what's in Notion"). You'll get the data back and can then give a real answer in a follow-up turn — don't guess or make up data.
-
+${scoped ? "\nYou only have access to the sheets and tools explicitly listed above — if the user asks about something outside that scope, say so plainly rather than guessing." : ''}
 Write your normal reply text first, then the [ACTION] block on its own if needed. Do not mention the raw JSON syntax to the user.`;
   }
 
-  function connectedToolsPrompt() {
+  function connectedToolsPrompt(scope) {
     const lines = [];
-    if (settings.tavily_key_configured) lines.push('- {"type":"tool_call","tool":"web_search","params":{"query":"<search query>"}}  — search the live web for current information (read)');
+    const toolAllowed = t => !scope || (scope.tools || []).includes(t);
+    const mcpAllowed = id => !scope || (scope.mcp_servers || []).includes(id);
+    const apiAllowed = id => !scope || (scope.api_servers || []).includes(id);
+    if (settings.tavily_key_configured && toolAllowed('web_search')) lines.push('- {"type":"tool_call","tool":"web_search","params":{"query":"<search query>"}}  — search the live web for current information (read)');
     if (settings.notion_key_configured) {
-      lines.push('- {"type":"tool_call","tool":"notion_query","params":{}}  — list pages in the connected Notion database (read)');
-      lines.push('- {"type":"tool_call","tool":"notion_create_page","params":{"title":"<title>","content":"<optional body text>"}}  — create a new page in the connected Notion database (write)');
+      if (toolAllowed('notion_query')) lines.push('- {"type":"tool_call","tool":"notion_query","params":{}}  — list pages in the connected Notion database (read)');
+      if (toolAllowed('notion_create_page')) lines.push('- {"type":"tool_call","tool":"notion_create_page","params":{"title":"<title>","content":"<optional body text>"}}  — create a new page in the connected Notion database (write)');
     }
     if (settings.descript_key_configured) {
-      lines.push('- {"type":"tool_call","tool":"descript_list_projects","params":{}}  — list Descript projects (read)');
-      lines.push('- {"type":"tool_call","tool":"descript_import_media","params":{"url":"<media url>","project_id":"<optional>","title":"<optional>"}}  — import media into Descript (write)');
+      if (toolAllowed('descript_list_projects')) lines.push('- {"type":"tool_call","tool":"descript_list_projects","params":{}}  — list Descript projects (read)');
+      if (toolAllowed('descript_import_media')) lines.push('- {"type":"tool_call","tool":"descript_import_media","params":{"url":"<media url>","project_id":"<optional>","title":"<optional>"}}  — import media into Descript (write)');
     }
     for (const server of mcpServers) {
+      if (!mcpAllowed(server.id)) continue;
       for (const tool of (server.tools_cache || [])) {
         lines.push(`- {"type":"mcp_tool_call","server":"${server.name}","tool":"${tool.name}","arguments":{...}}  — ${tool.description || tool.name} (via MCP server "${server.name}")`);
       }
     }
     for (const server of apiServers) {
+      if (!apiAllowed(server.id)) continue;
       for (const action of (apiActionsByServer[server.id] || [])) {
         lines.push(`- {"type":"api_action_call","server":"${server.name}","action":"${action.name}","arguments":{...}}  — ${action.description || action.name} (${action.method} via API server "${server.name}")`);
       }
@@ -1433,10 +1505,16 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     catch { return { cleanText, action: null }; }
   }
 
-  async function fetchQueryData(action) {
+  function scopeOf(agentCtx) {
+    return (agentCtx && agentCtx.context_mode === 'custom') ? (agentCtx.context_scope || {}) : null;
+  }
+
+  async function fetchQueryData(action, agentCtx) {
+    const scope = scopeOf(agentCtx);
     if (action.source === 'kokiri_rows' && action.sheet) {
       const sheet = kokiriSheets.find(s => s.name.toLowerCase() === action.sheet.toLowerCase());
       if (!sheet) return { error: `Unknown sheet "${action.sheet}"` };
+      if (scope && !(scope.sheets || []).includes(sheet.id)) return { error: `This agent doesn't have access to the "${sheet.name}" sheet.` };
       const [{ data: cols }, { data: rows }] = await Promise.all([
         supabase.from('kokiri_columns').select('name, column_key').eq('sheet_id', sheet.id).order('sort_order'),
         supabase.from('kokiri_rows').select('data').eq('sheet_id', sheet.id).order('sort_order').limit(30),
@@ -1456,6 +1534,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
       return { agent: agent.name, timeline: data || [] };
     }
     if (action.source === 'notion_tasks') {
+      if (scope && !(scope.tools || []).includes('notion_query')) return { error: `This agent doesn't have Notion access.` };
       const { data } = await supabase.from('notion_tasks').select('title, status, url').order('last_synced_at', { ascending: false }).limit(30);
       return { notion_tasks: data || [] };
     }
@@ -1476,10 +1555,12 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     return json;
   }
 
-  async function executeAction(action) {
+  async function executeAction(action, agentCtx) {
+    const scope = scopeOf(agentCtx);
     if (action.type === 'api_action_call') {
       const server = apiServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
       if (!server) return { confirmation: `⚠ Unknown API server "${action.server}".` };
+      if (scope && !(scope.api_servers || []).includes(server.id)) return { confirmation: `⚠ This agent doesn't have access to API server "${server.name}".` };
       const apiAction = (apiActionsByServer[server.id] || []).find(a => a.name.toLowerCase() === (action.action || '').toLowerCase());
       if (!apiAction) return { confirmation: `⚠ Unknown action "${action.action}" on "${server.name}".` };
       try {
@@ -1492,6 +1573,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
     if (action.type === 'mcp_tool_call') {
       const server = mcpServers.find(s => s.name.toLowerCase() === (action.server || '').toLowerCase());
       if (!server) return { confirmation: `⚠ Unknown MCP server "${action.server}".` };
+      if (scope && !(scope.mcp_servers || []).includes(server.id)) return { confirmation: `⚠ This agent doesn't have access to MCP server "${server.name}".` };
       try {
         const { result } = await callMcpClient({ type: 'call_tool', server_id: server.id, tool_name: action.tool, arguments: action.arguments || {} });
         return { queryResult: { mcp_server: server.name, mcp_tool: action.tool, result } };
@@ -1500,6 +1582,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
       }
     }
     if (action.type === 'tool_call') {
+      if (scope && !(scope.tools || []).includes(action.tool)) return { confirmation: `⚠ This agent doesn't have access to "${action.tool}".` };
       try {
         const result = await callAgentTool(action.tool, action.params || {});
         if (READ_TOOLS.has(action.tool)) return { queryResult: { tool: action.tool, ...result } };
@@ -1533,7 +1616,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
       return { confirmation: `✓ Updated agent "${agent.name}".` };
     }
     if (action.type === 'query_data') {
-      const data = await fetchQueryData(action);
+      const data = await fetchQueryData(action, agentCtx);
       return { queryResult: data };
     }
     return null;
@@ -1580,7 +1663,7 @@ Write your normal reply text first, then the [ACTION] block on its own if needed
       let finalText = cleanText;
 
       if (action) {
-        const result = await executeAction(action);
+        const result = await executeAction(action, agentCtx);
         if (result?.confirmation) {
           finalText += `\n\n${result.confirmation}`;
         } else if (result?.queryResult) {
