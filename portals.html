@@ -51,8 +51,31 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="tasks"] .dot { background: #86c5e6; }
 .portal-tab[data-portal="funnel"] .dot { background: #86e6b8; }
 .portal-tab[data-portal="impact"] .dot { background: #d086e6; }
+.portal-tab[data-portal="jobs"] .dot { background: #86a8e6; }
 .portal-tab[data-portal="builder"] .dot { background: #e6a868; }
 .portal-tab.active { background: var(--surface2); border-color: var(--border-bright); color: var(--text); }
+
+.index-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 1.3rem; }
+.index-box summary { cursor: pointer; font-family: var(--heading); font-size: 0.9rem; color: var(--leaf-bright); list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+.index-box summary::-webkit-details-marker { display: none; }
+.index-box summary .chev { transition: transform 0.15s; font-size: 0.7rem; }
+.index-box[open] summary .chev { transform: rotate(90deg); }
+.index-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; margin-top: 0.9rem; }
+.index-item { display: flex; gap: 0.6rem; padding: 0.5rem 0.6rem; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.index-item:hover { background: var(--surface2); border-color: var(--border); }
+.index-item .idot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 0.4rem; }
+.index-item h5 { font-family: var(--heading); font-size: 0.8rem; color: var(--text); }
+.index-item p { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+
+.resume-box { background: var(--surface); border: 1px dashed var(--border-bright); border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 1.2rem; }
+.resume-box h4 { font-family: var(--heading); font-size: 0.9rem; color: var(--gold); margin-bottom: 0.6rem; }
+.resume-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.7rem; }
+.resume-chip { display: flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 0.35rem 0.5rem 0.35rem 0.8rem; font-size: 0.78rem; }
+.resume-chip button { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 0.8rem; padding: 0 0.3rem; }
+.resume-chip button:hover { color: #f87171; }
+.resume-chip a { color: var(--leaf-bright); text-decoration: none; }
+.resume-dropzone { border: 1px dashed var(--border); border-radius: 8px; padding: 0.7rem 1rem; text-align: center; font-size: 0.78rem; color: var(--muted); cursor: pointer; }
+.resume-dropzone:hover, .resume-dropzone.dragover { border-color: var(--leaf); color: var(--text); }
 
 .funnel-wrap { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.3rem; }
 .funnel-stage { display: flex; align-items: center; gap: 0.9rem; }
@@ -202,8 +225,13 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   <main>
     <div class="page-head">
       <h1>🚪 Portals</h1>
-      <p>Affiliate, Client, CRM, Content, Tasks, Ads, Funnel, Impact Map, and Agent Builder in one place. These are internal views for you, not external logins — Kokiri stays single-user by design, so nobody but you can sign in here. If you want real external portals affiliates/clients log into themselves, that's a separate (larger) build — say the word.</p>
+      <p>Affiliate, Client, CRM, Content, Tasks, Ads, Funnel, Impact Map, Jobs, and Agent Builder in one place. These are internal views for you, not external logins — Kokiri stays single-user by design, so nobody but you can sign in here. If you want real external portals affiliates/clients log into themselves, that's a separate (larger) build — say the word.</p>
     </div>
+
+    <details class="index-box" id="portal-index">
+      <summary><span class="chev">▸</span> 📋 Index — what's in each section</summary>
+      <div class="index-grid" id="index-grid"></div>
+    </details>
 
     <div class="portal-tabs">
       <button class="portal-tab active" data-portal="affiliate"><span class="dot"></span>🤝 Affiliate Portal</button>
@@ -214,6 +242,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="ads"><span class="dot"></span>📣 Ads Portal</button>
       <button class="portal-tab" data-portal="funnel"><span class="dot"></span>🌪️ Funnel</button>
       <button class="portal-tab" data-portal="impact"><span class="dot"></span>🧠 Impact Map</button>
+      <button class="portal-tab" data-portal="jobs"><span class="dot"></span>💼 Jobs</button>
       <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
     </div>
 
@@ -260,6 +289,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="content">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-content"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Content pipeline — scripts, outlines, and every recorded version, plus AI drafting above.</div>
     </div>
 
     <div class="portal-panel" id="panel-tasks">
@@ -273,6 +303,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="tasks-dashboard">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-tasks-dashboard" style="display:none;"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Notion-style task board — drag isn't needed, just change the status dropdown on any card.</div>
     </div>
 
     <div class="portal-panel" id="panel-ads">
@@ -282,6 +313,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="ads">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-ads"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Ad creatives tracked here — which have AI-generated versions made yet.</div>
     </div>
 
     <div class="portal-panel" id="panel-funnel">
@@ -302,6 +334,23 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       </div>
       <div class="impact-cards" id="impact-cards"><p class="empty-note">Loading…</p></div>
       <div class="op-grid-wrap" id="grid-impact-map" style="display:none;"></div>
+      <div class="portal-note">Personal reflection framework — each entry's completion % tracks how far it's been processed through the full framework.</div>
+    </div>
+
+    <div class="portal-panel" id="panel-jobs">
+      <div class="resume-box">
+        <h4>📄 Resumes</h4>
+        <div class="resume-list" id="resume-list"></div>
+        <div class="resume-dropzone" id="resume-dropzone">Click or drop a resume file here (e.g. general resume, fitness-specific resume)</div>
+        <input type="file" id="resume-file-input" style="display:none;" multiple accept=".pdf,.doc,.docx,.txt,.rtf">
+      </div>
+      <div class="portal-stats" id="stats-jobs"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="job-applications">+ Add Row</button>
+        <button data-action="add-col" data-slug="job-applications">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-job-applications"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Personal Training + Operations listings around Salt Lake City, plus AI-eval side-income platforms as a separate category. Edit Status inline as you apply.</div>
     </div>
 
     <div class="portal-panel" id="panel-builder">
@@ -595,7 +644,35 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', funnel: 'Funnel', impact: 'Impact Map', builder: 'Agent Builder' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', builder: 'Agent Builder' };
+
+  // ---------- Index (table of contents for the whole page) ----------
+  const INDEX_DATA = [
+    { key: 'affiliate', label: '🤝 Affiliate Portal', desc: 'Fitness business affiliate referrals and commission owed.' },
+    { key: 'client', label: '🧑‍🤝‍🧑 Client Portal', desc: 'Everfit-style client tracking — program, check-ins, progress.' },
+    { key: 'crm', label: '📇 CRM', desc: 'Leads and contacts, Salesforce-style, pipeline by Lead Status.' },
+    { key: 'content', label: '✍️ Content', desc: 'Scripts, outlines, versions, plus AI drafting.' },
+    { key: 'tasks', label: '✅ Tasks', desc: 'Notion-style board — same data as the Operations Dashboard table.' },
+    { key: 'ads', label: '📣 Ads Portal', desc: 'Ad creatives and which have AI versions made.' },
+    { key: 'funnel', label: '🌪️ Funnel', desc: 'Landers → CRM Leads → Active Clients conversion funnel.' },
+    { key: 'impact', label: '🧠 Impact Map', desc: 'Personal reflection framework, progress cards per entry.' },
+    { key: 'jobs', label: '💼 Jobs', desc: 'Job-application CRM — PT/Operations listings around SLC, plus AI-eval side income and resume uploads.' },
+    { key: 'builder', label: '🧩 Agent Builder', desc: 'Questionnaire → agent team template → website/ad brief.' },
+  ];
+  function renderIndex() {
+    document.getElementById('index-grid').innerHTML = INDEX_DATA.map(i => `
+      <div class="index-item" data-jump="${i.key}">
+        <span class="idot" style="background:var(--leaf);"></span>
+        <div><h5>${i.label}</h5><p>${escapeHtml(i.desc)}</p></div>
+      </div>
+    `).join('');
+    document.querySelectorAll('.index-item').forEach(el => {
+      el.addEventListener('click', () => {
+        document.querySelector(`.portal-tab[data-portal="${el.dataset.jump}"]`)?.click();
+        document.getElementById('portal-index').open = false;
+      });
+    });
+  }
   let chatHistory = [];
 
   async function renderChatHeader() {
@@ -816,6 +893,58 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     }).join('');
   }
 
+  // ---------- Resumes (uses the same private storage bucket + documents table as the Repository) ----------
+  const REPO_BUCKET = 'kokiri-repository';
+  async function loadResumes() {
+    const { data } = await supabase.from('kokiri_documents').select('*').or('description.eq.Resume,name.ilike.%resume%').order('created_at', { ascending: false });
+    const list = document.getElementById('resume-list');
+    if (!data || !data.length) { list.innerHTML = '<p style="font-size:0.78rem;color:var(--dim);">No resumes uploaded yet.</p>'; return; }
+    list.innerHTML = data.map(d => `
+      <div class="resume-chip" data-id="${d.id}" data-path="${escapeHtml(d.storage_path)}">
+        <a data-action="dl">📄 ${escapeHtml(d.name)}</a>
+        <button data-action="del">✕</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-action="dl"]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const path = el.closest('.resume-chip').dataset.path;
+        const { data: signed } = await supabase.storage.from(REPO_BUCKET).createSignedUrl(path, 60);
+        if (signed) window.open(signed.signedUrl, '_blank');
+      });
+    });
+    list.querySelectorAll('[data-action="del"]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const chip = el.closest('.resume-chip');
+        if (!confirm('Delete this resume?')) return;
+        await supabase.storage.from(REPO_BUCKET).remove([chip.dataset.path]);
+        await supabase.from('kokiri_documents').delete().eq('id', chip.dataset.id);
+        loadResumes();
+      });
+    });
+  }
+
+  async function uploadResumes(fileList) {
+    for (const file of Array.from(fileList)) {
+      const storagePath = `resumes/${crypto.randomUUID()}-${file.name}`;
+      const { error } = await supabase.storage.from(REPO_BUCKET).upload(storagePath, file);
+      if (error) { alert(`⚠ Failed to upload ${file.name}: ${error.message}`); continue; }
+      await supabase.from('kokiri_documents').insert({
+        name: file.name, category: 'Document', description: 'Resume', mime_type: file.type || null, size_bytes: file.size, storage_path: storagePath,
+      });
+    }
+    await loadResumes();
+  }
+
+  function initResumeUpload() {
+    const dropzone = document.getElementById('resume-dropzone');
+    const fileInput = document.getElementById('resume-file-input');
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => { uploadResumes(fileInput.files); fileInput.value = ''; });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); uploadResumes(e.dataTransfer.files); });
+  }
+
   // ---------- Agent Builder ----------
   const TEAM_TEMPLATES = {
     solo: { icon: '🗡️', label: 'Solo Assistant', desc: 'One general-purpose agent to start.', agents: [
@@ -965,6 +1094,25 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     portalData.impact = { columns: cols.filter(c => c.column_key !== 'j'), rows, sheetId: rows[0]?.sheet_id };
     renderImpactCards(cols, rows);
   });
+
+  mountGrid('job-applications', (cols, rows) => {
+    portalData.jobs = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
+    const catKey = cols.find(c => /category/i.test(c.name))?.column_key;
+    const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
+    const ptCount = catKey ? rows.filter(r => /personal training/i.test(r.data?.[catKey] || '')).length : 0;
+    const opsCount = catKey ? rows.filter(r => /operations/i.test(r.data?.[catKey] || '')).length : 0;
+    const applied = statusKey ? rows.filter(r => /applied/i.test(r.data?.[statusKey] || '') && !/not applied/i.test(r.data?.[statusKey] || '')).length : 0;
+    statsBoxes(document.getElementById('stats-jobs'), 'affiliate', [
+      { val: rows.length, label: 'Total Listings' },
+      { val: ptCount, label: 'Personal Training' },
+      { val: opsCount, label: 'Operations' },
+      { val: applied, label: 'Applied' },
+    ]);
+  });
+
+  initResumeUpload();
+  loadResumes();
+  renderIndex();
 </script>
 
 <script type="module" src="ambience.js"></script>
