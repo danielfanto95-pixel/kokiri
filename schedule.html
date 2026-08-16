@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
+.page-head { margin-bottom: 1.3rem; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; max-width: 640px; }
+
+.quick-add { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+.quick-add input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.85rem; }
+.quick-add input#qa-time { width: 110px; }
+.quick-add input#qa-event { flex: 1; min-width: 200px; }
+.quick-add button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+
+.op-toolbar { display: flex; gap: 0.6rem; margin-bottom: 1rem; }
+.op-toolbar button {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer;
+}
+.op-toolbar button:hover { border-color: var(--leaf); }
+
+.today-block { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 1.6rem; }
+.today-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.2rem; }
+.today-block .today-date { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); margin-bottom: 0.8rem; }
+
+.backlog-head { font-family: var(--heading); font-size: 1rem; color: var(--gold); margin: 0.5rem 0 0.8rem; }
+.day-group { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.6rem; overflow: hidden; }
+.day-group summary { cursor: pointer; padding: 0.7rem 1rem; display: flex; align-items: center; gap: 0.6rem; list-style: none; user-select: none; }
+.day-group summary::-webkit-details-marker { display: none; }
+.day-group summary:hover { background: var(--surface2); }
+.day-group summary .chev { transition: transform 0.15s; font-size: 0.7rem; color: var(--muted); }
+.day-group[open] summary .chev { transform: rotate(90deg); }
+.day-group summary .dg-date { font-family: var(--heading); font-size: 0.88rem; color: var(--text); flex: 1; }
+.day-group summary .dg-count { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+.day-group .dg-body { padding: 0 1rem 1rem; border-top: 1px solid var(--border); }
+
+.op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 0.6rem; }
+table { border-collapse: collapse; width: 100%; min-width: max-content; }
+th, td {
+  border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left;
+  font-size: 0.8rem; vertical-align: top; max-width: 280px;
+}
+th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; font-size: 0.7rem; }
+td { background: var(--surface); color: var(--text); min-width: 120px; }
+td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
+.row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 24px; }
+.row-del:hover { color: #f87171; }
+.empty-note { color: var(--muted); font-size: 0.85rem; padding: 1rem; text-align: center; }
+
+.day-extra { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+@media (max-width: 760px) { .day-extra { grid-template-columns: 1fr; } }
+.day-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 0.9rem; }
+.day-panel h4 { font-family: var(--heading); font-size: 0.82rem; color: var(--gold); margin-bottom: 0.6rem; }
+
+.task-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.task-row:last-of-type { border-bottom: none; }
+.task-row input[type="checkbox"] { accent-color: var(--leaf); cursor: pointer; }
+.task-row .ttitle { flex: 1; }
+.task-row.done .ttitle { color: var(--dim); text-decoration: line-through; }
+.task-row .trec { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); background: var(--surface); border-radius: 100px; padding: 0.1rem 0.4rem; }
+.task-row .tdel { color: var(--dim); cursor: pointer; font-size: 0.8rem; }
+.task-row .tdel:hover { color: #f87171; }
+.add-task-form { display: flex; gap: 0.4rem; margin-top: 0.6rem; flex-wrap: wrap; }
+.add-task-form input[type="text"] { flex: 1; min-width: 120px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.78rem; }
+.add-task-form select { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.35rem 0.4rem; font-size: 0.75rem; }
+.add-task-form button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.35rem 0.7rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+
+.day-notes textarea { width: 100%; min-height: 70px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.6rem; font-family: inherit; font-size: 0.8rem; resize: vertical; }
+.link-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 0.2rem 0.4rem 0.2rem 0.7rem; font-size: 0.75rem; margin: 0.4rem 0.3rem 0 0; }
+.link-chip a { color: var(--leaf-bright); text-decoration: none; }
+.link-chip .ldel { color: var(--dim); cursor: pointer; padding: 0 0.2rem; }
+.link-chip .ldel:hover { color: #f87171; }
+.add-link-form { display: flex; gap: 0.4rem; margin-top: 0.6rem; flex-wrap: wrap; }
+.add-link-form input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.78rem; }
+.add-link-form input#nl-label-today, .add-link-form input[data-role="link-label"] { width: 90px; }
+.add-link-form input[data-role="link-url"] { flex: 1; min-width: 120px; }
+.add-link-form button { background: var(--surface); border: 1px solid var(--border); color: var(--leaf-bright); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.75rem; cursor: pointer; }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <h1>🗓️ Schedule</h1>
+      <p>Today, front and center. Everything before today is grouped by date and collapsed — expand any day to see it, or ungroup one at a time as you need to look back.</p>
+    </div>
+
+    <div class="quick-add">
+      <input type="text" id="qa-time" placeholder="Time (e.g. 9:00 AM)">
+      <input type="text" id="qa-event" placeholder="Add an event to today…">
+      <button id="btn-quick-add">+ Add to Today</button>
+    </div>
+
+    <div class="op-toolbar">
+      <button id="btn-add-col">+ Add Column</button>
+      <button id="btn-add-row-unscheduled">+ Add Unscheduled Row</button>
+    </div>
+
+    <div class="today-block">
+      <h2 id="today-title">Today</h2>
+      <div class="today-date" id="today-date-label"></div>
+      <div class="op-grid-wrap" id="today-grid"><p class="empty-note">Loading…</p></div>
+      <div class="day-extra" id="today-extra"></div>
+    </div>
+
+    <div class="backlog-head">📦 Previous Days</div>
+    <div id="backlog-container"><p class="empty-note">Loading…</p></div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Repository">Repository<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="app.html#repository">📁 All Files</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="portals.html">🚪 All Portals</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Schedule">Schedule<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link active" href="schedule.html">🗓️ Today &amp; Backlog</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Architecture">Architecture<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="architecture.html">🏛️ System Architecture</a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
+      + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a>`;
+  }
+
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+
+  // ---------- Schedule (calendar-schedule sheet, grouped by Date) ----------
+  const TODAY = new Date().toISOString().slice(0, 10);
+  let sheetId = null;
+  let columns = [];
+  let rows = [];
+
+  async function loadSchedule() {
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'calendar-schedule').maybeSingle();
+    if (!sheet) { document.getElementById('today-grid').innerHTML = '<p class="empty-note">Schedule sheet not found.</p>'; return; }
+    sheetId = sheet.id;
+    const [{ data: cols }, { data: rowData }] = await Promise.all([
+      supabase.from('kokiri_columns').select('*').eq('sheet_id', sheetId).order('sort_order'),
+      supabase.from('kokiri_rows').select('*').eq('sheet_id', sheetId).order('sort_order'),
+    ]);
+    columns = cols || [];
+    rows = rowData || [];
+    render();
+  }
+
+  function dateKeyOf(row) {
+    const dateKey = columns.find(c => /date/i.test(c.name))?.column_key;
+    const v = (dateKey && row.data?.[dateKey] || '').trim();
+    return v || null;
+  }
+
+  function renderTable(container, tableRows, onLocalChange) {
+    if (!columns.length) { container.innerHTML = '<p class="empty-note">No columns yet.</p>'; return; }
+    let html = '<table><thead><tr><th class="row-del">×</th>';
+    for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
+    html += '</tr></thead><tbody>';
+    for (const r of tableRows) {
+      html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
+      for (const c of columns) html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    container.querySelectorAll('td[contenteditable="true"]').forEach(td => {
+      td.addEventListener('blur', async () => {
+        const rowId = td.closest('tr').dataset.rowId;
+        const row = rows.find(r => r.id === rowId);
+        if (!row) return;
+        row.data = { ...row.data, [td.dataset.colKey]: td.textContent };
+        await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+        (onLocalChange || render)();
+      });
+    });
+    container.querySelectorAll('[data-action="del-row"]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const rowId = el.closest('tr').dataset.rowId;
+        if (!confirm('Delete this event?')) return;
+        await supabase.from('kokiri_rows').delete().eq('id', rowId);
+        rows = rows.filter(r => r.id !== rowId);
+        (onLocalChange || render)();
+      });
+    });
+  }
+
+  function renderToday() {
+    const el = document.getElementById('today-grid');
+    const todayRows = rows.filter(r => dateKeyOf(r) === TODAY);
+    if (!todayRows.length) { el.innerHTML = '<p class="empty-note">Nothing scheduled for today yet — add one above.</p>'; return; }
+    renderTable(el, todayRows, renderToday);
+  }
+
+  function render() {
+    document.getElementById('today-date-label').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    renderToday();
+
+    // Group everything else by date (descending), unscheduled last.
+    const groups = new Map();
+    let unscheduled = [];
+    for (const r of rows) {
+      const k = dateKeyOf(r);
+      if (k === TODAY) continue;
+      if (!k) { unscheduled.push(r); continue; }
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(r);
+    }
+    const sortedDates = [...groups.keys()].sort((a, b) => b.localeCompare(a));
+
+    const backlogEl = document.getElementById('backlog-container');
+    if (!sortedDates.length && !unscheduled.length) {
+      backlogEl.innerHTML = '<p class="empty-note">No previous days yet.</p>';
+      return;
+    }
+    backlogEl.innerHTML = sortedDates.map(d => `
+      <details class="day-group" data-date="${escapeHtml(d)}">
+        <summary><span class="chev">▸</span><span class="dg-date">${escapeHtml(d)}</span><span class="dg-count">${groups.get(d).length} event${groups.get(d).length === 1 ? '' : 's'}</span></summary>
+        <div class="dg-body"><div class="op-grid-wrap"></div><div class="day-extra"></div></div>
+      </details>
+    `).join('') + (unscheduled.length ? `
+      <details class="day-group" data-date="">
+        <summary><span class="chev">▸</span><span class="dg-date">Unscheduled</span><span class="dg-count">${unscheduled.length} row${unscheduled.length === 1 ? '' : 's'}</span></summary>
+        <div class="dg-body"><div class="op-grid-wrap"></div></div>
+      </details>
+    ` : '');
+
+    backlogEl.querySelectorAll('.day-group').forEach(group => {
+      const d = group.dataset.date;
+      const wrap = group.querySelector('.op-grid-wrap');
+      const extraEl = group.querySelector('.day-extra');
+      const renderThisGroup = () => renderTable(wrap, d ? (groups.get(d) || []) : unscheduled, renderThisGroup);
+      let rendered = false;
+      group.addEventListener('toggle', () => {
+        if (group.open && !rendered) {
+          renderThisGroup();
+          if (d && extraEl) renderDayExtra(extraEl, d);
+          rendered = true;
+        }
+      });
+    });
+  }
+
+  // ---------- Per-day running task list (with recurring tasks) + notes/links ----------
+  let allDayTasks = [];
+  async function loadDayTasks() {
+    const { data } = await supabase.from('kokiri_day_tasks').select('*').order('sort_order');
+    allDayTasks = data || [];
+  }
+
+  function tasksForDate(dateKey) {
+    const d = new Date(dateKey + 'T00:00:00');
+    const dow = d.getDay();
+    return allDayTasks.filter(t => {
+      if (t.recurrence === 'none') return t.anchor_date === dateKey;
+      if (t.recurrence === 'daily') return true;
+      if (t.recurrence === 'weekdays') return dow >= 1 && dow <= 5;
+      if (t.recurrence === 'weekly') return new Date(t.anchor_date + 'T00:00:00').getDay() === dow;
+      return false;
+    });
+  }
+
+  const REC_LABEL = { none: '', daily: 'daily', weekdays: 'weekdays', weekly: 'weekly' };
+
+  async function renderDayExtra(container, dateKey) {
+    const uid = dateKey.replace(/[^0-9]/g, '');
+    container.innerHTML = `
+      <div class="day-panel">
+        <h4>✅ Tasks</h4>
+        <div id="tasks-${uid}"><p class="empty-note">Loading…</p></div>
+        <div class="add-task-form">
+          <input type="text" id="ti-${uid}" placeholder="Add a task…">
+          <select id="tr-${uid}">
+            <option value="none">One-time</option>
+            <option value="daily">Daily</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="weekly">Weekly</option>
+          </select>
+          <button id="ta-${uid}">+ Add</button>
+        </div>
+      </div>
+      <div class="day-panel day-notes">
+        <h4>📝 Notes &amp; Links</h4>
+        <textarea id="notes-${uid}" placeholder="Notes for this day…"></textarea>
+        <div id="links-${uid}"></div>
+        <div class="add-link-form">
+          <input type="text" data-role="link-label" id="ll-${uid}" placeholder="Label">
+          <input type="text" data-role="link-url" id="lu-${uid}" placeholder="https://...">
+          <button id="la-${uid}">+ Link</button>
+        </div>
+      </div>
+    `;
+
+    const [{ data: statuses }, { data: noteRow }] = await Promise.all([
+      supabase.from('kokiri_day_task_status').select('task_id, done').eq('date_key', dateKey),
+      supabase.from('kokiri_day_notes').select('*').eq('date_key', dateKey).maybeSingle(),
+    ]);
+    const statusMap = {};
+    (statuses || []).forEach(s => statusMap[s.task_id] = s.done);
+
+    function renderTasks() {
+      const applicable = tasksForDate(dateKey);
+      const el = document.getElementById('tasks-' + uid);
+      el.innerHTML = applicable.length ? applicable.map(t => `
+        <div class="task-row ${statusMap[t.id] ? 'done' : ''}" data-task-id="${t.id}">
+          <input type="checkbox" ${statusMap[t.id] ? 'checked' : ''}>
+          <span class="ttitle">${escapeHtml(t.title)}</span>
+          ${REC_LABEL[t.recurrence] ? `<span class="trec">${REC_LABEL[t.recurrence]}</span>` : ''}
+          <span class="tdel">✕</span>
+        </div>
+      `).join('') : '<p class="empty-note" style="padding:0.4rem;">No tasks yet.</p>';
+
+      el.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', async (e) => {
+          const taskId = e.target.closest('.task-row').dataset.taskId;
+          await supabase.from('kokiri_day_task_status').upsert({ task_id: taskId, date_key: dateKey, done: e.target.checked }, { onConflict: 'task_id,date_key' });
+          statusMap[taskId] = e.target.checked;
+          renderTasks();
+        });
+      });
+      el.querySelectorAll('.tdel').forEach(del => {
+        del.addEventListener('click', async (e) => {
+          const taskId = e.target.closest('.task-row').dataset.taskId;
+          if (!confirm('Delete this task? (Removes it from every day it recurs on.)')) return;
+          await supabase.from('kokiri_day_tasks').delete().eq('id', taskId);
+          allDayTasks = allDayTasks.filter(t => t.id !== taskId);
+          renderTasks();
+        });
+      });
+    }
+    renderTasks();
+
+    document.getElementById('ta-' + uid).addEventListener('click', async () => {
+      const titleEl = document.getElementById('ti-' + uid);
+      const title = titleEl.value.trim();
+      if (!title) return;
+      const recurrence = document.getElementById('tr-' + uid).value;
+      const maxOrder = allDayTasks.reduce((m, t) => Math.max(m, t.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_day_tasks').insert({ title, recurrence, anchor_date: dateKey, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      allDayTasks.push(data);
+      titleEl.value = '';
+      renderTasks();
+    });
+
+    // Notes + links
+    const notesEl = document.getElementById('notes-' + uid);
+    notesEl.value = noteRow?.notes || '';
+    let links = noteRow?.links || [];
+
+    async function saveNotesRow(patch) {
+      await supabase.from('kokiri_day_notes').upsert({ date_key: dateKey, notes: notesEl.value, links, ...patch, updated_at: new Date().toISOString() }, { onConflict: 'date_key' });
+    }
+    notesEl.addEventListener('blur', () => saveNotesRow({}));
+
+    function renderLinks() {
+      document.getElementById('links-' + uid).innerHTML = links.map((l, i) => `
+        <span class="link-chip" data-idx="${i}"><a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.label || l.url)}</a><span class="ldel">✕</span></span>
+      `).join('');
+      document.querySelectorAll(`#links-${uid} .ldel`).forEach(del => {
+        del.addEventListener('click', async (e) => {
+          const idx = Number(e.target.closest('.link-chip').dataset.idx);
+          links = links.filter((_, i) => i !== idx);
+          await saveNotesRow({ links });
+          renderLinks();
+        });
+      });
+    }
+    renderLinks();
+
+    document.getElementById('la-' + uid).addEventListener('click', async () => {
+      const labelEl = document.getElementById('ll-' + uid);
+      const urlEl = document.getElementById('lu-' + uid);
+      const url = urlEl.value.trim();
+      if (!url) return;
+      links = [...links, { label: labelEl.value.trim(), url }];
+      await saveNotesRow({ links });
+      labelEl.value = ''; urlEl.value = '';
+      renderLinks();
+    });
+  }
+
+  document.getElementById('btn-quick-add').addEventListener('click', async () => {
+    const time = document.getElementById('qa-time').value.trim();
+    const event = document.getElementById('qa-event').value.trim();
+    if (!event) return;
+    const dateKey = columns.find(c => /date/i.test(c.name))?.column_key || 'date';
+    const timeKey = columns.find(c => /time/i.test(c.name))?.column_key;
+    const eventKey = columns.find(c => /event/i.test(c.name))?.column_key || 'event';
+    const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+    const data = { [dateKey]: TODAY, [eventKey]: event };
+    if (timeKey && time) data[timeKey] = time;
+    const { data: created, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheetId, data, sort_order: maxOrder + 1 }).select().single();
+    if (error) { alert(error.message); return; }
+    rows.push(created);
+    document.getElementById('qa-time').value = '';
+    document.getElementById('qa-event').value = '';
+    render();
+  });
+
+  document.getElementById('btn-add-row-unscheduled').addEventListener('click', async () => {
+    const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheetId, data: {}, sort_order: maxOrder + 1 }).select().single();
+    if (error) { alert(error.message); return; }
+    rows.push(data);
+    render();
+  });
+
+  document.getElementById('btn-add-col').addEventListener('click', async () => {
+    const name = prompt('New column name (applies to every day):');
+    if (!name) return;
+    const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
+    const maxOrder = columns.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_columns').insert({ sheet_id: sheetId, column_key: key, name, sort_order: maxOrder + 1 }).select().single();
+    if (error) { alert(error.message); return; }
+    columns.push(data);
+    render();
+  });
+
+  initNavCollapse();
+  await loadNav();
+  await loadDayTasks();
+  await loadSchedule();
+  await renderDayExtra(document.getElementById('today-extra'), TODAY);
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>
