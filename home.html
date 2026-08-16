@@ -72,6 +72,20 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .item-row .content .meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
 .empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 
+.quick-links { margin-bottom: 2.2rem; }
+.quick-links h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.8rem; }
+.ql-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.8rem; }
+.ql-chip { display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 0.45rem 0.5rem 0.45rem 0.9rem; font-size: 0.82rem; }
+.ql-chip a { color: var(--text); text-decoration: none; }
+.ql-chip a:hover { color: var(--leaf-bright); }
+.ql-chip .ql-del { color: var(--dim); cursor: pointer; padding: 0 0.3rem; font-size: 0.8rem; }
+.ql-chip .ql-del:hover { color: #f87171; }
+.ql-add-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.ql-add-form input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.82rem; }
+.ql-add-form input#ql-label { width: 140px; }
+.ql-add-form input#ql-url { flex: 1; min-width: 200px; }
+.ql-add-form button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+
 .brief-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.3rem 1.4rem; margin-bottom: 2.5rem; }
 .brief-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
 .brief-head h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); flex: 1; }
@@ -171,6 +185,16 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
             <div class="title">Dashboards</div>
             <div class="sub">Custom views, uploaded sources, AI-generated dashboards.</div>
           </a>
+        </div>
+      </div>
+
+      <div class="quick-links">
+        <h2>🔗 Quick Links</h2>
+        <div class="ql-row" id="ql-row"><p class="empty" style="padding:0.6rem;">Loading…</p></div>
+        <div class="ql-add-form">
+          <input type="text" id="ql-label" placeholder="Label">
+          <input type="text" id="ql-url" placeholder="https://...">
+          <button id="btn-add-ql">+ Add Link</button>
         </div>
       </div>
 
@@ -593,13 +617,55 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     return brief;
   }
 
+  // ---------- Quick Links ----------
+  let quickLinks = [];
+  async function loadQuickLinks() {
+    const { data } = await supabase.from('kokiri_quick_links').select('*').order('sort_order');
+    quickLinks = data || [];
+    renderQuickLinks();
+  }
+  function renderQuickLinks() {
+    const el = document.getElementById('ql-row');
+    if (!quickLinks.length) { el.innerHTML = '<p class="empty" style="padding:0.6rem;">No links yet — add one below.</p>'; return; }
+    el.innerHTML = quickLinks.map(l => `
+      <span class="ql-chip" data-id="${l.id}">
+        <a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>
+        <span class="ql-del">✕</span>
+      </span>
+    `).join('');
+    el.querySelectorAll('.ql-del').forEach(del => {
+      del.addEventListener('click', async (e) => {
+        const id = e.target.closest('.ql-chip').dataset.id;
+        await supabase.from('kokiri_quick_links').delete().eq('id', id);
+        quickLinks = quickLinks.filter(l => l.id !== id);
+        renderQuickLinks();
+      });
+    });
+  }
+  document.getElementById('btn-add-ql').addEventListener('click', async () => {
+    const labelEl = document.getElementById('ql-label');
+    const urlEl = document.getElementById('ql-url');
+    let label = labelEl.value.trim();
+    let url = urlEl.value.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (!label) label = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const maxOrder = quickLinks.reduce((m, l) => Math.max(m, l.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_quick_links').insert({ label, url, sort_order: maxOrder + 1 }).select().single();
+    if (error) { alert(error.message); return; }
+    quickLinks.push(data);
+    labelEl.value = ''; urlEl.value = '';
+    renderQuickLinks();
+  });
+  document.getElementById('ql-url').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('btn-add-ql').click(); });
+
   document.getElementById('btn-read-brief').addEventListener('click', () => {
     const text = document.getElementById('brief-text').textContent;
     if (text && text !== 'Loading…') speakText(text, document.getElementById('btn-read-brief'), '🔊 Read it');
   });
 
   const { agents } = await loadNav();
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings()]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks()]);
   meetingsSheetId = await getMeetingsSheetId();
 
   const statsSnapshot = {
