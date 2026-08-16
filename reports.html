@@ -62,6 +62,16 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .usage-total { font-family: var(--mono); color: var(--leaf-bright); font-weight: 600; }
 .usage-empty { color: var(--muted); font-size: 0.82rem; }
 
+.session-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.8rem; }
+.session-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; }
+.session-card .stitle { font-family: var(--heading); font-size: 0.9rem; color: var(--leaf-bright); margin-bottom: 0.3rem; }
+.session-card .stag { display: inline-block; font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold); background: var(--surface2); border-radius: 100px; padding: 0.15rem 0.5rem; margin-bottom: 0.5rem; }
+.session-card .sfield { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.3rem; line-height: 1.4; }
+.session-card .sfield b { color: var(--text); font-weight: 600; }
+.type-breakdown { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.type-pill { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 0.3rem 0.7rem; }
+.type-pill b { color: var(--leaf-bright); }
+
 .nav-side {
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
   padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
@@ -109,6 +119,13 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     <div class="section-block">
       <h2>All Sheets at a Glance</h2>
       <div class="sheet-grid" id="sheet-grid"><p class="usage-empty">Loading…</p></div>
+    </div>
+
+    <div class="section-block">
+      <h2>🧵 Sessions</h2>
+      <div class="pulse-grid" id="sessions-stats" style="margin-bottom:1rem;"></div>
+      <div class="type-breakdown" id="sessions-type-breakdown"></div>
+      <div class="session-cards" id="sessions-cards"><p class="usage-empty">Loading…</p></div>
     </div>
 
     <div class="section-block">
@@ -255,6 +272,53 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     ].map(b => `<div class="pstat-box"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
   }
 
+  // ---------- Sessions macro ----------
+  async function loadSessionsMacro() {
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'sessions').maybeSingle();
+    const statsEl = document.getElementById('sessions-stats');
+    const breakdownEl = document.getElementById('sessions-type-breakdown');
+    const cardsEl = document.getElementById('sessions-cards');
+    if (!sheet) { cardsEl.innerHTML = '<p class="usage-empty">No Sessions sheet found.</p>'; return; }
+
+    const [{ data: cols }, { data: rows }] = await Promise.all([
+      supabase.from('kokiri_columns').select('name, column_key').eq('sheet_id', sheet.id).order('sort_order'),
+      supabase.from('kokiri_rows').select('data').eq('sheet_id', sheet.id).order('sort_order'),
+    ]);
+    const columns = cols || [];
+    const allRows = rows || [];
+    if (!allRows.length) { cardsEl.innerHTML = '<p class="usage-empty">No sessions logged yet.</p>'; statsEl.innerHTML = ''; return; }
+
+    const titleKey = columns.find(c => /title/i.test(c.name))?.column_key || columns[0]?.column_key;
+    const typeKey = columns.find(c => /task type/i.test(c.name))?.column_key;
+    const situationKey = columns.find(c => /situation/i.test(c.name))?.column_key;
+    const wisdomKey = columns.find(c => /wisdom/i.test(c.name))?.column_key;
+
+    const byType = {};
+    allRows.forEach(r => {
+      const t = (typeKey && r.data?.[typeKey]?.trim()) || 'Untyped';
+      byType[t] = (byType[t] || 0) + 1;
+    });
+    const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0];
+
+    statsEl.innerHTML = [
+      { val: allRows.length, label: 'Total Sessions' },
+      { val: Object.keys(byType).length, label: 'Task Types' },
+      { val: topType ? topType[0] : '—', label: 'Most Common Type' },
+    ].map(b => `<div class="pstat-box"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
+
+    breakdownEl.innerHTML = Object.entries(byType).sort((a, b) => b[1] - a[1])
+      .map(([t, n]) => `<span class="type-pill"><b>${n}</b> ${escapeHtml(t)}</span>`).join('');
+
+    cardsEl.innerHTML = allRows.slice(0, 30).map(r => `
+      <div class="session-card">
+        <div class="stitle">${escapeHtml(r.data?.[titleKey] || '(untitled session)')}</div>
+        ${typeKey && r.data?.[typeKey] ? `<span class="stag">${escapeHtml(r.data[typeKey])}</span>` : ''}
+        ${situationKey && r.data?.[situationKey] ? `<div class="sfield"><b>Situation:</b> ${escapeHtml(r.data[situationKey]).slice(0, 140)}</div>` : ''}
+        ${wisdomKey && r.data?.[wisdomKey] ? `<div class="sfield"><b>Wisdom:</b> ${escapeHtml(r.data[wisdomKey]).slice(0, 140)}</div>` : ''}
+      </div>
+    `).join('') + (allRows.length > 30 ? `<p class="usage-empty" style="grid-column:1/-1;">+${allRows.length - 30} more — see the full Sessions sheet.</p>` : '');
+  }
+
   async function loadUsage() {
     const el = document.getElementById('usage-content');
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -289,6 +353,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
   await loadNav();
   await loadPulse();
   await loadSheetGlance();
+  await loadSessionsMacro();
   await loadUsage();
 </script>
 
