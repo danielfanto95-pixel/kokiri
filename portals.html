@@ -46,7 +46,74 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="affiliate"] .dot { background: #e6c068; }
 .portal-tab[data-portal="client"] .dot { background: #7cc576; }
 .portal-tab[data-portal="ads"] .dot { background: #6fb8e6; }
+.portal-tab[data-portal="crm"] .dot { background: #c586e6; }
+.portal-tab[data-portal="content"] .dot { background: #e68686; }
+.portal-tab[data-portal="tasks"] .dot { background: #86c5e6; }
+.portal-tab[data-portal="builder"] .dot { background: #e6a868; }
 .portal-tab.active { background: var(--surface2); border-color: var(--border-bright); color: var(--text); }
+
+.view-toggle { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
+.view-toggle button {
+  font-family: var(--mono); font-size: 0.7rem; color: var(--muted); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer;
+}
+.view-toggle button.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); }
+
+.board { display: flex; gap: 0.9rem; overflow-x: auto; padding-bottom: 0.5rem; }
+.board-col { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; min-width: 240px; flex-shrink: 0; }
+.board-col h4 { font-family: var(--heading); font-size: 0.85rem; color: var(--leaf-bright); margin-bottom: 0.7rem; display: flex; justify-content: space-between; }
+.board-col h4 .count { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); }
+.board-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.7rem; margin-bottom: 0.6rem; font-size: 0.82rem; }
+.board-card .bctitle { margin-bottom: 0.35rem; }
+.board-card select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--muted); border-radius: 5px; padding: 0.25rem 0.4rem; font-size: 0.7rem; font-family: var(--mono); }
+.board-card .bmeta { font-size: 0.68rem; color: var(--dim); margin-top: 0.3rem; font-family: var(--mono); }
+
+.ai-draft-box { background: var(--surface); border: 1px dashed var(--border-bright); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; }
+.ai-draft-box .row { display: flex; gap: 0.6rem; }
+.ai-draft-box input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.82rem; }
+.ai-draft-box button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 0.9rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ai-draft-output { margin-top: 0.8rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; font-size: 0.82rem; white-space: pre-wrap; display: none; }
+.ai-draft-output .actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; }
+.ai-draft-output button { font-family: var(--mono); font-size: 0.7rem; background: var(--surface2); border: 1px solid var(--border); color: var(--leaf-bright); border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer; }
+
+.builder-step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.3rem; margin-bottom: 1rem; }
+.builder-step h3 { font-family: var(--heading); font-size: 1rem; color: var(--gold); margin-bottom: 0.7rem; }
+.builder-step label { display: block; font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; color: var(--dim); margin: 0.6rem 0 0.3rem; }
+.builder-step input, .builder-step textarea, .builder-step select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 0.5rem 0.7rem; font-family: inherit; font-size: 0.85rem;
+}
+.builder-step textarea { min-height: 60px; resize: vertical; }
+.team-option { display: flex; gap: 0.6rem; align-items: flex-start; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.8rem; margin-bottom: 0.5rem; cursor: pointer; }
+.team-option.selected { border-color: var(--leaf); background: rgba(124,197,118,0.08); }
+.team-option .ticon { font-size: 1.2rem; }
+.team-option h5 { font-family: var(--heading); font-size: 0.85rem; color: var(--text); margin-bottom: 0.15rem; }
+.team-option p { font-size: 0.75rem; color: var(--muted); }
+#btn-run-builder, #btn-generate-brief { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 8px; padding: 0.6rem 1.2rem; font-family: var(--mono); font-weight: 600; font-size: 0.8rem; cursor: pointer; }
+.builder-result { margin-top: 0.8rem; padding: 0.9rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; white-space: pre-wrap; }
+
+/* Floating capped AI chatbot */
+#chat-toggle {
+  position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 50; background: var(--leaf-bright); color: var(--bg);
+  border: none; border-radius: 100px; padding: 0.7rem 1.1rem; font-family: var(--heading); font-weight: 700;
+  font-size: 0.82rem; cursor: pointer; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+}
+#chat-panel {
+  position: fixed; bottom: 5rem; left: 1.5rem; width: 320px; max-width: 90vw; height: 420px; max-height: 70vh;
+  background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; z-index: 50;
+  display: none; flex-direction: column; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+#chat-panel.open { display: flex; }
+.chat-panel-head { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.chat-panel-head h4 { font-family: var(--heading); font-size: 0.85rem; color: var(--leaf-bright); }
+.chat-panel-head .cap-note { font-family: var(--mono); font-size: 0.62rem; color: var(--dim); }
+#chat-log { flex: 1; overflow-y: auto; padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.chat-msg { font-size: 0.8rem; padding: 0.4rem 0.6rem; border-radius: 8px; max-width: 85%; }
+.chat-msg.user { align-self: flex-end; background: var(--surface2); }
+.chat-msg.assistant { align-self: flex-start; background: rgba(163,214,140,0.1); }
+.chat-panel-input { display: flex; gap: 0.4rem; padding: 0.7rem; border-top: 1px solid var(--border); }
+.chat-panel-input input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.8rem; }
+.chat-panel-input button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.4rem 0.7rem; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
 
 .portal-panel { display: none; }
 .portal-panel.active { display: block; }
@@ -117,13 +184,17 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   <main>
     <div class="page-head">
       <h1>🚪 Portals</h1>
-      <p>Affiliate, Client, and Ads views in one place. These are internal views for you, not external logins — Kokiri stays single-user by design, so nobody but you can sign in here. If you want real external portals affiliates/clients log into themselves, that's a separate (larger) build — say the word.</p>
+      <p>Affiliate, Client, CRM, Content, Tasks, Ads, and Agent Builder in one place. These are internal views for you, not external logins — Kokiri stays single-user by design, so nobody but you can sign in here. If you want real external portals affiliates/clients log into themselves, that's a separate (larger) build — say the word.</p>
     </div>
 
     <div class="portal-tabs">
       <button class="portal-tab active" data-portal="affiliate"><span class="dot"></span>🤝 Affiliate Portal</button>
       <button class="portal-tab" data-portal="client"><span class="dot"></span>🧑‍🤝‍🧑 Client Portal</button>
+      <button class="portal-tab" data-portal="crm"><span class="dot"></span>📇 CRM</button>
+      <button class="portal-tab" data-portal="content"><span class="dot"></span>✍️ Content</button>
+      <button class="portal-tab" data-portal="tasks"><span class="dot"></span>✅ Tasks</button>
       <button class="portal-tab" data-portal="ads"><span class="dot"></span>📣 Ads Portal</button>
+      <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -133,6 +204,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="affiliates-performance">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-affiliates-performance"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Affiliate program for the fitness business — referrals and commission owed, tracked per affiliate.</div>
     </div>
 
     <div class="portal-panel" id="panel-client">
@@ -142,6 +214,45 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="clients">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-clients"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Everfit-style client tracking: program assignment, check-in cadence, and progress — all editable inline.</div>
+    </div>
+
+    <div class="portal-panel" id="panel-crm">
+      <div class="portal-stats" id="stats-crm"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="crm">+ Add Row</button>
+        <button data-action="add-col" data-slug="crm">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-crm"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Salesforce-style lead/contact tracking — pipeline breakdown by Lead Status above.</div>
+    </div>
+
+    <div class="portal-panel" id="panel-content">
+      <div class="ai-draft-box">
+        <div class="row">
+          <input id="ai-draft-topic" placeholder="Topic or angle to draft, e.g. '3 fixes for a stalled fat-loss plateau'">
+          <button id="btn-ai-draft">✨ AI Draft</button>
+        </div>
+        <div class="ai-draft-output" id="ai-draft-output"></div>
+      </div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="content">+ Add Row</button>
+        <button data-action="add-col" data-slug="content">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-content"><p class="empty-note">Loading…</p></div>
+    </div>
+
+    <div class="portal-panel" id="panel-tasks">
+      <div class="view-toggle">
+        <button class="active" data-view="board">Board</button>
+        <button data-view="table">Table</button>
+      </div>
+      <div id="tasks-board"></div>
+      <div class="op-toolbar" id="tasks-table-toolbar" style="display:none;">
+        <button data-action="add-row" data-slug="tasks-dashboard">+ Add Row</button>
+        <button data-action="add-col" data-slug="tasks-dashboard">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-tasks-dashboard" style="display:none;"><p class="empty-note">Loading…</p></div>
     </div>
 
     <div class="portal-panel" id="panel-ads">
@@ -151,6 +262,30 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="ads">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-ads"><p class="empty-note">Loading…</p></div>
+    </div>
+
+    <div class="portal-panel" id="panel-builder">
+      <div class="builder-step">
+        <h3>1. Tell Kokiri about what you're building</h3>
+        <label>What is this for? (business, project, or purpose)</label>
+        <input id="b-subject" placeholder="e.g. A meal-prep subscription business">
+        <label>Who's it for / target audience</label>
+        <input id="b-audience" placeholder="e.g. Busy professionals who want to eat healthy without cooking">
+        <label>Tone &amp; voice</label>
+        <input id="b-tone" placeholder="e.g. Warm, direct, no corporate jargon">
+        <label>Goals for the next 90 days</label>
+        <textarea id="b-goals" placeholder="e.g. Get to 50 paying subscribers, build a repeatable content system"></textarea>
+      </div>
+      <div class="builder-step">
+        <h3>2. Pick a starting agent team</h3>
+        <div id="team-options"></div>
+      </div>
+      <div class="builder-step">
+        <h3>3. Build it</h3>
+        <button id="btn-run-builder">🧩 Create Agent Team</button>
+        <button id="btn-generate-brief" style="margin-left:0.6rem;">🌐 Generate Website &amp; Ad Brief</button>
+        <div class="builder-result" id="builder-result" style="display:none;"></div>
+      </div>
     </div>
   </main>
 
@@ -192,6 +327,19 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       </div>
     </div>
   </nav>
+</div>
+
+<button id="chat-toggle">💬 Ask about this tab</button>
+<div id="chat-panel">
+  <div class="chat-panel-head">
+    <h4 id="chat-panel-title">Portal Assistant</h4>
+    <span class="cap-note" id="cap-note"></span>
+  </div>
+  <div id="chat-log"></div>
+  <div class="chat-panel-input">
+    <input id="chat-input" placeholder="Ask a question…">
+    <button id="chat-send">Send</button>
+  </div>
 </div>
 
 <script type="module">
@@ -325,11 +473,311 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     el.innerHTML = boxes.map(b => `<div class="pstat-box ${cls}"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
   }
 
-  // ---------- Mount all three portals ----------
+  // ---------- Shared data cache (per-tab, feeds the chatbot + board view) ----------
+  const portalData = {}; // slug -> { columns, rows, label }
+  let activeTab = 'affiliate';
+
+  document.querySelectorAll('.portal-tab').forEach(tab => {
+    tab.addEventListener('click', () => { activeTab = tab.dataset.portal; renderChatHeader(); });
+  });
+
+  // ---------- Settings (needed for the capped intelligence cascade) ----------
+  let settings = {};
+  async function loadSettings() {
+    const { data } = await supabase.from('kokiri_settings').select('key, value');
+    (data || []).forEach(r => settings[r.key] = r.value);
+  }
+
+  // ---------- Capped AI: at most PAID_CAP chat-proxy (premium/paid-capable) calls per day across all portal chatbots; beyond that, free-tier only ----------
+  const PAID_CAP = 5;
+  function todayKey() { return new Date().toISOString().slice(0, 10); }
+  async function getPaidUsedToday() {
+    const { data } = await supabase.from('kokiri_settings').select('value').eq('key', 'portal_chat_paid_used_' + todayKey()).maybeSingle();
+    return parseInt(data?.value || '0', 10) || 0;
+  }
+  async function incrementPaidUsedToday() {
+    const used = await getPaidUsedToday();
+    await supabase.from('kokiri_settings').upsert({ key: 'portal_chat_paid_used_' + todayKey(), value: String(used + 1) }, { onConflict: 'key' });
+  }
+
+  async function callPortalIntelligence(messages) {
+    const used = await getPaidUsedToday();
+    if (used < PAID_CAP) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 25000);
+        const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/chat-proxy', {
+          method: 'POST', signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+          body: JSON.stringify({ messages }),
+        });
+        clearTimeout(t);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.text) { await incrementPaidUsedToday(); return json; }
+        }
+      } catch { /* fall through to free tiers */ }
+    }
+    // Free tiers only (either by choice, past cap, or premium failed)
+    const omniUrl = (settings.omnirouter_url || 'http://localhost:20128').replace(/\/$/, '');
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4000);
+      const res = await fetch(omniUrl + '/v1/chat/completions', {
+        method: 'POST', signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json', ...(settings.omnirouter_key ? { Authorization: 'Bearer ' + settings.omnirouter_key } : {}) },
+        body: JSON.stringify({ model: 'auto/free', messages }),
+      });
+      clearTimeout(t);
+      if (!res.ok) throw new Error('omni not ok');
+      const json = await res.json();
+      return { text: json.choices?.[0]?.message?.content || '(empty response)', source: 'omnirouter' };
+    } catch { /* fall through */ }
+    if (settings.ollama_model) {
+      const ollamaUrl = (settings.ollama_url || 'http://localhost:11434').replace(/\/$/, '');
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 20000);
+        const res = await fetch(ollamaUrl + '/api/chat', {
+          method: 'POST', signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: settings.ollama_model, messages, stream: false }),
+        });
+        clearTimeout(t);
+        if (!res.ok) throw new Error('ollama not ok');
+        const json = await res.json();
+        const text = json.message?.content;
+        if (text) return { text, source: 'ollama' };
+      } catch { /* fall through */ }
+    }
+    throw new Error('No intelligence available right now.');
+  }
+
+  // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', builder: 'Agent Builder' };
+  let chatHistory = [];
+
+  async function renderChatHeader() {
+    document.getElementById('chat-panel-title').textContent = '💬 ' + (TAB_LABELS[activeTab] || 'Portal') + ' Assistant';
+    const used = await getPaidUsedToday();
+    document.getElementById('cap-note').textContent = `${Math.max(0, PAID_CAP - used)}/${PAID_CAP} premium replies left today`;
+  }
+
+  function buildTabContextPrompt() {
+    const d = portalData[activeTab];
+    if (!d) return `You are a helpful assistant for the ${TAB_LABELS[activeTab] || activeTab} section of Kokiri, Daniel's personal operations system. No data is loaded for this tab yet.`;
+    const colNames = d.columns.map(c => c.name).join(', ');
+    const sample = d.rows.slice(0, 12).map(r => d.columns.map(c => `${c.name}: ${r.data?.[c.column_key] ?? ''}`).join(' | ')).join('\n');
+    return `You are a helpful, concise assistant for the ${TAB_LABELS[activeTab] || activeTab} section of Kokiri, Daniel's personal operations system. This tab has ${d.rows.length} rows with columns: ${colNames}.
+Sample data (up to 12 rows):
+${sample || '(no rows yet)'}
+Answer questions about this data plainly. You are read-only — you cannot edit anything, only describe and summarize. If asked to change something, tell Daniel to edit it directly in the grid.`;
+  }
+
+  function appendChatMsg(role, text) {
+    const log = document.getElementById('chat-log');
+    log.insertAdjacentHTML('beforeend', `<div class="chat-msg ${role}">${escapeHtml(text)}</div>`);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  document.getElementById('chat-toggle').addEventListener('click', async () => {
+    const panel = document.getElementById('chat-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) await renderChatHeader();
+  });
+
+  async function sendPortalChat() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    appendChatMsg('user', text);
+    chatHistory.push({ role: 'user', content: text });
+    appendChatMsg('assistant', '…thinking');
+    try {
+      const messages = [{ role: 'system', content: buildTabContextPrompt() }, ...chatHistory.slice(-10)];
+      const reply = await callPortalIntelligence(messages);
+      document.querySelectorAll('.chat-msg.assistant').forEach(el => { if (el.textContent === '…thinking') el.remove(); });
+      appendChatMsg('assistant', reply.text);
+      chatHistory.push({ role: 'assistant', content: reply.text });
+      await renderChatHeader();
+    } catch (e) {
+      document.querySelectorAll('.chat-msg.assistant').forEach(el => { if (el.textContent === '…thinking') el.remove(); });
+      appendChatMsg('assistant', '⚠ ' + e.message);
+    }
+  }
+  document.getElementById('chat-send').addEventListener('click', sendPortalChat);
+  document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendPortalChat(); });
+
+  // ---------- Tasks board view (Notion-style, over the same tasks-dashboard sheet as the Table view) ----------
+  function renderTasksBoard(columns, rows, sheetId) {
+    const board = document.getElementById('tasks-board');
+    const statusKey = columns.find(c => /status/i.test(c.name))?.column_key;
+    const titleKey = columns.find(c => /task|title|name/i.test(c.name))?.column_key || columns[0]?.column_key;
+    const ownerKey = columns.find(c => /owner/i.test(c.name))?.column_key;
+    const dueKey = columns.find(c => /due/i.test(c.name))?.column_key;
+    const priorityKey = columns.find(c => /priority/i.test(c.name))?.column_key;
+    if (!statusKey) { board.innerHTML = '<p class="empty-note">Add a "Status" column to enable the board view.</p>'; return; }
+
+    const statuses = [...new Set(rows.map(r => (r.data?.[statusKey] || '').trim()).filter(Boolean))];
+    const cols = statuses.length ? statuses : ['To Do', 'In Progress', 'Done'];
+
+    board.innerHTML = `<div class="board">${cols.map(status => {
+      const cardRows = rows.filter(r => (r.data?.[statusKey] || '').trim() === status);
+      return `
+        <div class="board-col">
+          <h4>${escapeHtml(status)} <span class="count">${cardRows.length}</span></h4>
+          ${cardRows.map(r => `
+            <div class="board-card" data-row-id="${r.id}">
+              <div class="bctitle">${escapeHtml(r.data?.[titleKey] || '(untitled)')}</div>
+              <select data-status-select>${cols.map(s => `<option ${s === status ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}</select>
+              <div class="bmeta">${[ownerKey && r.data?.[ownerKey], priorityKey && r.data?.[priorityKey], dueKey && r.data?.[dueKey]].filter(Boolean).map(escapeHtml).join(' · ')}</div>
+            </div>
+          `).join('') || '<p style="font-size:0.75rem;color:var(--dim);">Empty</p>'}
+        </div>
+      `;
+    }).join('')}</div>`;
+
+    board.querySelectorAll('[data-status-select]').forEach(sel => {
+      sel.addEventListener('change', async (e) => {
+        const rowId = e.target.closest('.board-card').dataset.rowId;
+        const row = rows.find(r => r.id === rowId);
+        if (!row) return;
+        row.data = { ...row.data, [statusKey]: e.target.value };
+        await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+        renderTasksBoard(columns, rows, sheetId);
+      });
+    });
+  }
+
+  document.querySelectorAll('.view-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const isBoard = btn.dataset.view === 'board';
+      document.getElementById('tasks-board').style.display = isBoard ? 'block' : 'none';
+      document.getElementById('tasks-table-toolbar').style.display = isBoard ? 'none' : 'flex';
+      document.getElementById('grid-tasks-dashboard').style.display = isBoard ? 'none' : 'block';
+    });
+  });
+
+  // ---------- Content: AI Draft ----------
+  document.getElementById('btn-ai-draft').addEventListener('click', async () => {
+    const topic = document.getElementById('ai-draft-topic').value.trim();
+    if (!topic) return;
+    const btn = document.getElementById('btn-ai-draft');
+    const out = document.getElementById('ai-draft-output');
+    btn.disabled = true; btn.textContent = 'Drafting…';
+    out.style.display = 'block';
+    out.textContent = 'Working on it…';
+    try {
+      const reply = await callPortalIntelligence([
+        { role: 'system', content: 'You write short, punchy content drafts for a fitness coaching business. Plain text, no markdown, ready to adapt into a video script or post.' },
+        { role: 'user', content: `Draft a short piece of content on: ${topic}` },
+      ]);
+      out.innerHTML = escapeHtml(reply.text).replace(/\n/g, '<br>') + `
+        <div class="actions">
+          <button id="btn-draft-add-row">+ Add as Row</button>
+          <button id="btn-draft-copy">Copy</button>
+        </div>`;
+      document.getElementById('btn-draft-copy').addEventListener('click', () => navigator.clipboard.writeText(reply.text));
+      document.getElementById('btn-draft-add-row').addEventListener('click', async () => {
+        const d = portalData.content;
+        if (!d) return;
+        const titleKey = d.columns.find(c => /outline|instructions/i.test(c.name))?.column_key || d.columns[0]?.column_key;
+        const bodyKey = d.columns.find(c => /script/i.test(c.name))?.column_key || titleKey;
+        const maxOrder = d.rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+        const rowData = {}; rowData[titleKey] = topic; if (bodyKey !== titleKey) rowData[bodyKey] = reply.text;
+        await supabase.from('kokiri_rows').insert({ sheet_id: d.sheetId, data: rowData, sort_order: maxOrder + 1 });
+        alert('Added — refresh the Content grid to see it.');
+      });
+    } catch (e) {
+      out.textContent = '⚠ ' + e.message;
+    }
+    btn.disabled = false; btn.textContent = '✨ AI Draft';
+  });
+
+  // ---------- Agent Builder ----------
+  const TEAM_TEMPLATES = {
+    solo: { icon: '🗡️', label: 'Solo Assistant', desc: 'One general-purpose agent to start.', agents: [
+      { name: 'Assistant', purpose: 'General-purpose support for this project — answer questions, draft content, track tasks.', icon: '🗡️' },
+    ]},
+    sales_support: { icon: '🤝', label: 'Sales + Support Duo', desc: 'A sales-focused agent and a customer-support agent.', agents: [
+      { name: 'Sales', purpose: 'Handle inbound leads, draft outreach, and track the pipeline.', icon: '💼' },
+      { name: 'Support', purpose: 'Handle customer questions and issues, keep a log of recurring problems.', icon: '🎧' },
+    ]},
+    full_team: { icon: '🏛️', label: 'Full Team', desc: 'Sales, Support, Content, and a Master coordinating agent.', agents: [
+      { name: 'Master', purpose: 'Coordinate the team below, delegate incoming work, keep the big picture.', icon: '🧭' },
+      { name: 'Sales', purpose: 'Handle inbound leads, draft outreach, and track the pipeline.', icon: '💼' },
+      { name: 'Support', purpose: 'Handle customer questions and issues, keep a log of recurring problems.', icon: '🎧' },
+      { name: 'Content', purpose: 'Draft and organize content — posts, scripts, outlines.', icon: '✍️' },
+    ]},
+  };
+  let selectedTeam = 'solo';
+  function renderTeamOptions() {
+    document.getElementById('team-options').innerHTML = Object.entries(TEAM_TEMPLATES).map(([key, t]) => `
+      <div class="team-option ${key === selectedTeam ? 'selected' : ''}" data-team="${key}">
+        <span class="ticon">${t.icon}</span>
+        <div><h5>${escapeHtml(t.label)}</h5><p>${escapeHtml(t.desc)} (${t.agents.length} agent${t.agents.length > 1 ? 's' : ''})</p></div>
+      </div>
+    `).join('');
+    document.querySelectorAll('.team-option').forEach(el => {
+      el.addEventListener('click', () => { selectedTeam = el.dataset.team; renderTeamOptions(); });
+    });
+  }
+
+  document.getElementById('btn-run-builder').addEventListener('click', async () => {
+    const subject = document.getElementById('b-subject').value.trim();
+    if (!subject) { alert('Fill in what this is for first.'); return; }
+    const team = TEAM_TEMPLATES[selectedTeam];
+    const { data: existing } = await supabase.from('agents').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+    let sortOrder = (existing?.[0]?.sort_order || 0) + 1;
+    let masterId = null;
+    for (const a of team.agents) {
+      const { data } = await supabase.from('agents').insert({
+        name: `${a.name} (${subject.slice(0, 30)})`, purpose: a.purpose, icon: a.icon,
+        model_pref: 'auto', sort_order: sortOrder++, reports_to: a.name === 'Master' ? null : masterId,
+      }).select().single();
+      if (a.name === 'Master') masterId = data.id;
+    }
+    const resultEl = document.getElementById('builder-result');
+    resultEl.style.display = 'block';
+    resultEl.textContent = `✓ Created ${team.agents.length} agent(s) for "${subject}" — find them in the Agent Dashboard.`;
+  });
+
+  document.getElementById('btn-generate-brief').addEventListener('click', async () => {
+    const subject = document.getElementById('b-subject').value.trim();
+    const audience = document.getElementById('b-audience').value.trim();
+    const tone = document.getElementById('b-tone').value.trim();
+    const goals = document.getElementById('b-goals').value.trim();
+    if (!subject) { alert('Fill in what this is for first.'); return; }
+    const btn = document.getElementById('btn-generate-brief');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    const resultEl = document.getElementById('builder-result');
+    resultEl.style.display = 'block';
+    resultEl.textContent = 'Working on it…';
+    try {
+      const reply = await callPortalIntelligence([
+        { role: 'system', content: 'You write short, practical starter briefs for a new website and a first ad campaign. Plain text, no markdown, organized under two clear headers: WEBSITE BRIEF and AD BRIEF.' },
+        { role: 'user', content: `Subject: ${subject}\nAudience: ${audience || 'not specified'}\nTone: ${tone || 'not specified'}\n90-day goals: ${goals || 'not specified'}\n\nWrite a short website brief (homepage sections + key messaging) and a short first-ad brief (hook, angle, CTA).` },
+      ]);
+      resultEl.textContent = reply.text;
+    } catch (e) {
+      resultEl.textContent = '⚠ ' + e.message;
+    }
+    btn.disabled = false; btn.textContent = '🌐 Generate Website & Ad Brief';
+  });
+
+  // ---------- Mount everything ----------
   initNavCollapse();
   await loadNav();
+  await loadSettings();
+  renderTeamOptions();
+  renderChatHeader();
 
   mountGrid('affiliates-performance', (cols, rows) => {
+    portalData.affiliate = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
     const commKey = cols.find(c => /commission/i.test(c.name))?.column_key;
     const refKey = cols.find(c => /referral/i.test(c.name))?.column_key;
     const totalCommission = commKey ? rows.reduce((s, r) => s + numFrom(r.data?.[commKey]), 0) : 0;
@@ -342,6 +790,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   });
 
   mountGrid('clients', (cols, rows) => {
+    portalData.client = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
     const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
     const active = statusKey ? rows.filter(r => /active/i.test(r.data?.[statusKey] || '')).length : 0;
     statsBoxes(document.getElementById('stats-client'), 'client', [
@@ -351,7 +800,36 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     ]);
   });
 
+  mountGrid('crm', async (cols, rows) => {
+    let sheetId = rows[0]?.sheet_id;
+    if (!sheetId) { const { data } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'crm').maybeSingle(); sheetId = data?.id; }
+    portalData.crm = { columns: cols, rows, sheetId };
+    const statusKey = cols.find(c => /lead status|status/i.test(c.name))?.column_key;
+    const byStatus = {};
+    if (statusKey) rows.forEach(r => { const s = (r.data?.[statusKey] || 'Unset').trim() || 'Unset'; byStatus[s] = (byStatus[s] || 0) + 1; });
+    const topStatus = Object.entries(byStatus).sort((a, b) => b[1] - a[1])[0];
+    statsBoxes(document.getElementById('stats-crm'), 'affiliate', [
+      { val: rows.length, label: 'Total Leads/Contacts' },
+      { val: Object.keys(byStatus).length, label: 'Pipeline Stages' },
+      { val: topStatus ? `${topStatus[1]} in "${topStatus[0]}"` : '—', label: 'Largest Stage' },
+    ]);
+  });
+
+  mountGrid('content', async (cols, rows) => {
+    let sheetId = rows[0]?.sheet_id;
+    if (!sheetId) { const { data } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'content').maybeSingle(); sheetId = data?.id; }
+    portalData.content = { columns: cols, rows, sheetId };
+  });
+
+  mountGrid('tasks-dashboard', async (cols, rows) => {
+    let sheetId = rows[0]?.sheet_id;
+    if (!sheetId) { const { data } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'tasks-dashboard').maybeSingle(); sheetId = data?.id; }
+    portalData.tasks = { columns: cols, rows, sheetId };
+    renderTasksBoard(cols, rows, sheetId);
+  });
+
   mountGrid('ads', (cols, rows) => {
+    portalData.ads = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
     const aiKey = cols.find(c => /ai version/i.test(c.name))?.column_key;
     const withAi = aiKey ? rows.filter(r => (r.data?.[aiKey] || '').trim()).length : 0;
     statsBoxes(document.getElementById('stats-ads'), 'ads', [
