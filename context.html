@@ -36,13 +36,25 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .page-head { margin-bottom: 1.5rem; }
 .page-head h1 { font-family: var(--heading); font-size: 1.5rem; color: var(--leaf-bright); }
 .page-head p { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.6; }
-.editor-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+.editor-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.3rem; }
+.editor-box .section-tag { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.3rem; }
+.editor-box h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.editor-box .section-desc { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.9rem; line-height: 1.5; }
 textarea {
-  width: 100%; min-height: 320px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  width: 100%; min-height: 140px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
   color: var(--text); font-family: var(--body); font-size: 0.95rem; line-height: 1.6; padding: 1rem; resize: vertical;
 }
 textarea:focus { outline: none; border-color: var(--leaf); }
-.editor-footer { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
+.subfield { margin-bottom: 1rem; }
+.subfield:last-child { margin-bottom: 0; }
+.subfield label { display: block; font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); margin-bottom: 0.4rem; }
+.subfield textarea { min-height: 90px; }
+.subfield select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  padding: 0.6rem 0.8rem; font-family: var(--body); font-size: 0.9rem;
+}
+.saga-preview { margin-top: 0.6rem; padding: 0.7rem 0.9rem; background: var(--bg); border: 1px dashed var(--border-bright); border-radius: 8px; font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+.editor-footer { display: flex; align-items: center; gap: 1rem; margin-top: 0.3rem; }
 #btn-save {
   background: var(--leaf); color: #0c120d; border: none; border-radius: 8px; padding: 0.7rem 1.5rem;
   font-family: var(--heading); font-weight: 700; font-size: 0.85rem; cursor: pointer;
@@ -99,19 +111,56 @@ textarea:focus { outline: none; border-color: var(--leaf); }
     <div class="content-wrap">
       <div class="page-head">
         <h1>📝 Global Instructions & Context</h1>
-        <p>This applies everywhere intelligence is used across Kokiri — every agent's reasoning, the chat panel, and the autonomous 30-minute runner. Think of it as the one place to set tone, priorities, or standing rules that should never need repeating.</p>
+        <p>This applies everywhere intelligence is used across Kokiri — every agent's reasoning, the chat panel, the messaging bridge, and the autonomous runner. Divided into three sections so it stays organized as it grows; all three are combined into one context block behind the scenes.</p>
       </div>
 
       <div class="editor-box">
-        <textarea id="context-text" placeholder="e.g. Always be concise. Prioritize the Furin Fitness launch this month. Never suggest spending money without asking first. My timezone is..."></textarea>
-        <div class="editor-footer">
-          <button id="btn-save">Save</button>
-          <span class="save-status" id="save-status"></span>
+        <div class="section-tag">Section A</div>
+        <h2>General Context</h2>
+        <div class="section-desc">Standing facts and preferences that apply everywhere — tone, timezone, priorities, things to never do without asking first.</div>
+        <textarea id="ctx-general" placeholder="e.g. Always be concise. Never suggest spending money without asking first. My timezone is..."></textarea>
+      </div>
+
+      <div class="editor-box">
+        <div class="section-tag">Section B</div>
+        <h2>Current Saga</h2>
+        <div class="section-desc">The active "quest" from your Sagas sheet, plus its stats and goals — surfaced to every agent so they know the big-picture arc you're in right now.</div>
+        <div class="subfield">
+          <label>Current Saga (from the Sagas sheet)</label>
+          <select id="ctx-saga-select"><option value="">— None selected —</option></select>
+          <div class="saga-preview" id="saga-preview" style="display:none;"></div>
+        </div>
+        <div class="subfield">
+          <label>Saga Stats</label>
+          <textarea id="ctx-saga-stats" placeholder="e.g. Week 6 of 12. Revenue up 18% since start. 3 of 5 milestones hit."></textarea>
+        </div>
+        <div class="subfield">
+          <label>Saga Goals</label>
+          <textarea id="ctx-saga-goals" placeholder="e.g. Hit $10k MRR by end of quarter. Launch the affiliate program by the 15th."></textarea>
         </div>
       </div>
 
+      <div class="editor-box">
+        <div class="section-tag">Section C</div>
+        <h2>Agent Context & Instructions</h2>
+        <div class="section-desc">Standing instructions for how agents should behave, beyond any single agent's own Purpose field — split into what you've explicitly told them vs. patterns Kokiri has picked up over time.</div>
+        <div class="subfield">
+          <label>Explicit Instructions</label>
+          <textarea id="ctx-agent-explicit" placeholder="e.g. Always confirm before sending anything externally. Default to the free model tier unless I say otherwise."></textarea>
+        </div>
+        <div class="subfield">
+          <label>Inferred Instructions</label>
+          <textarea id="ctx-agent-inferred" placeholder="e.g. Patterns noticed over time — prefers short replies, usually reviews things in the evening..."></textarea>
+        </div>
+      </div>
+
+      <div class="editor-footer">
+        <button id="btn-save">Save All Sections</button>
+        <span class="save-status" id="save-status"></span>
+      </div>
+
       <div class="scope-note">
-        <strong>Scope:</strong> this is a single global block of context — not per-agent. Individual agents still have their own "Purpose" field (set on the Agent Dashboard) for role-specific instructions; this text gets prepended alongside that for every call, everywhere.
+        <strong>Scope:</strong> this is global context — not per-agent. Individual agents still have their own "Purpose" field (set on the Agent Dashboard) for role-specific instructions; everything above gets combined and prepended alongside that for every call, everywhere.
       </div>
 
       <div class="usage-box">
@@ -202,24 +251,81 @@ textarea:focus { outline: none; border-color: var(--leaf); }
     });
   }
 
-  const textarea = document.getElementById('context-text');
   const statusEl = document.getElementById('save-status');
   const saveBtn = document.getElementById('btn-save');
+  const sagaSelect = document.getElementById('ctx-saga-select');
+  const sagaPreview = document.getElementById('saga-preview');
+  let sagaRows = [];
+
+  const SETTING_KEYS = ['ctx_general', 'ctx_current_saga_id', 'ctx_saga_stats', 'ctx_saga_goals', 'ctx_agent_explicit', 'ctx_agent_inferred'];
+
+  async function loadSagaOptions() {
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'sagas').maybeSingle();
+    if (!sheet) return;
+    const { data: rows } = await supabase.from('kokiri_rows').select('id, data').eq('sheet_id', sheet.id).order('sort_order');
+    sagaRows = rows || [];
+    sagaSelect.innerHTML = '<option value="">— None selected —</option>' +
+      sagaRows.map(r => `<option value="${r.id}">${escapeHtml(r.data?.quest_title || '(untitled saga)')}</option>`).join('');
+  }
+
+  function renderSagaPreview() {
+    const row = sagaRows.find(r => r.id === sagaSelect.value);
+    if (!row || !row.data?.situation) { sagaPreview.style.display = 'none'; return; }
+    sagaPreview.style.display = 'block';
+    sagaPreview.textContent = row.data.situation;
+  }
+  sagaSelect.addEventListener('change', renderSagaPreview);
 
   async function loadContext() {
-    const { data } = await supabase.from('kokiri_settings').select('value, updated_at').eq('key', 'global_context').maybeSingle();
-    textarea.value = data?.value || '';
-    if (data?.updated_at) statusEl.textContent = 'Last saved ' + new Date(data.updated_at).toLocaleString();
+    const { data } = await supabase.from('kokiri_settings').select('key, value, updated_at').in('key', SETTING_KEYS);
+    const byKey = {};
+    (data || []).forEach(r => byKey[r.key] = r.value);
+    document.getElementById('ctx-general').value = byKey.ctx_general || '';
+    document.getElementById('ctx-saga-stats').value = byKey.ctx_saga_stats || '';
+    document.getElementById('ctx-saga-goals').value = byKey.ctx_saga_goals || '';
+    document.getElementById('ctx-agent-explicit').value = byKey.ctx_agent_explicit || '';
+    document.getElementById('ctx-agent-inferred').value = byKey.ctx_agent_inferred || '';
+    sagaSelect.value = byKey.ctx_current_saga_id || '';
+    renderSagaPreview();
+    const lastSaved = (data || []).map(r => r.updated_at).filter(Boolean).sort().pop();
+    if (lastSaved) statusEl.textContent = 'Last saved ' + new Date(lastSaved).toLocaleString();
+  }
+
+  function composeGlobalContext(vals) {
+    const saga = sagaRows.find(r => r.id === vals.ctx_current_saga_id);
+    const parts = [];
+    if (vals.ctx_general) parts.push(`## General Context\n${vals.ctx_general}`);
+    if (saga || vals.ctx_saga_stats || vals.ctx_saga_goals) {
+      let block = '## Current Saga\n';
+      if (saga) block += `Quest: ${saga.data?.quest_title || ''}\n` + (saga.data?.situation ? `Situation: ${saga.data.situation}\n` : '');
+      if (vals.ctx_saga_stats) block += `Stats: ${vals.ctx_saga_stats}\n`;
+      if (vals.ctx_saga_goals) block += `Goals: ${vals.ctx_saga_goals}\n`;
+      parts.push(block.trim());
+    }
+    if (vals.ctx_agent_explicit || vals.ctx_agent_inferred) {
+      let block = '## Agent Context & Instructions\n';
+      if (vals.ctx_agent_explicit) block += `Explicit instructions:\n${vals.ctx_agent_explicit}\n`;
+      if (vals.ctx_agent_inferred) block += `Inferred instructions:\n${vals.ctx_agent_inferred}\n`;
+      parts.push(block.trim());
+    }
+    return parts.join('\n\n');
   }
 
   saveBtn.addEventListener('click', async () => {
     saveBtn.disabled = true;
     statusEl.textContent = 'Saving…';
-    const value = textarea.value.trim();
-    const { error } = await supabase.from('kokiri_settings').upsert(
-      { key: 'global_context', value, updated_at: new Date().toISOString() },
-      { onConflict: 'key' }
-    );
+    const vals = {
+      ctx_general: document.getElementById('ctx-general').value.trim(),
+      ctx_current_saga_id: sagaSelect.value || '',
+      ctx_saga_stats: document.getElementById('ctx-saga-stats').value.trim(),
+      ctx_saga_goals: document.getElementById('ctx-saga-goals').value.trim(),
+      ctx_agent_explicit: document.getElementById('ctx-agent-explicit').value.trim(),
+      ctx_agent_inferred: document.getElementById('ctx-agent-inferred').value.trim(),
+    };
+    const now = new Date().toISOString();
+    const rows = Object.entries(vals).map(([key, value]) => ({ key, value, updated_at: now }));
+    rows.push({ key: 'global_context', value: composeGlobalContext(vals), updated_at: now });
+    const { error } = await supabase.from('kokiri_settings').upsert(rows, { onConflict: 'key' });
     saveBtn.disabled = false;
     statusEl.textContent = error ? '⚠ ' + error.message : '✓ Saved ' + new Date().toLocaleTimeString();
   });
@@ -263,6 +369,7 @@ textarea:focus { outline: none; border-color: var(--leaf); }
 
   initNavCollapse();
   await loadNav();
+  await loadSagaOptions();
   await loadContext();
   await loadUsage();
 </script>

@@ -1136,13 +1136,16 @@ main { padding: 1.5rem; overflow-x: hidden; }
 
   function renderAgentList() {
     const el = document.getElementById('agent-list');
-    el.innerHTML = agents.map(a => `
-      <div class="nav-link agent-item ${currentAgent?.id === a.id ? 'active' : ''}" data-id="${a.id}">
+    el.innerHTML = agents.map(a => {
+      const parent = a.reports_to ? agents.find(p => p.id === a.reports_to) : null;
+      return `
+      <div class="nav-link agent-item ${currentAgent?.id === a.id ? 'active' : ''}" data-id="${a.id}" style="${parent ? 'padding-left:1.4rem;' : ''}">
         <span class="icon">${a.icon}</span>
-        <span class="name">${escapeHtml(a.name)}</span>
+        <span class="name">${escapeHtml(a.name)}${parent ? `<div style="font-family:var(--mono);font-size:0.6rem;color:var(--dim);font-weight:400;">↳ reports to ${escapeHtml(parent.name)}</div>` : ''}</span>
         <span class="agent-status-dot ${a.status !== 'active' ? 'paused' : ''}"></span>
       </div>
-    `).join('');
+    `;
+    }).join('');
     el.querySelectorAll('.agent-item').forEach(item => {
       item.addEventListener('click', () => selectAgent(item.dataset.id));
     });
@@ -1287,6 +1290,11 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <label>Purpose</label><textarea id="f3">${escapeHtml(a.purpose || '')}</textarea>
       <label>Model Preference</label><input id="f4" value="${escapeHtml(a.model_pref || 'auto')}">
       <label>Status</label><select id="f5"><option ${a.status==='active'?'selected':''}>active</option><option ${a.status==='paused'?'selected':''}>paused</option></select>
+      <label>Reports To (optional — makes this a subagent)</label>
+      <select id="f7">
+        <option value="">— None, standalone agent —</option>
+        ${agents.filter(x => x.id !== a.id).map(x => `<option value="${x.id}" ${a.reports_to===x.id?'selected':''}>${x.icon} ${escapeHtml(x.name)}</option>`).join('')}
+      </select>
       <label>Context Access</label>
       <select id="f6">
         <option value="global" ${a.context_mode !== 'custom' ? 'selected' : ''}>Global — full context &amp; all connected tools</option>
@@ -1305,6 +1313,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
         purpose: document.getElementById('f3').value.trim(),
         model_pref: document.getElementById('f4').value.trim(),
         status: document.getElementById('f5').value,
+        reports_to: document.getElementById('f7').value || null,
         context_mode: contextMode,
         context_scope: contextMode === 'custom' ? readContextScope() : {},
       };
@@ -1329,6 +1338,11 @@ main { padding: 1.5rem; overflow-x: hidden; }
       <label>Name</label><input id="f2" placeholder="e.g. Scout">
       <label>Purpose</label><textarea id="f3" placeholder="What does this agent do?"></textarea>
       <label>Model Preference</label><input id="f4" value="auto">
+      <label>Reports To (optional — makes this a subagent)</label>
+      <select id="f7">
+        <option value="">— None, standalone agent —</option>
+        ${agents.map(x => `<option value="${x.id}">${x.icon} ${escapeHtml(x.name)}</option>`).join('')}
+      </select>
       <label>Context Access</label>
       <select id="f6">
         <option value="global">Global — full context &amp; all connected tools</option>
@@ -1348,6 +1362,7 @@ main { padding: 1.5rem; overflow-x: hidden; }
         name, purpose: document.getElementById('f3').value.trim(),
         model_pref: document.getElementById('f4').value.trim() || 'auto',
         sort_order: agents.length + 1,
+        reports_to: document.getElementById('f7').value || null,
         context_mode: contextMode,
         context_scope: contextMode === 'custom' ? readContextScope() : {},
       }).select().single();
