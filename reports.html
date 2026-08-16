@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Reports</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
+.page-head { margin-bottom: 1.3rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; max-width: 640px; }
+.page-head .goto-home { font-family: var(--mono); font-size: 0.75rem; color: var(--leaf); text-decoration: none; white-space: nowrap; }
+
+.section-block { margin-bottom: 2rem; }
+.section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--gold); margin-bottom: 0.8rem; }
+
+.pulse-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; }
+.pstat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; text-align: center; }
+.pstat-box .num { font-family: var(--heading); font-size: 1.4rem; font-weight: 800; color: var(--leaf-bright); }
+.pstat-box .label { font-family: var(--mono); font-size: 0.63rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.2rem; }
+
+.sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.7rem; }
+.sheet-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 0.9rem;
+  text-decoration: none; color: var(--text); display: block; transition: border-color 0.15s;
+}
+.sheet-card:hover { border-color: var(--border-bright); }
+.sheet-card .name { font-family: var(--heading); font-size: 0.85rem; color: var(--leaf-bright); margin-bottom: 0.3rem; }
+.sheet-card .count { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+
+.usage-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.5rem; }
+.usage-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.usage-table th, .usage-table td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+.usage-table th { color: var(--dim); font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+.usage-table td { color: var(--text); }
+.usage-total { font-family: var(--mono); color: var(--leaf-bright); font-weight: 600; }
+.usage-empty { color: var(--muted); font-size: 0.82rem; }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <div>
+        <h1>📊 Reports</h1>
+        <p>A macro rollup of everything Kokiri is tracking — one screen, live numbers. For the narrated Daily/Weekly reports and the Daily Meeting Brief, head to Home.</p>
+      </div>
+      <a class="goto-home" href="home.html">← Daily/Weekly narrative reports on Home</a>
+    </div>
+
+    <div class="section-block">
+      <h2>Business Pulse</h2>
+      <div class="pulse-grid" id="pulse-grid"><p class="usage-empty">Loading…</p></div>
+    </div>
+
+    <div class="section-block">
+      <h2>All Sheets at a Glance</h2>
+      <div class="sheet-grid" id="sheet-grid"><p class="usage-empty">Loading…</p></div>
+    </div>
+
+    <div class="section-block">
+      <h2>💳 API Usage (last 30 days)</h2>
+      <div class="usage-box"><div id="usage-content"><p class="usage-empty">Loading…</p></div></div>
+    </div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Repository">Repository<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="app.html#repository">📁 All Files</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="portals.html">🚪 All Portals</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Reports">Reports<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link active" href="reports.html">📊 Macro Reports</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Architecture">Architecture<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="architecture.html">🏛️ System Architecture</a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function numFrom(v) { const n = parseFloat(String(v ?? '').replace(/[^0-9.-]/g, '')); return isNaN(n) ? 0 : n; }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
+      + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a>`;
+  }
+
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+
+  // ---------- All Sheets at a Glance ----------
+  async function loadSheetGlance() {
+    const { data: sheets } = await supabase.from('kokiri_sheets').select('id, slug, name').order('sort_order');
+    const grid = document.getElementById('sheet-grid');
+    if (!sheets || !sheets.length) { grid.innerHTML = '<p class="usage-empty">No sheets yet.</p>'; return; }
+    const counts = await Promise.all(sheets.map(s => supabase.from('kokiri_rows').select('id', { count: 'exact', head: true }).eq('sheet_id', s.id)));
+    grid.innerHTML = sheets.map((s, i) => `
+      <a class="sheet-card" href="app.html#${s.slug}">
+        <div class="name">${escapeHtml(s.name)}</div>
+        <div class="count">${counts[i].count ?? 0} rows</div>
+      </a>
+    `).join('');
+    return sheets.map((s, i) => ({ ...s, count: counts[i].count ?? 0 }));
+  }
+
+  // ---------- Business Pulse ----------
+  async function loadPulse() {
+    const el = document.getElementById('pulse-grid');
+    const [agentsRes, tasksRes, clientsRes, crmRes] = await Promise.all([
+      supabase.from('agents').select('id, status'),
+      supabase.from('agent_tasks').select('id, status'),
+      supabase.from('kokiri_sheets').select('id').eq('slug', 'clients').maybeSingle(),
+      supabase.from('kokiri_sheets').select('id').eq('slug', 'crm').maybeSingle(),
+    ]);
+    const agents = agentsRes.data || [];
+    const activeAgents = agents.filter(a => a.status === 'active').length;
+    const openTasks = (tasksRes.data || []).filter(t => t.status !== 'done').length;
+
+    let activeClients = 0, crmLeads = 0;
+    if (clientsRes.data?.id) {
+      const { data: rows } = await supabase.from('kokiri_rows').select('data').eq('sheet_id', clientsRes.data.id);
+      const { data: cols } = await supabase.from('kokiri_columns').select('name, column_key').eq('sheet_id', clientsRes.data.id);
+      const statusKey = (cols || []).find(c => /status/i.test(c.name))?.column_key;
+      activeClients = statusKey ? (rows || []).filter(r => /active/i.test(r.data?.[statusKey] || '')).length : (rows || []).length;
+    }
+    if (crmRes.data?.id) {
+      const { count } = await supabase.from('kokiri_rows').select('id', { count: 'exact', head: true }).eq('sheet_id', crmRes.data.id);
+      crmLeads = count ?? 0;
+    }
+
+    el.innerHTML = [
+      { val: agents.length, label: 'Total Agents' },
+      { val: activeAgents, label: 'Active Agents' },
+      { val: openTasks, label: 'Open Agent Tasks' },
+      { val: activeClients, label: 'Active Clients' },
+      { val: crmLeads, label: 'CRM Leads/Contacts' },
+    ].map(b => `<div class="pstat-box"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
+  }
+
+  async function loadUsage() {
+    const el = document.getElementById('usage-content');
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase.from('kokiri_usage_log').select('source, model, input_tokens, output_tokens, estimated_cost_usd').gte('created_at', since);
+    if (error) { el.innerHTML = `<p class="usage-empty">⚠ ${escapeHtml(error.message)}</p>`; return; }
+    if (!data || !data.length) { el.innerHTML = `<p class="usage-empty">No API calls logged yet.</p>`; return; }
+    const bySource = {};
+    let totalCost = 0, totalCalls = 0;
+    for (const row of data) {
+      const key = row.source + (row.model ? ' (' + row.model + ')' : '');
+      if (!bySource[key]) bySource[key] = { calls: 0, input: 0, output: 0, cost: 0 };
+      bySource[key].calls++;
+      bySource[key].input += row.input_tokens || 0;
+      bySource[key].output += row.output_tokens || 0;
+      bySource[key].cost += Number(row.estimated_cost_usd) || 0;
+      totalCost += Number(row.estimated_cost_usd) || 0;
+      totalCalls++;
+    }
+    const rows = Object.entries(bySource).map(([key, v]) => `
+      <tr><td>${escapeHtml(key)}</td><td>${v.calls}</td><td>${v.input.toLocaleString()}</td><td>${v.output.toLocaleString()}</td><td>$${v.cost.toFixed(4)}</td></tr>
+    `).join('');
+    el.innerHTML = `
+      <table class="usage-table">
+        <thead><tr><th>Source</th><th>Calls</th><th>Input tok</th><th>Output tok</th><th>Est. cost</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="margin-top:0.8rem;font-size:0.8rem;color:var(--muted);">${totalCalls} calls total · <span class="usage-total">$${totalCost.toFixed(4)}</span> estimated (list-price estimate, not actual billing)</p>
+    `;
+  }
+
+  initNavCollapse();
+  await loadNav();
+  await loadPulse();
+  await loadSheetGlance();
+  await loadUsage();
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>
