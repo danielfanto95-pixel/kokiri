@@ -49,8 +49,26 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="crm"] .dot { background: #c586e6; }
 .portal-tab[data-portal="content"] .dot { background: #e68686; }
 .portal-tab[data-portal="tasks"] .dot { background: #86c5e6; }
+.portal-tab[data-portal="funnel"] .dot { background: #86e6b8; }
+.portal-tab[data-portal="impact"] .dot { background: #d086e6; }
 .portal-tab[data-portal="builder"] .dot { background: #e6a868; }
 .portal-tab.active { background: var(--surface2); border-color: var(--border-bright); color: var(--text); }
+
+.funnel-wrap { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.3rem; }
+.funnel-stage { display: flex; align-items: center; gap: 0.9rem; }
+.funnel-bar { height: 46px; background: linear-gradient(90deg, #7cc576, #a8e79f); border-radius: 8px; display: flex; align-items: center; padding: 0 1rem; font-family: var(--heading); font-weight: 700; color: #0c120d; white-space: nowrap; transition: width 0.4s; }
+.funnel-meta { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); min-width: 130px; }
+.funnel-conv { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); margin-left: 2.2rem; }
+
+.impact-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; margin-bottom: 1.2rem; }
+.impact-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.9rem; }
+.impact-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
+.impact-card .itop { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem; }
+.impact-card .iinput { font-family: var(--heading); font-size: 0.95rem; color: var(--leaf-bright); }
+.impact-card .iprog-track { height: 5px; border-radius: 100px; background: var(--surface2); overflow: hidden; width: 60px; flex-shrink: 0; margin-top: 0.3rem; }
+.impact-card .iprog-fill { height: 100%; background: var(--gold); }
+.impact-card .ifield { font-size: 0.78rem; margin-bottom: 0.4rem; }
+.impact-card .ifield b { color: var(--muted); font-family: var(--mono); font-size: 0.65rem; text-transform: uppercase; display: block; margin-bottom: 0.1rem; }
 
 .view-toggle { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
 .view-toggle button {
@@ -184,7 +202,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   <main>
     <div class="page-head">
       <h1>🚪 Portals</h1>
-      <p>Affiliate, Client, CRM, Content, Tasks, Ads, and Agent Builder in one place. These are internal views for you, not external logins — Kokiri stays single-user by design, so nobody but you can sign in here. If you want real external portals affiliates/clients log into themselves, that's a separate (larger) build — say the word.</p>
+      <p>Affiliate, Client, CRM, Content, Tasks, Ads, Funnel, Impact Map, and Agent Builder in one place. These are internal views for you, not external logins — Kokiri stays single-user by design, so nobody but you can sign in here. If you want real external portals affiliates/clients log into themselves, that's a separate (larger) build — say the word.</p>
     </div>
 
     <div class="portal-tabs">
@@ -194,6 +212,8 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="content"><span class="dot"></span>✍️ Content</button>
       <button class="portal-tab" data-portal="tasks"><span class="dot"></span>✅ Tasks</button>
       <button class="portal-tab" data-portal="ads"><span class="dot"></span>📣 Ads Portal</button>
+      <button class="portal-tab" data-portal="funnel"><span class="dot"></span>🌪️ Funnel</button>
+      <button class="portal-tab" data-portal="impact"><span class="dot"></span>🧠 Impact Map</button>
       <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
     </div>
 
@@ -262,6 +282,26 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="ads">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-ads"><p class="empty-note">Loading…</p></div>
+    </div>
+
+    <div class="portal-panel" id="panel-funnel">
+      <div class="funnel-wrap" id="funnel-viz"><p class="empty-note">Loading…</p></div>
+      <div class="portal-note">Landers → CRM Leads → Active Clients. Raw lander lines below, editable.</div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="landers">+ Add Row</button>
+        <button data-action="add-col" data-slug="landers">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-landers"><p class="empty-note">Loading…</p></div>
+    </div>
+
+    <div class="portal-panel" id="panel-impact">
+      <div class="impact-summary" id="impact-summary"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="impact-map">+ New Entry</button>
+        <button data-action="add-col" data-slug="impact-map">+ Add Field</button>
+      </div>
+      <div class="impact-cards" id="impact-cards"><p class="empty-note">Loading…</p></div>
+      <div class="op-grid-wrap" id="grid-impact-map" style="display:none;"></div>
     </div>
 
     <div class="portal-panel" id="panel-builder">
@@ -555,7 +595,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', builder: 'Agent Builder' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', funnel: 'Funnel', impact: 'Impact Map', builder: 'Agent Builder' };
   let chatHistory = [];
 
   async function renderChatHeader() {
@@ -698,6 +738,84 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     btn.disabled = false; btn.textContent = '✨ AI Draft';
   });
 
+  // ---------- Funnel: Landers -> CRM Leads -> Active Clients ----------
+  async function renderFunnel() {
+    const wrap = document.getElementById('funnel-viz');
+    const [{ data: landerSheet }, { data: crmSheet }, { data: clientSheet }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('id').eq('slug', 'landers').maybeSingle(),
+      supabase.from('kokiri_sheets').select('id').eq('slug', 'crm').maybeSingle(),
+      supabase.from('kokiri_sheets').select('id').eq('slug', 'clients').maybeSingle(),
+    ]);
+    const [landerCount, crmCount] = await Promise.all([
+      landerSheet ? supabase.from('kokiri_rows').select('id', { count: 'exact', head: true }).eq('sheet_id', landerSheet.id) : { count: 0 },
+      crmSheet ? supabase.from('kokiri_rows').select('id', { count: 'exact', head: true }).eq('sheet_id', crmSheet.id) : { count: 0 },
+    ]);
+    let activeClients = 0;
+    if (clientSheet) {
+      const [{ data: cols }, { data: rows }] = await Promise.all([
+        supabase.from('kokiri_columns').select('name, column_key').eq('sheet_id', clientSheet.id),
+        supabase.from('kokiri_rows').select('data').eq('sheet_id', clientSheet.id),
+      ]);
+      const statusKey = (cols || []).find(c => /status/i.test(c.name))?.column_key;
+      activeClients = statusKey ? (rows || []).filter(r => /active/i.test(r.data?.[statusKey] || '')).length : (rows || []).length;
+    }
+    const stages = [
+      { label: 'Landers', val: landerCount.count ?? 0 },
+      { label: 'CRM Leads', val: crmCount.count ?? 0 },
+      { label: 'Active Clients', val: activeClients },
+    ];
+    const maxVal = Math.max(1, ...stages.map(s => s.val));
+    wrap.innerHTML = stages.map((s, i) => {
+      const pct = Math.max(8, Math.round((s.val / maxVal) * 100));
+      const prev = stages[i - 1];
+      const conv = prev && prev.val ? `${Math.round((s.val / prev.val) * 100)}% of ${prev.label}` : '';
+      return `
+        ${i > 0 && conv ? `<div class="funnel-conv">↓ ${conv}</div>` : ''}
+        <div class="funnel-stage">
+          <div class="funnel-bar" style="width:${pct}%">${s.val}</div>
+          <div class="funnel-meta">${escapeHtml(s.label)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ---------- Impact Map (personal reflection framework) progress cards ----------
+  function renderImpactCards(cols, rows) {
+    const summaryEl = document.getElementById('impact-summary');
+    const cardsEl = document.getElementById('impact-cards');
+    const usableCols = cols.filter(c => c.column_key !== 'j');
+    const titleKey = usableCols.find(c => /input/i.test(c.name))?.column_key || usableCols[0]?.column_key;
+
+    const completions = rows.map(r => {
+      const filled = usableCols.filter(c => (r.data?.[c.column_key] || '').toString().trim()).length;
+      return usableCols.length ? filled / usableCols.length : 0;
+    });
+    const avgPct = completions.length ? Math.round((completions.reduce((a, b) => a + b, 0) / completions.length) * 100) : 0;
+    const fullyProcessed = completions.filter(c => c >= 0.9).length;
+
+    summaryEl.innerHTML = [
+      { val: rows.length, label: 'Entries' },
+      { val: avgPct + '%', label: 'Avg. Completion' },
+      { val: fullyProcessed, label: 'Fully Processed' },
+    ].map(b => `<div class="pstat-box"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
+
+    if (!rows.length) { cardsEl.innerHTML = '<p class="empty-note">No entries yet — click "+ New Entry" to start one.</p>'; return; }
+
+    cardsEl.innerHTML = rows.map((r, i) => {
+      const pct = Math.round(completions[i] * 100);
+      const fields = usableCols.filter(c => c.column_key !== titleKey && (r.data?.[c.column_key] || '').toString().trim());
+      return `
+        <div class="impact-card">
+          <div class="itop">
+            <div class="iinput">${escapeHtml(r.data?.[titleKey] || '(untitled)')}</div>
+            <div><div class="iprog-track"><div class="iprog-fill" style="width:${pct}%"></div></div></div>
+          </div>
+          ${fields.map(c => `<div class="ifield"><b>${escapeHtml(c.name)}</b>${escapeHtml(r.data?.[c.column_key])}</div>`).join('')}
+        </div>
+      `;
+    }).join('');
+  }
+
   // ---------- Agent Builder ----------
   const TEAM_TEMPLATES = {
     solo: { icon: '🗡️', label: 'Solo Assistant', desc: 'One general-purpose agent to start.', agents: [
@@ -836,6 +954,16 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
       { val: rows.length, label: 'Ad Creatives' },
       { val: withAi, label: 'AI Versions Made' },
     ]);
+  });
+
+  mountGrid('landers', (cols, rows) => {
+    portalData.funnel = { columns: cols, rows, sheetId: rows[0]?.sheet_id, label: 'Landers (raw lines feeding the funnel)' };
+    renderFunnel();
+  });
+
+  mountGrid('impact-map', (cols, rows) => {
+    portalData.impact = { columns: cols.filter(c => c.column_key !== 'j'), rows, sheetId: rows[0]?.sheet_id };
+    renderImpactCards(cols, rows);
   });
 </script>
 
