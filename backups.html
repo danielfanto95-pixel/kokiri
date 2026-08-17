@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Backups</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
+.page-head { margin-bottom: 1.4rem; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; max-width: 640px; line-height: 1.5; }
+
+.section-block { margin-bottom: 1.8rem; }
+.section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--gold); margin-bottom: 0.7rem; }
+
+.backup-now-box { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.backup-now-box p { flex: 1; min-width: 220px; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+#btn-backup-now { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 8px; padding: 0.65rem 1.2rem; font-family: var(--heading); font-weight: 700; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+#btn-backup-now:disabled { opacity: 0.6; cursor: not-allowed; }
+.backup-status { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); width: 100%; }
+
+.dropzone { border: 1px dashed var(--border-bright); border-radius: 10px; padding: 1.2rem; text-align: center; font-size: 0.85rem; color: var(--muted); cursor: pointer; margin-bottom: 1rem; }
+.dropzone:hover, .dropzone.dragover { border-color: var(--leaf); color: var(--text); background: var(--surface); }
+
+.toolbar { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.toolbar select, .toolbar input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.82rem; }
+
+.backup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.9rem; }
+.backup-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; }
+.backup-card .bicon { font-size: 1.3rem; margin-bottom: 0.4rem; }
+.backup-card .bname { font-family: var(--heading); font-size: 0.85rem; color: var(--leaf-bright); word-break: break-word; margin-bottom: 0.25rem; }
+.backup-card .bmeta { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); margin-bottom: 0.7rem; }
+.backup-card .bactions { display: flex; gap: 0.5rem; }
+.backup-card button { font-family: var(--mono); font-size: 0.7rem; background: var(--surface2); border: 1px solid var(--border); color: var(--leaf-bright); border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer; }
+.backup-card button.bdel { color: #e68686; }
+.empty-note { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; grid-column: 1/-1; }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <h1>🗄️ Backups</h1>
+      <p>One-click snapshots of your live data (sheets, columns, rows, agents, settings) as downloadable JSON, plus a place to drop in anything else worth keeping a backup copy of. All stored privately alongside the rest of your Repository.</p>
+    </div>
+
+    <div class="section-block">
+      <div class="backup-now-box">
+        <p>Creates a JSON snapshot of every sheet's data, agents, and settings — uploaded here automatically with a timestamped filename.</p>
+        <button id="btn-backup-now">📸 Create Backup Now</button>
+        <div class="backup-status" id="backup-status"></div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <h2>Manual Upload</h2>
+      <div class="dropzone" id="dropzone">Click or drop any file here to store it as a backup (exports, screenshots of settings, anything)</div>
+      <input type="file" id="file-input" style="display:none;" multiple>
+    </div>
+
+    <div class="section-block">
+      <h2>Stored Backups</h2>
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Search backups…">
+      </div>
+      <div class="backup-grid" id="backup-grid"><p class="empty-note">Loading…</p></div>
+    </div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Repository">Repository<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="app.html#repository">📁 All Files</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="portals.html">🚪 All Portals</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Backups">Backups<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link active" href="backups.html">🗄️ Backups</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Architecture">Architecture<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="architecture.html">🏛️ System Architecture</a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function formatBytes(n) {
+    if (!n) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return n.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+  }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
+      + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a>`;
+  }
+
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+
+  // ---------- Backups (reuses the private Repository storage bucket + documents table) ----------
+  const REPO_BUCKET = 'kokiri-repository';
+  let backups = [];
+  let searchTerm = '';
+
+  async function loadBackups() {
+    const { data } = await supabase.from('kokiri_documents').select('*').eq('category', 'Backup').order('created_at', { ascending: false });
+    backups = data || [];
+    renderBackups();
+  }
+
+  function renderBackups() {
+    const grid = document.getElementById('backup-grid');
+    const filtered = backups.filter(b => !searchTerm || b.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (!filtered.length) { grid.innerHTML = '<p class="empty-note">No backups yet — create one above or drop in a file.</p>'; return; }
+    grid.innerHTML = filtered.map(b => `
+      <div class="backup-card" data-id="${b.id}" data-path="${escapeHtml(b.storage_path)}">
+        <div class="bicon">${b.mime_type === 'application/json' ? '🧾' : '📦'}</div>
+        <div class="bname">${escapeHtml(b.name)}</div>
+        <div class="bmeta">${formatBytes(b.size_bytes)} · ${new Date(b.created_at).toLocaleString()}</div>
+        <div class="bactions">
+          <button data-action="dl">⬇ Download</button>
+          <button data-action="del" class="bdel">✕ Delete</button>
+        </div>
+      </div>
+    `).join('');
+    grid.querySelectorAll('[data-action="dl"]').forEach(btn => btn.addEventListener('click', () => downloadBackup(btn.closest('.backup-card').dataset.id)));
+    grid.querySelectorAll('[data-action="del"]').forEach(btn => btn.addEventListener('click', () => deleteBackup(btn.closest('.backup-card').dataset.id)));
+  }
+  document.getElementById('search').addEventListener('input', (e) => { searchTerm = e.target.value; renderBackups(); });
+
+  async function downloadBackup(id) {
+    const b = backups.find(x => x.id === id);
+    if (!b) return;
+    const { data, error } = await supabase.storage.from(REPO_BUCKET).createSignedUrl(b.storage_path, 60);
+    if (error) { alert('⚠ ' + error.message); return; }
+    window.open(data.signedUrl, '_blank');
+  }
+
+  async function deleteBackup(id) {
+    const b = backups.find(x => x.id === id);
+    if (!b) return;
+    if (!confirm(`Delete "${b.name}"? This can't be undone.`)) return;
+    await supabase.storage.from(REPO_BUCKET).remove([b.storage_path]);
+    await supabase.from('kokiri_documents').delete().eq('id', id);
+    backups = backups.filter(x => x.id !== id);
+    renderBackups();
+  }
+
+  async function uploadFiles(fileList) {
+    for (const file of Array.from(fileList)) {
+      const storagePath = `backups/${crypto.randomUUID()}-${file.name}`;
+      const { error } = await supabase.storage.from(REPO_BUCKET).upload(storagePath, file);
+      if (error) { alert(`⚠ Failed to upload ${file.name}: ${error.message}`); continue; }
+      await supabase.from('kokiri_documents').insert({
+        name: file.name, category: 'Backup', description: 'Manually uploaded backup', mime_type: file.type || null, size_bytes: file.size, storage_path: storagePath,
+      });
+    }
+    await loadBackups();
+  }
+
+  function initDropzone() {
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => { uploadFiles(fileInput.files); fileInput.value = ''; });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); uploadFiles(e.dataTransfer.files); });
+  }
+
+  // ---------- Create Backup Now: snapshot every sheet's data + agents + settings ----------
+  document.getElementById('btn-backup-now').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-backup-now');
+    const statusEl = document.getElementById('backup-status');
+    btn.disabled = true;
+    statusEl.textContent = 'Gathering data…';
+    try {
+      const [{ data: sheets }, { data: columns }, { data: rows }, { data: agents }, { data: settings }] = await Promise.all([
+        supabase.from('kokiri_sheets').select('*'),
+        supabase.from('kokiri_columns').select('*'),
+        supabase.from('kokiri_rows').select('*'),
+        supabase.from('agents').select('*'),
+        supabase.from('kokiri_settings').select('*'),
+      ]);
+      const snapshot = {
+        created_at: new Date().toISOString(),
+        sheets, columns, rows, agents, settings,
+      };
+      const json = JSON.stringify(snapshot, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `kokiri-backup-${stamp}.json`;
+      const storagePath = `backups/${crypto.randomUUID()}-${filename}`;
+
+      statusEl.textContent = 'Uploading…';
+      const { error: uploadError } = await supabase.storage.from(REPO_BUCKET).upload(storagePath, blob, { contentType: 'application/json' });
+      if (uploadError) throw uploadError;
+
+      await supabase.from('kokiri_documents').insert({
+        name: filename, category: 'Backup', description: `Full data snapshot — ${sheets?.length || 0} sheets, ${rows?.length || 0} rows, ${agents?.length || 0} agents`,
+        mime_type: 'application/json', size_bytes: blob.size, storage_path: storagePath,
+      });
+
+      await loadBackups();
+      statusEl.textContent = `✓ Backup created — ${filename} (${formatBytes(blob.size)})`;
+    } catch (e) {
+      statusEl.textContent = '⚠ ' + e.message;
+    }
+    btn.disabled = false;
+  });
+
+  initNavCollapse();
+  await loadNav();
+  initDropzone();
+  await loadBackups();
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>
