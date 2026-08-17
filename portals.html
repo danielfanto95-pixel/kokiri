@@ -53,7 +53,16 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="impact"] .dot { background: #d086e6; }
 .portal-tab[data-portal="jobs"] .dot { background: #86a8e6; }
 .portal-tab[data-portal="sales"] .dot { background: #e68699; }
+.portal-tab[data-portal="budgets"] .dot { background: #86e6c5; }
 .portal-tab[data-portal="builder"] .dot { background: #e6a868; }
+
+.budget-track { height: 8px; border-radius: 100px; background: var(--surface2); overflow: hidden; margin-top: 0.4rem; }
+.budget-fill { height: 100%; border-radius: 100px; transition: width 0.3s; }
+.budget-fill.ok { background: var(--leaf-bright); }
+.budget-fill.warn { background: var(--gold); }
+.budget-fill.over { background: #e68686; }
+.budget-row-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-top: 0.9rem; }
+.budget-row-label b { color: var(--text); }
 
 .offer-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
 .offer-box h4 { font-family: var(--heading); font-size: 0.9rem; color: var(--gold); margin-bottom: 0.6rem; }
@@ -253,6 +262,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="impact"><span class="dot"></span>🧠 Impact Map</button>
       <button class="portal-tab" data-portal="jobs"><span class="dot"></span>💼 Jobs</button>
       <button class="portal-tab" data-portal="sales"><span class="dot"></span>💬 Sales</button>
+      <button class="portal-tab" data-portal="budgets"><span class="dot"></span>💰 Budgets</button>
       <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
     </div>
 
@@ -396,6 +406,18 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div class="op-grid-wrap" id="grid-sales-best-practices"><p class="empty-note">Loading…</p></div>
       <div data-lineage-page="portals.html" data-lineage-section="sales" data-lineage-label="Sales Conversations & Learning"></div>
       <div class="portal-note">Pulled from the Furin Fitness offer doc — discovery call script, transition conversation, and objection handling. Add to either grid as new patterns come up on real calls.</div>
+    </div>
+
+    <div class="portal-panel" id="panel-budgets">
+      <div class="portal-stats" id="stats-budgets"></div>
+      <div id="budget-bars"></div>
+      <div class="op-toolbar" style="margin-top:1.2rem;">
+        <button data-action="add-row" data-slug="budgets">+ Add Row</button>
+        <button data-action="add-col" data-slug="budgets">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-budgets"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="budgets" data-lineage-label="Budgets"></div>
+      <div class="portal-note">Monthly Budget vs. Actual Spent, per category — fill in real numbers and the bars/totals above update automatically.</div>
     </div>
 
     <div class="portal-panel" id="panel-builder">
@@ -705,7 +727,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', builder: 'Agent Builder' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -719,6 +741,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'impact', label: '🧠 Impact Map', desc: 'Personal reflection framework, progress cards per entry.' },
     { key: 'jobs', label: '💼 Jobs', desc: 'Job-application CRM — PT/Operations listings around SLC, plus AI-eval side income and resume uploads.' },
     { key: 'sales', label: '💬 Sales', desc: 'Offer quick-reference, objections, and best practices from the Furin Fitness sales script.' },
+    { key: 'budgets', label: '💰 Budgets', desc: 'Monthly Budget vs. Actual Spent per category, with totals and progress bars.' },
     { key: 'builder', label: '🧩 Agent Builder', desc: 'Questionnaire → agent team template → website/ad brief.' },
   ];
   function renderIndex() {
@@ -1181,10 +1204,41 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     portalData.sales.bestPracticeRows = rows;
   });
 
+  mountGrid('budgets', (cols, rows) => {
+    portalData.budgets = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
+    const budgetKey = cols.find(c => /monthly budget/i.test(c.name))?.column_key;
+    const spentKey = cols.find(c => /actual spent/i.test(c.name))?.column_key;
+    const catKey = cols.find(c => /category/i.test(c.name))?.column_key || cols[0]?.column_key;
+    const totalBudget = budgetKey ? rows.reduce((s, r) => s + numFrom(r.data?.[budgetKey]), 0) : 0;
+    const totalSpent = spentKey ? rows.reduce((s, r) => s + numFrom(r.data?.[spentKey]), 0) : 0;
+    const pctUsed = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
+    statsBoxes(document.getElementById('stats-budgets'), 'affiliate', [
+      { val: '$' + totalBudget.toFixed(2), label: 'Total Budgeted' },
+      { val: '$' + totalSpent.toFixed(2), label: 'Total Spent' },
+      { val: '$' + (totalBudget - totalSpent).toFixed(2), label: 'Remaining' },
+      { val: pctUsed + '%', label: '% Used' },
+    ]);
+    const barsEl = document.getElementById('budget-bars');
+    barsEl.innerHTML = rows.map(r => {
+      const budget = budgetKey ? numFrom(r.data?.[budgetKey]) : 0;
+      const spent = spentKey ? numFrom(r.data?.[spentKey]) : 0;
+      const pct = budget ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
+      const cls = !budget ? 'ok' : spent > budget ? 'over' : pct >= 80 ? 'warn' : 'ok';
+      return `
+        <div class="budget-row-label"><b>${escapeHtml(r.data?.[catKey] || '(untitled)')}</b><span>$${spent.toFixed(2)} / $${budget.toFixed(2)}</span></div>
+        <div class="budget-track"><div class="budget-fill ${cls}" style="width:${pct}%"></div></div>
+      `;
+    }).join('') || '<p class="empty-note">No budget categories yet — add a row below.</p>';
+  });
+
   initResumeUpload();
   loadResumes();
   renderIndex();
   initLineageBadges();
+
+  // Deep-link to a specific tab, e.g. portals.html#budgets
+  const hashTab = window.location.hash.replace('#', '');
+  if (hashTab) document.querySelector(`.portal-tab[data-portal="${hashTab}"]`)?.click();
 </script>
 
 <script type="module" src="ambience.js"></script>

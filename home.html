@@ -72,6 +72,14 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .item-row .content .meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
 .empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 
+.budget-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
+.budget-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+.budget-card h2 a { font-family: var(--mono); font-size: 0.72rem; color: var(--leaf); text-decoration: none; font-weight: 400; }
+.budget-stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; }
+.budget-stats-row .bstat { background: var(--surface2); border-radius: 8px; padding: 0.7rem; text-align: center; }
+.budget-stats-row .bstat .num { font-family: var(--heading); font-size: 1.1rem; font-weight: 800; color: var(--leaf-bright); }
+.budget-stats-row .bstat .label { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); text-transform: uppercase; margin-top: 0.15rem; }
+
 .quick-links { margin-bottom: 2.2rem; }
 .quick-links h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.8rem; }
 .ql-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.8rem; }
@@ -212,6 +220,11 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
         <div class="stat-box"><div class="num" id="stat-pending-tasks">—</div><div class="label">Pending Tasks</div></div>
         <div class="stat-box"><div class="num" id="stat-open-triage">—</div><div class="label">Open Triage</div></div>
         <div class="stat-box"><div class="num" id="stat-cost-7d">—</div><div class="label">Est. Cost (7d)</div></div>
+      </div>
+
+      <div class="budget-card">
+        <h2>💰 Budgets <a href="portals.html#budgets">Open in Portals →</a></h2>
+        <div class="budget-stats-row" id="budget-stats-row"><p class="empty" style="grid-column:1/-1;padding:0.5rem;">Loading…</p></div>
       </div>
 
       <div class="section">
@@ -662,13 +675,36 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   });
   document.getElementById('ql-url').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('btn-add-ql').click(); });
 
+  // ---------- Budgets summary ----------
+  function numFrom(v) { const n = parseFloat(String(v ?? '').replace(/[^0-9.-]/g, '')); return isNaN(n) ? 0 : n; }
+  async function loadBudgetSummary() {
+    const el = document.getElementById('budget-stats-row');
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'budgets').maybeSingle();
+    if (!sheet) { el.innerHTML = '<p class="empty" style="grid-column:1/-1;padding:0.5rem;">No Budgets sheet found.</p>'; return; }
+    const [{ data: cols }, { data: rows }] = await Promise.all([
+      supabase.from('kokiri_columns').select('name, column_key').eq('sheet_id', sheet.id),
+      supabase.from('kokiri_rows').select('data').eq('sheet_id', sheet.id),
+    ]);
+    const budgetKey = (cols || []).find(c => /monthly budget/i.test(c.name))?.column_key;
+    const spentKey = (cols || []).find(c => /actual spent/i.test(c.name))?.column_key;
+    const totalBudget = budgetKey ? (rows || []).reduce((s, r) => s + numFrom(r.data?.[budgetKey]), 0) : 0;
+    const totalSpent = spentKey ? (rows || []).reduce((s, r) => s + numFrom(r.data?.[spentKey]), 0) : 0;
+    const pct = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
+    el.innerHTML = [
+      { val: (rows || []).length, label: 'Categories' },
+      { val: '$' + totalBudget.toFixed(2), label: 'Budgeted' },
+      { val: '$' + totalSpent.toFixed(2), label: 'Spent' },
+      { val: pct + '%', label: '% Used' },
+    ].map(b => `<div class="bstat"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
+  }
+
   document.getElementById('btn-read-brief').addEventListener('click', () => {
     const text = document.getElementById('brief-text').textContent;
     if (text && text !== 'Loading…') speakText(text, document.getElementById('btn-read-brief'), '🔊 Read it');
   });
 
   const { agents } = await loadNav();
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks()]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary()]);
   meetingsSheetId = await getMeetingsSheetId();
 
   const statsSnapshot = {
