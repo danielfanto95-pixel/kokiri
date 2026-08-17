@@ -111,6 +111,8 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       <a class="goto-home" href="home.html">← Daily/Weekly narrative reports on Home</a>
     </div>
 
+    <div data-lineage-page="reports.html" data-lineage-section="reports" data-lineage-label="Reports (macro)" style="margin-bottom:1rem;"></div>
+
     <div class="section-block">
       <h2>Business Pulse</h2>
       <div class="pulse-grid" id="pulse-grid"><p class="usage-empty">Loading…</p></div>
@@ -182,6 +184,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -202,6 +205,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
     document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
       + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="backups.html">🗄️ Backups</a>`;

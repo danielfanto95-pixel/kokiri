@@ -200,6 +200,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -226,6 +227,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     const navSheets = document.getElementById('nav-sheets');
     navSheets.innerHTML = sheets.map(s => `<div class="nav-link" data-slug="${s.slug}"><span class="dot"></span>${escapeHtml(s.name)}</div>`).join('');
     navSheets.querySelectorAll('.nav-link').forEach(el => el.addEventListener('click', () => selectSheet(el.dataset.slug)));
+    await appendNonSheetSourcesToNav('nav-sheets');
 
     const navAgents = document.getElementById('nav-agents');
     navAgents.innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('')

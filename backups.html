@@ -97,6 +97,8 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       <p>One-click snapshots of your live data (sheets, columns, rows, agents, settings) as downloadable JSON, plus a place to drop in anything else worth keeping a backup copy of. All stored privately alongside the rest of your Repository.</p>
     </div>
 
+    <div data-lineage-page="backups.html" data-lineage-section="backups" data-lineage-label="Backups" style="margin-bottom:1rem;"></div>
+
     <div class="section-block">
       <div class="backup-now-box">
         <p>Creates a JSON snapshot of every sheet's data, agents, and settings — uploaded here automatically with a timestamped filename.</p>
@@ -168,6 +170,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -194,6 +197,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
     document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
       + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a>`;

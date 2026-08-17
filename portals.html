@@ -263,6 +263,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="affiliates-performance">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-affiliates-performance"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="affiliate" data-lineage-label="Affiliate Portal"></div>
       <div class="portal-note">Affiliate program for the fitness business — referrals and commission owed, tracked per affiliate.</div>
     </div>
 
@@ -273,6 +274,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="clients">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-clients"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="client" data-lineage-label="Client Portal"></div>
       <div class="portal-note">Everfit-style client tracking: program assignment, check-in cadence, and progress — all editable inline.</div>
     </div>
 
@@ -283,6 +285,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="crm">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-crm"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="crm" data-lineage-label="CRM"></div>
       <div class="portal-note">Salesforce-style lead/contact tracking — pipeline breakdown by Lead Status above.</div>
     </div>
 
@@ -299,6 +302,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="content">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-content"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="content" data-lineage-label="Content"></div>
       <div class="portal-note">Content pipeline — scripts, outlines, and every recorded version, plus AI drafting above.</div>
     </div>
 
@@ -313,6 +317,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="tasks-dashboard">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-tasks-dashboard" style="display:none;"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="tasks" data-lineage-label="Tasks"></div>
       <div class="portal-note">Notion-style task board — drag isn't needed, just change the status dropdown on any card.</div>
     </div>
 
@@ -323,11 +328,13 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="ads">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-ads"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="ads" data-lineage-label="Ads Portal"></div>
       <div class="portal-note">Ad creatives tracked here — which have AI-generated versions made yet.</div>
     </div>
 
     <div class="portal-panel" id="panel-funnel">
       <div class="funnel-wrap" id="funnel-viz"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="funnel" data-lineage-label="Funnel"></div>
       <div class="portal-note">Landers → CRM Leads → Active Clients. Raw lander lines below, editable.</div>
       <div class="op-toolbar">
         <button data-action="add-row" data-slug="landers">+ Add Row</button>
@@ -344,6 +351,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       </div>
       <div class="impact-cards" id="impact-cards"><p class="empty-note">Loading…</p></div>
       <div class="op-grid-wrap" id="grid-impact-map" style="display:none;"></div>
+      <div data-lineage-page="portals.html" data-lineage-section="impact" data-lineage-label="Impact Map"></div>
       <div class="portal-note">Personal reflection framework — each entry's completion % tracks how far it's been processed through the full framework.</div>
     </div>
 
@@ -360,6 +368,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="job-applications">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-job-applications"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="jobs" data-lineage-label="Jobs"></div>
       <div class="portal-note">Personal Training + Operations listings around Salt Lake City, plus AI-eval side-income platforms as a separate category. Edit Status inline as you apply.</div>
     </div>
 
@@ -385,10 +394,12 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="sales-best-practices">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-sales-best-practices"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="sales" data-lineage-label="Sales Conversations & Learning"></div>
       <div class="portal-note">Pulled from the Furin Fitness offer doc — discovery call script, transition conversation, and objection handling. Add to either grid as new patterns come up on real calls.</div>
     </div>
 
     <div class="portal-panel" id="panel-builder">
+      <div data-lineage-page="portals.html" data-lineage-section="builder" data-lineage-label="Agent Builder"></div>
       <div class="builder-step">
         <h3>1. Tell Kokiri about what you're building</h3>
         <label>What is this for? (business, project, or purpose)</label>
@@ -468,6 +479,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { initLineageBadges, appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -488,6 +500,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
     document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
       + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="backups.html">🗄️ Backups</a>`;
@@ -1158,6 +1171,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
   initResumeUpload();
   loadResumes();
   renderIndex();
+  initLineageBadges();
 </script>
 
 <script type="module" src="ambience.js"></script>

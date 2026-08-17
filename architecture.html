@@ -104,6 +104,17 @@ textarea:focus { outline: none; border-color: var(--leaf); }
   padding: 0.15rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-bright); color: var(--leaf-bright); white-space: nowrap;
 }
 .pages-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.lineage-group { margin-bottom: 1.2rem; }
+.lineage-group h3 { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); margin-bottom: 0.5rem; }
+.lineage-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.lineage-table th, .lineage-table td { text-align: left; padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--border); }
+.lineage-table th { font-family: var(--mono); font-size: 0.65rem; text-transform: uppercase; color: var(--dim); font-weight: 500; }
+.lineage-table td { color: var(--text); }
+.lineage-table a { color: var(--leaf-bright); text-decoration: none; }
+.lineage-type { font-family: var(--mono); font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 100px; border: 1px solid var(--border); color: var(--muted); }
+.lineage-type.sheet { color: var(--leaf-bright); border-color: rgba(124,197,118,0.3); }
+.lineage-type.table { color: #6fb8e6; border-color: rgba(111,184,230,0.3); }
+.lineage-type.composite { color: var(--gold); border-color: rgba(230,192,106,0.3); }
 .page-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem;
   display: flex; gap: 1rem; align-items: flex-start;
@@ -193,6 +204,14 @@ textarea:focus { outline: none; border-color: var(--leaf); }
 
         <div class="pages-list" id="pages-list"></div>
       </div>
+
+      <div class="pages-section">
+        <div class="pages-head">
+          <h2>🔗 Data Lineage</h2>
+        </div>
+        <p style="font-size:0.8rem;color:var(--muted);margin:-0.4rem 0 1rem;">Every portal, dashboard, and macro section, and the root data source it's built on — sheets, tables, or composites of several. Sections without a declared source show a warning until one is added on the page itself.</p>
+        <div id="lineage-table-wrap"></div>
+      </div>
     </div>
   </main>
 
@@ -238,6 +257,7 @@ textarea:focus { outline: none; border-color: var(--leaf); }
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -257,6 +277,7 @@ textarea:focus { outline: none; border-color: var(--leaf); }
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
     document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('') + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="backups.html">🗄️ Backups</a>`;
   }
@@ -532,10 +553,41 @@ GitHub Pages: $0. Supabase free tier (DB, Auth, Edge Functions, cron): $0 at cur
     loadPages();
   });
 
+  // --- Data Lineage ---
+  async function loadLineage() {
+    const { data } = await supabase.from('kokiri_section_sources').select('*').order('page').order('sort_order');
+    renderLineage(data || []);
+  }
+  function renderLineage(rows) {
+    const wrap = document.getElementById('lineage-table-wrap');
+    if (!rows.length) { wrap.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No sections registered yet.</p>'; return; }
+    const byPage = {};
+    rows.forEach(r => { (byPage[r.page] = byPage[r.page] || []).push(r); });
+    wrap.innerHTML = Object.entries(byPage).map(([page, secs]) => `
+      <div class="lineage-group">
+        <h3>${escapeHtml(page)}</h3>
+        <table class="lineage-table">
+          <thead><tr><th>Section</th><th>Source Type</th><th>Source</th><th>Notes</th></tr></thead>
+          <tbody>
+            ${secs.map(s => `
+              <tr>
+                <td>${escapeHtml(s.section_label)}</td>
+                <td><span class="lineage-type ${s.source_type}">${s.source_type}</span></td>
+                <td>${s.source_type === 'sheet' ? `<a href="app.html#${encodeURIComponent(s.source_ref)}">${escapeHtml(s.source_label)}</a>` : escapeHtml(s.source_label)}</td>
+                <td style="color:var(--muted);">${escapeHtml(s.notes || '')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `).join('');
+  }
+
   initNavCollapse();
   await loadNav();
   await loadDoc();
   await loadPages();
+  await loadLineage();
 </script>
 
 <script type="module" src="ambience.js"></script>

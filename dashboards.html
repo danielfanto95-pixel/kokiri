@@ -178,6 +178,7 @@ td { background: var(--bg); }
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -204,6 +205,7 @@ td { background: var(--bg); }
     dashboardsList = dashData || [];
 
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
     document.getElementById('nav-agents').innerHTML = agentsList.map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('')
       + `<a class="nav-link" href="agents.html" style="color:var(--gold);">→ Open Dashboard</a>`;
     renderDashNav();

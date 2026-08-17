@@ -148,6 +148,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { initLineageBadges, appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -167,6 +168,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
     document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
       + `<a class="nav-link active" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="backups.html">🗄️ Backups</a>`;
@@ -218,6 +220,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <span class="chevron">▸</span>
       </div>
       <div class="op-body">
+        <div data-lineage-page="operations.html" data-lineage-section="${cfg.slug}" data-lineage-label="${escapeHtml(cfg.title)}"></div>
         <div class="op-toolbar">
           <button data-action="add-row" data-slug="${cfg.slug}">+ Add Row</button>
           <button data-action="add-col" data-slug="${cfg.slug}">+ Add Column</button>
@@ -320,6 +323,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   initNavCollapse();
   await loadNav();
   for (const cfg of SECTIONS) await mountSection(cfg);
+  await initLineageBadges();
 </script>
 
 <script type="module" src="ambience.js"></script>
