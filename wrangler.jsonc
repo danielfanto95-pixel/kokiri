@@ -2,6 +2,7 @@
   "name": "kokiri",
   "compatibility_date": "2026-08-17",
   "assets": {
-    "directory": "./"
+    "directory": "./",
+    "html_handling": "none"
   }
 }
