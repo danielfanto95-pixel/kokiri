@@ -212,6 +212,36 @@ textarea:focus { outline: none; border-color: var(--leaf); }
         <p style="font-size:0.8rem;color:var(--muted);margin:-0.4rem 0 1rem;">Every portal, dashboard, and macro section, and the root data source it's built on — sheets, tables, or composites of several. Sections without a declared source show a warning until one is added on the page itself.</p>
         <div id="lineage-table-wrap"></div>
       </div>
+
+      <div class="pages-section">
+        <div class="pages-head">
+          <h2>📐 Rules &amp; Requirements</h2>
+          <button id="btn-add-rule">+ Add Rule</button>
+        </div>
+        <p style="font-size:0.8rem;color:var(--muted);margin:-0.4rem 0 1rem;">Global rules apply everywhere; specific rules are scoped to a feature or page. These are the actual operating constraints the system is built to — not aspirational, enforced.</p>
+
+        <div class="add-page-form" id="add-rule-form">
+          <div class="add-page-form-row">
+            <select id="rule-scope"><option value="global">Global</option><option value="specific">Specific</option></select>
+            <input type="text" id="rule-applies-to" placeholder="Applies to (e.g. portals.html) — specific only">
+          </div>
+          <input type="text" id="rule-title" placeholder="Rule title" style="width:100%;margin-top:0.6rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;color:var(--text);font-family:inherit;">
+          <textarea id="rule-desc" rows="2" placeholder="What the rule requires, and why"></textarea>
+          <div class="add-page-form-actions">
+            <button id="btn-save-rule">Add Rule</button>
+            <button id="btn-cancel-rule">Cancel</button>
+          </div>
+        </div>
+
+        <div class="lineage-group">
+          <h3>Global</h3>
+          <div class="pages-list" id="rules-global-list"></div>
+        </div>
+        <div class="lineage-group">
+          <h3>Specific</h3>
+          <div class="pages-list" id="rules-specific-list"></div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -554,6 +584,71 @@ GitHub Pages: $0. Supabase free tier (DB, Auth, Edge Functions, cron): $0 at cur
     loadPages();
   });
 
+  // --- Rules & Requirements ---
+  const addRuleForm = document.getElementById('add-rule-form');
+  const btnAddRule = document.getElementById('btn-add-rule');
+  const btnCancelRule = document.getElementById('btn-cancel-rule');
+  const btnSaveRule = document.getElementById('btn-save-rule');
+
+  async function loadRules() {
+    const { data, error } = await supabase.from('kokiri_rules').select('*').order('sort_order').order('created_at');
+    if (error) { document.getElementById('rules-global-list').innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">⚠ ${escapeHtml(error.message)}</p>`; return; }
+    renderRules(data || []);
+  }
+
+  function ruleCard(r) {
+    return `
+      <div class="page-card" data-id="${r.id}">
+        <div class="page-card-main">
+          <div class="page-card-title">
+            <span>${escapeHtml(r.title)}</span>
+            ${r.applies_to ? `<span class="page-cat-badge">${escapeHtml(r.applies_to)}</span>` : ''}
+          </div>
+          <div class="page-card-desc">${escapeHtml(r.description)}</div>
+        </div>
+        <button class="rule-del" data-id="${r.id}" title="Remove rule">✕</button>
+      </div>
+    `;
+  }
+
+  function renderRules(rules) {
+    const globalEl = document.getElementById('rules-global-list');
+    const specificEl = document.getElementById('rules-specific-list');
+    const globalRules = rules.filter(r => r.scope === 'global');
+    const specificRules = rules.filter(r => r.scope === 'specific');
+    globalEl.innerHTML = globalRules.length ? globalRules.map(ruleCard).join('') : '<p style="color:var(--muted);font-size:0.85rem;">No global rules yet.</p>';
+    specificEl.innerHTML = specificRules.length ? specificRules.map(ruleCard).join('') : '<p style="color:var(--muted);font-size:0.85rem;">No specific rules yet.</p>';
+    document.querySelectorAll('.rule-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remove this rule?')) return;
+        await supabase.from('kokiri_rules').delete().eq('id', btn.dataset.id);
+        loadRules();
+      });
+    });
+  }
+
+  btnAddRule.addEventListener('click', () => { addRuleForm.classList.add('open'); });
+  btnCancelRule.addEventListener('click', () => {
+    addRuleForm.classList.remove('open');
+    document.getElementById('rule-title').value = '';
+    document.getElementById('rule-desc').value = '';
+    document.getElementById('rule-applies-to').value = '';
+  });
+  btnSaveRule.addEventListener('click', async () => {
+    const scope = document.getElementById('rule-scope').value;
+    const title = document.getElementById('rule-title').value.trim();
+    const description = document.getElementById('rule-desc').value.trim();
+    const appliesTo = document.getElementById('rule-applies-to').value.trim();
+    if (!title || !description) { alert('Title and description are required.'); return; }
+    btnSaveRule.disabled = true;
+    const { data: maxRow } = await supabase.from('kokiri_rules').select('sort_order').eq('scope', scope).order('sort_order', { ascending: false }).limit(1).maybeSingle();
+    const { error } = await supabase.from('kokiri_rules').insert({ scope, title, description, applies_to: appliesTo, sort_order: (maxRow?.sort_order ?? 0) + 1 });
+    btnSaveRule.disabled = false;
+    if (error) { alert('⚠ ' + error.message); return; }
+    btnCancelRule.click();
+    loadRules();
+  });
+
   // --- Data Lineage ---
   async function loadLineage() {
     const { data } = await supabase.from('kokiri_section_sources').select('*').order('page').order('sort_order');
@@ -589,6 +684,7 @@ GitHub Pages: $0. Supabase free tier (DB, Auth, Edge Functions, cron): $0 at cur
   await loadDoc();
   await loadPages();
   await loadLineage();
+  await loadRules();
 </script>
 
 <script type="module" src="ambience.js"></script>
