@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Users</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
+.page-head { margin-bottom: 1.4rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; max-width: 620px; line-height: 1.5; }
+#btn-invite { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 8px; padding: 0.65rem 1.1rem; font-family: var(--heading); font-weight: 700; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+
+.user-list { display: flex; flex-direction: column; gap: 0.7rem; }
+.user-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
+.user-top { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.user-email { font-family: var(--heading); font-size: 0.95rem; color: var(--text); }
+.role-badge { font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 100px; border: 1px solid var(--border); color: var(--muted); }
+.role-badge.owner { color: var(--gold); border-color: rgba(230,192,106,0.3); }
+.role-badge.active { color: var(--leaf-bright); border-color: rgba(124,197,118,0.3); }
+.role-badge.revoked { color: #e68686; border-color: rgba(230,134,134,0.3); }
+.user-grants { margin-top: 0.7rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.grant-chip { font-family: var(--mono); font-size: 0.68rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 0.2rem 0.6rem; color: var(--muted); }
+.grant-chip.edit { color: var(--leaf-bright); }
+.user-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; flex-wrap: wrap; }
+.user-actions button { font-family: var(--mono); font-size: 0.7rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer; }
+.user-actions button:hover { border-color: var(--leaf); }
+.user-actions button.danger { color: #e68686; }
+.empty-note { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; padding: 2rem; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.5rem 1.6rem; width: 520px; max-width: 100%; max-height: 85vh; overflow-y: auto; }
+.modal-box h2 { font-family: var(--heading); font-size: 1.1rem; color: var(--leaf-bright); margin-bottom: 1rem; }
+.modal-box label { display: block; font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; color: var(--dim); margin: 0.8rem 0 0.4rem; }
+.modal-box input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-family: inherit; font-size: 0.85rem; }
+.grant-section-label { font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; color: var(--dim); margin: 1rem 0 0.5rem; }
+.grant-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.grant-row:last-child { border-bottom: none; }
+.grant-row .gname { flex: 1; }
+.grant-row select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.75rem; font-family: var(--mono); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.3rem; }
+.modal-actions button { font-family: var(--mono); font-size: 0.78rem; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); }
+.btn-cancel { background: transparent; color: var(--muted); }
+.btn-save { background: var(--leaf-bright); color: var(--bg); border: none; font-weight: 600; }
+.credential-box { background: var(--bg); border: 1px solid var(--border-bright); border-radius: 8px; padding: 1rem; margin-top: 1rem; font-family: var(--mono); font-size: 0.82rem; }
+.credential-box .warn { color: var(--gold); font-size: 0.72rem; margin-bottom: 0.6rem; font-family: var(--body); }
+.credential-box .row { margin-bottom: 0.4rem; word-break: break-all; }
+.credential-box .row b { color: var(--leaf-bright); }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <div>
+        <h1>👤 Users</h1>
+        <p>Invite people into Kokiri and control exactly what they can see. Guests only ever reach Portals, Dashboards, and Operations — and only the specific sheets/dashboards you grant them, enforced at the database level.</p>
+      </div>
+      <button id="btn-invite">+ Invite User</button>
+    </div>
+    <div class="user-list" id="user-list"><p class="empty-note">Loading…</p></div>
+  </main>
+
+  <nav class="nav-side">
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="portals.html">🚪 All Portals</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Users">Users<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link active" href="users.html">👤 Manage Users</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Architecture">Architecture<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="architecture.html">🏛️ System Architecture</a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { requireOwnerPage } from './guard.js';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const auth = await requireOwnerPage(supabase);
+  if (!auth) throw new Error('redirecting');
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('');
+  }
+
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+
+  const FN_URL = 'https://qahriykfwknuoqctsaek.supabase.co/functions/v1/user-admin';
+  async function callUserAdmin(payload) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(FN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'Request failed');
+    return json;
+  }
+
+  function openModal(html) { document.getElementById('modal-box').innerHTML = html; document.getElementById('modal-overlay').classList.add('open'); }
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+  document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); });
+
+  // ---------- Data ----------
+  let sheets = [], dashboardsList = [], profiles = [], grants = [];
+
+  async function loadAll() {
+    const [{ data: sheetData }, { data: dashData }, adminData] = await Promise.all([
+      supabase.from('kokiri_sheets').select('id, slug, name').order('sort_order'),
+      supabase.from('dashboards').select('id, name').order('created_at'),
+      callUserAdmin({ type: 'list' }),
+    ]);
+    sheets = sheetData || [];
+    dashboardsList = dashData || [];
+    profiles = adminData.profiles || [];
+    grants = adminData.grants || [];
+    renderUserList();
+  }
+
+  function grantsFor(userId) { return grants.filter(g => g.user_id === userId); }
+  function labelForGrant(g) {
+    if (g.resource_type === 'kokiri_sheet') {
+      const s = sheets.find(x => x.id === g.resource_id);
+      return (s ? s.name : 'Unknown sheet') + (g.access_level === 'edit' ? ' (edit)' : ' (view)');
+    }
+    if (g.resource_type === 'dashboard') {
+      const d = dashboardsList.find(x => x.id === g.resource_id);
+      return (d ? d.name : 'Unknown dashboard') + ' [Dashboard]' + (g.access_level === 'edit' ? ' (edit)' : ' (view)');
+    }
+    return `${g.resource_type} (${g.access_level})`;
+  }
+
+  function renderUserList() {
+    const el = document.getElementById('user-list');
+    if (!profiles.length) { el.innerHTML = '<p class="empty-note">No users yet.</p>'; return; }
+    el.innerHTML = profiles.map(p => {
+      const isOwner = p.role === 'owner';
+      const userGrants = grantsFor(p.id);
+      return `
+        <div class="user-card" data-id="${p.id}">
+          <div class="user-top">
+            <span class="user-email">${escapeHtml(p.email)}</span>
+            <span class="role-badge ${isOwner ? 'owner' : ''}">${isOwner ? 'Owner' : 'Guest'}</span>
+            ${!isOwner ? `<span class="role-badge ${p.status}">${p.status}</span>` : ''}
+          </div>
+          ${!isOwner ? `
+            <div class="user-grants">
+              ${userGrants.length ? userGrants.map(g => `<span class="grant-chip ${g.access_level === 'edit' ? 'edit' : ''}">${escapeHtml(labelForGrant(g))}</span>`).join('') : '<span class="grant-chip">No access granted yet</span>'}
+            </div>
+            <div class="user-actions">
+              <button data-action="manage">Manage Access</button>
+              <button data-action="reset-password">Reset Password</button>
+              ${p.status === 'active' ? '<button data-action="revoke" class="danger">Revoke</button>' : '<button data-action="reactivate">Reactivate</button>'}
+              <button data-action="delete" class="danger">Delete</button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('[data-action="manage"]').forEach(btn => btn.addEventListener('click', (e) => openManageModal(e.target.closest('.user-card').dataset.id)));
+    el.querySelectorAll('[data-action="revoke"]').forEach(btn => btn.addEventListener('click', (e) => setStatus(e.target.closest('.user-card').dataset.id, 'revoked')));
+    el.querySelectorAll('[data-action="reactivate"]').forEach(btn => btn.addEventListener('click', (e) => setStatus(e.target.closest('.user-card').dataset.id, 'active')));
+    el.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', (e) => deleteUser(e.target.closest('.user-card').dataset.id)));
+    el.querySelectorAll('[data-action="reset-password"]').forEach(btn => btn.addEventListener('click', (e) => resetPassword(e.target.closest('.user-card').dataset.id)));
+  }
+
+  async function setStatus(userId, status) {
+    if (status === 'revoked' && !confirm('Revoke this user\'s access? They will be immediately signed out of everything.')) return;
+    await callUserAdmin({ type: 'set_status', user_id: userId, status });
+    await loadAll();
+  }
+  async function deleteUser(userId) {
+    if (!confirm('Permanently delete this user and all their access grants? This cannot be undone.')) return;
+    await callUserAdmin({ type: 'delete', user_id: userId });
+    await loadAll();
+  }
+  async function resetPassword(userId) {
+    const { password } = await callUserAdmin({ type: 'reset_password', user_id: userId });
+    const p = profiles.find(x => x.id === userId);
+    openModal(`
+      <h2>Password Reset</h2>
+      <div class="credential-box">
+        <div class="warn">⚠ This is shown once — copy it now and share it with ${escapeHtml(p?.email || 'the user')} yourself.</div>
+        <div class="row"><b>Email:</b> ${escapeHtml(p?.email || '')}</div>
+        <div class="row"><b>New Password:</b> ${escapeHtml(password)}</div>
+      </div>
+      <div class="modal-actions"><button class="btn-save" id="m-close">Done</button></div>
+    `);
+    document.getElementById('m-close').addEventListener('click', closeModal);
+  }
+
+  function grantFieldsHtml(existingGrants) {
+    const sheetGrant = (id) => existingGrants.find(g => g.resource_type === 'kokiri_sheet' && g.resource_id === id);
+    const dashGrant = (id) => existingGrants.find(g => g.resource_type === 'dashboard' && g.resource_id === id);
+    return `
+      <div class="grant-section-label">Kokiri Sheets</div>
+      ${sheets.map(s => {
+        const g = sheetGrant(s.id);
+        return `<div class="grant-row" data-type="kokiri_sheet" data-id="${s.id}">
+          <span class="gname">${escapeHtml(s.name)}</span>
+          <select>
+            <option value="none" ${!g ? 'selected' : ''}>No access</option>
+            <option value="view" ${g && g.access_level === 'view' ? 'selected' : ''}>View</option>
+            <option value="edit" ${g && g.access_level === 'edit' ? 'selected' : ''}>Edit</option>
+          </select>
+        </div>`;
+      }).join('')}
+      <div class="grant-section-label">Dashboards</div>
+      ${dashboardsList.length ? dashboardsList.map(d => {
+        const g = dashGrant(d.id);
+        return `<div class="grant-row" data-type="dashboard" data-id="${d.id}">
+          <span class="gname">${escapeHtml(d.name)}</span>
+          <select>
+            <option value="none" ${!g ? 'selected' : ''}>No access</option>
+            <option value="view" ${g && g.access_level === 'view' ? 'selected' : ''}>View</option>
+            <option value="edit" ${g && g.access_level === 'edit' ? 'selected' : ''}>Edit</option>
+          </select>
+        </div>`;
+      }).join('') : '<p style="font-size:0.78rem;color:var(--dim);">No dashboards yet.</p>'}
+    `;
+  }
+
+  function readGrantFields() {
+    const out = [];
+    document.querySelectorAll('.grant-row').forEach(row => {
+      const level = row.querySelector('select').value;
+      if (level === 'none') return;
+      out.push({ resource_type: row.dataset.type, resource_id: row.dataset.id, access_level: level });
+    });
+    return out;
+  }
+
+  function openManageModal(userId) {
+    const p = profiles.find(x => x.id === userId);
+    openModal(`
+      <h2>Manage Access — ${escapeHtml(p.email)}</h2>
+      ${grantFieldsHtml(grantsFor(userId))}
+      <div class="modal-actions">
+        <button class="btn-cancel" id="m-cancel">Cancel</button>
+        <button class="btn-save" id="m-save">Save</button>
+      </div>
+    `);
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    document.getElementById('m-save').addEventListener('click', async () => {
+      await callUserAdmin({ type: 'update_permissions', user_id: userId, grants: readGrantFields() });
+      closeModal();
+      await loadAll();
+    });
+  }
+
+  document.getElementById('btn-invite').addEventListener('click', () => {
+    openModal(`
+      <h2>Invite User</h2>
+      <label>Email</label>
+      <input type="email" id="inv-email" placeholder="guest@example.com">
+      ${grantFieldsHtml([])}
+      <div class="modal-actions">
+        <button class="btn-cancel" id="m-cancel">Cancel</button>
+        <button class="btn-save" id="m-save">Create User</button>
+      </div>
+    `);
+    document.getElementById('m-cancel').addEventListener('click', closeModal);
+    document.getElementById('m-save').addEventListener('click', async () => {
+      const email = document.getElementById('inv-email').value.trim();
+      if (!email) { alert('Email is required.'); return; }
+      const grantsPayload = readGrantFields();
+      try {
+        const result = await callUserAdmin({ type: 'create', email, grants: grantsPayload });
+        openModal(`
+          <h2>User Created</h2>
+          <div class="credential-box">
+            <div class="warn">⚠ This is shown once — copy it now and share it with them yourself (no email is sent automatically).</div>
+            <div class="row"><b>Email:</b> ${escapeHtml(result.email)}</div>
+            <div class="row"><b>Password:</b> ${escapeHtml(result.password)}</div>
+            <div class="row"><b>Login at:</b> login.html</div>
+          </div>
+          <div class="modal-actions"><button class="btn-save" id="m-close">Done</button></div>
+        `);
+        document.getElementById('m-close').addEventListener('click', async () => { closeModal(); await loadAll(); });
+      } catch (e) {
+        alert('⚠ ' + e.message);
+      }
+    });
+  });
+
+  initNavCollapse();
+  await loadNav();
+  await loadAll();
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>

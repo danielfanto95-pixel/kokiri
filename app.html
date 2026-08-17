@@ -200,11 +200,12 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { requireOwnerPage } from './guard.js';
   import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) window.location.href = 'login.html';
+  const auth = await requireOwnerPage(supabase);
+  if (!auth) throw new Error('redirecting');
 
   document.getElementById('btn-logout').addEventListener('click', async () => {
     await supabase.auth.signOut();
@@ -235,7 +236,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 
     const navDashboards = document.getElementById('nav-dashboards');
     navDashboards.innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
-      + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="backups.html">🗄️ Backups</a>`;
+      + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="backups.html">🗄️ Backups</a><a class="nav-link" href="users.html">👤 Users</a>`;
 
     document.getElementById('nav-repository').addEventListener('click', selectRepository);
 
