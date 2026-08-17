@@ -72,6 +72,20 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .item-row .content .meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
 .empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 
+.dispatch-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
+.dispatch-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.dispatch-card .sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
+.dispatch-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.dispatch-row select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.6rem 0.7rem; font-size: 0.85rem; }
+.dispatch-row input { flex: 1; min-width: 220px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.6rem 0.8rem; font-size: 0.9rem; }
+#btn-dispatch { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.6rem 1.1rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+#btn-dispatch:disabled { opacity: 0.6; cursor: not-allowed; }
+.dispatch-log { margin-top: 0.9rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.dispatch-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--muted); padding: 0.4rem 0.6rem; background: var(--surface2); border-radius: 6px; }
+.dispatch-item .dagent { font-family: var(--mono); font-size: 0.65rem; color: var(--leaf-bright); background: var(--surface); border-radius: 100px; padding: 0.1rem 0.5rem; white-space: nowrap; }
+.dispatch-item .dtitle { flex: 1; color: var(--text); }
+.dispatch-item .dtime { font-family: var(--mono); font-size: 0.65rem; white-space: nowrap; }
+
 .budget-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
 .budget-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
 .budget-card h2 a { font-family: var(--mono); font-size: 0.72rem; color: var(--leaf); text-decoration: none; font-weight: 400; }
@@ -196,6 +210,17 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
         </div>
       </div>
 
+      <div class="dispatch-card">
+        <h2>📡 Dispatch</h2>
+        <div class="sub">Fire off a task to any agent without leaving Home.</div>
+        <div class="dispatch-row">
+          <select id="dispatch-agent"><option value="">Choose an agent…</option></select>
+          <input type="text" id="dispatch-text" placeholder="What do you need done?">
+          <button id="btn-dispatch">🚀 Dispatch</button>
+        </div>
+        <div class="dispatch-log" id="dispatch-log"></div>
+      </div>
+
       <div class="quick-links">
         <h2>🔗 Quick Links</h2>
         <div class="ql-row" id="ql-row"><p class="empty" style="padding:0.6rem;">Loading…</p></div>
@@ -224,6 +249,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
       <div class="budget-card">
         <h2>💰 Budgets <a href="portals.html#budgets">Open in Portals →</a></h2>
+        <div data-lineage-page="home.html" data-lineage-section="budgets" data-lineage-label="Budgets Summary" style="margin-bottom:0.6rem;"></div>
         <div class="budget-stats-row" id="budget-stats-row"><p class="empty" style="grid-column:1/-1;padding:0.5rem;">Loading…</p></div>
       </div>
 
@@ -298,7 +324,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   import { requireOwnerPage } from './guard.js';
-  import { appendNonSheetSourcesToNav } from './lineage.js';
+  import { appendNonSheetSourcesToNav, initLineageBadges } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const auth = await requireOwnerPage(supabase);
@@ -675,6 +701,40 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   });
   document.getElementById('ql-url').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('btn-add-ql').click(); });
 
+  // ---------- Dispatch ----------
+  function initDispatch(agentsList) {
+    const select = document.getElementById('dispatch-agent');
+    select.innerHTML = '<option value="">Choose an agent…</option>' + agentsList.map(a => `<option value="${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</option>`).join('');
+  }
+
+  async function loadDispatchLog() {
+    const el = document.getElementById('dispatch-log');
+    const { data } = await supabase.from('agent_tasks').select('title, created_at, agent_id, agents(name, icon)').order('created_at', { ascending: false }).limit(5);
+    if (!data || !data.length) { el.innerHTML = ''; return; }
+    el.innerHTML = data.map(t => `
+      <div class="dispatch-item">
+        <span class="dagent">${t.agents?.icon || '⚔️'} ${escapeHtml(t.agents?.name || 'Unknown')}</span>
+        <span class="dtitle">${escapeHtml(t.title)}</span>
+        <span class="dtime">${new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('btn-dispatch').addEventListener('click', async () => {
+    const agentId = document.getElementById('dispatch-agent').value;
+    const textEl = document.getElementById('dispatch-text');
+    const text = textEl.value.trim();
+    if (!agentId || !text) { alert('Pick an agent and describe what you need.'); return; }
+    const btn = document.getElementById('btn-dispatch');
+    btn.disabled = true;
+    const { error } = await supabase.from('agent_tasks').insert({ agent_id: agentId, title: text, status: 'todo' });
+    btn.disabled = false;
+    if (error) { alert('⚠ ' + error.message); return; }
+    textEl.value = '';
+    await loadDispatchLog();
+  });
+  document.getElementById('dispatch-text').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('btn-dispatch').click(); });
+
   // ---------- Budgets summary ----------
   function numFrom(v) { const n = parseFloat(String(v ?? '').replace(/[^0-9.-]/g, '')); return isNaN(n) ? 0 : n; }
   async function loadBudgetSummary() {
@@ -704,7 +764,9 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   });
 
   const { agents } = await loadNav();
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary()]);
+  initDispatch(agents);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog()]);
+  initLineageBadges();
   meetingsSheetId = await getMeetingsSheetId();
 
   const statsSnapshot = {

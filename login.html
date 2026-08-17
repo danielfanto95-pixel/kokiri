@@ -36,6 +36,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .msg { margin-top: 1rem; font-size: 0.85rem; padding: 0.6rem 0.8rem; border-radius: 6px; display: none; }
 .msg.error { background: rgba(248,113,113,0.1); color: var(--error); display: block; }
 .msg.success { background: rgba(147,217,154,0.1); color: var(--success); display: block; }
+.forgot-link { display: block; text-align: center; margin-top: 1rem; font-size: 0.8rem; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; font-family: inherit; }
+.forgot-link:hover { color: var(--leaf-bright); }
 </style>
 </head>
 <body>
@@ -52,6 +54,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <button type="submit" id="btn-login">Log In</button>
     </div>
   </form>
+  <button type="button" class="forgot-link" id="btn-forgot">Forgot password?</button>
   <div id="msg" class="msg"></div>
 </div>
 
@@ -90,6 +93,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     setLoading(false);
     if (error) { showMsg(error.message, 'error'); return; }
     await routeAfterLogin();
+  });
+
+  document.getElementById('btn-forgot').addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    if (!email) { showMsg('Enter your email above first, then click "Forgot password?"', 'error'); return; }
+    const redirectTo = window.location.origin + window.location.pathname.replace(/login\.html$/, 'reset-password.html');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) { showMsg(error.message, 'error'); return; }
+    showMsg('If that email has an account, a reset link is on its way — check your inbox.', 'success');
   });
 </script>
 
