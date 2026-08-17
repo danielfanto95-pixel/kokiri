@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kokiri — Operations Dashboard</title>
+<title>Kokiri — Temple of Time</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -32,24 +32,19 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
 .layout { display: flex; min-height: calc(100vh - 57px); }
 main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
-.page-head { margin-bottom: 1.3rem; }
-.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
-.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; }
+.page-head { margin-bottom: 1.6rem; }
+.page-head h1 { font-family: var(--heading); font-size: 1.5rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.4rem; max-width: 680px; line-height: 1.6; }
 
-.op-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; overflow: hidden; }
-.op-head {
-  display: flex; align-items: center; gap: 0.7rem; padding: 0.9rem 1.1rem; cursor: pointer; user-select: none;
-  border-bottom: 1px solid transparent;
-}
-.op-head:hover { background: var(--surface2); }
-.op-section.open .op-head { border-bottom-color: var(--border); }
-.op-head .op-icon { font-size: 1.2rem; }
-.op-head h2 { font-family: var(--heading); font-size: 1rem; color: var(--leaf-bright); flex: 1; }
-.op-head .op-count { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
-.op-head .chevron { transition: transform 0.15s; font-size: 0.7rem; color: var(--muted); }
-.op-section.open .op-head .chevron { transform: rotate(90deg); }
-.op-body { display: none; padding: 1rem 1.1rem 1.2rem; }
-.op-section.open .op-body { display: block; }
+.macro-head { display: flex; align-items: baseline; gap: 0.6rem; margin: 2rem 0 0.9rem; }
+.macro-head:first-of-type { margin-top: 0; }
+.macro-head h2 { font-family: var(--heading); font-size: 1.2rem; color: var(--gold); }
+.macro-head .macro-sub { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); }
+
+.progress-summary { display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1.1rem; margin-bottom: 1rem; }
+.progress-summary .ptrack { flex: 1; height: 10px; border-radius: 100px; background: var(--surface2); overflow: hidden; }
+.progress-summary .pfill { height: 100%; background: var(--leaf-bright); border-radius: 100px; transition: width 0.3s; }
+.progress-summary .plabel { font-family: var(--mono); font-size: 0.78rem; color: var(--leaf-bright); white-space: nowrap; }
 
 .op-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; }
 .op-toolbar button {
@@ -58,21 +53,33 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 }
 .op-toolbar button:hover { border-color: var(--leaf); }
 
-.op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+.op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.6rem; }
 table { border-collapse: collapse; width: 100%; min-width: max-content; }
 th, td {
-  border: 1px solid var(--border); padding: 0.5rem 0.65rem; text-align: left;
+  border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left;
   font-size: 0.8rem; vertical-align: top; max-width: 280px;
 }
-th {
-  background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright);
-  white-space: nowrap; font-size: 0.72rem;
-}
-td { background: var(--surface); color: var(--text); min-width: 130px; }
+th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; font-size: 0.7rem; }
+td { background: var(--surface); color: var(--text); min-width: 120px; }
 td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
-.row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 26px; }
+.row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 24px; }
 .row-del:hover { color: #f87171; }
-.empty-note { color: var(--muted); font-size: 0.82rem; padding: 1.2rem; text-align: center; }
+.empty-note { color: var(--muted); font-size: 0.85rem; padding: 1.2rem; text-align: center; }
+
+.op-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0.8rem; overflow: hidden; }
+.op-head {
+  display: flex; align-items: center; gap: 0.7rem; padding: 0.8rem 1.1rem; cursor: pointer; user-select: none;
+  border-bottom: 1px solid transparent;
+}
+.op-head:hover { background: var(--surface2); }
+.op-section.open .op-head { border-bottom-color: var(--border); }
+.op-head .op-icon { font-size: 1.1rem; }
+.op-head h3 { font-family: var(--heading); font-size: 0.95rem; color: var(--leaf-bright); flex: 1; }
+.op-head .op-count { font-family: var(--mono); font-size: 0.66rem; color: var(--dim); }
+.op-head .chevron { transition: transform 0.15s; font-size: 0.68rem; color: var(--muted); }
+.op-section.open .op-head .chevron { transform: rotate(90deg); }
+.op-body { display: none; padding: 0.9rem 1.1rem 1.1rem; }
+.op-section.open .op-body { display: block; }
 
 .nav-side {
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
@@ -106,10 +113,30 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 <div class="layout">
   <main>
     <div class="page-head">
-      <h1>🗂️ Operations Dashboard</h1>
-      <p>CRM, Ads, Content, Affiliates, Weekly/Daily Reports, Calendar, and Tasks — all editable, all in one place. Click a section header to expand/collapse; state is remembered.</p>
+      <h1>🕰️ Temple of Time</h1>
+      <p>Source → Sync → Syntropy. Fill in the root data and questionnaires below, keep the six Sync sheets current, and Syntropy is where it all gets synthesized into finished profiles and deliverables.</p>
     </div>
-    <div id="op-sections"></div>
+
+    <div class="macro-head"><h2>📥 Source</h2><span class="macro-sub">root data + questionnaires, tracked as tasks</span></div>
+    <div class="progress-summary">
+      <span class="plabel" id="source-progress-label">0%</span>
+      <div class="ptrack"><div class="pfill" id="source-progress-fill" style="width:0%"></div></div>
+    </div>
+    <div class="op-toolbar">
+      <button data-action="add-row" data-slug="temple-source">+ Add Row</button>
+      <button data-action="add-col" data-slug="temple-source">+ Add Column</button>
+    </div>
+    <div class="op-grid-wrap" id="grid-temple-source"><p class="empty-note">Loading…</p></div>
+
+    <div class="macro-head"><h2>🔄 Sync</h2><span class="macro-sub">the six living sheets — add rows/columns to any of them</span></div>
+    <div id="sync-sections"></div>
+
+    <div class="macro-head"><h2>✨ Syntropy</h2><span class="macro-sub">profiles &amp; deliverables built from Source + Sync</span></div>
+    <div class="op-toolbar">
+      <button data-action="add-row" data-slug="temple-syntropy">+ Add Row</button>
+      <button data-action="add-col" data-slug="temple-syntropy">+ Add Column</button>
+    </div>
+    <div class="op-grid-wrap" id="grid-temple-syntropy"><p class="empty-note">Loading…</p></div>
   </main>
 
   <nav class="nav-side">
@@ -129,6 +156,18 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div class="nav-group-label" data-group="Repository">Repository<span class="chevron">▾</span></div>
       <div class="nav-group-content">
         <a class="nav-link" href="app.html#repository">📁 All Files</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="portals.html">🚪 All Portals</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Temple">Temple<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link active" href="temple-of-time.html">🕰️ Temple of Time</a>
       </div>
     </div>
     <div class="nav-group">
@@ -159,6 +198,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   });
 
   function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function numFrom(v) { const n = parseFloat(String(v ?? '').replace(/[^0-9.-]/g, '')); return isNaN(n) ? 0 : n; }
 
   async function loadNav() {
     const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
@@ -169,7 +209,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
     document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
-      + `<a class="nav-link active" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a>`;
+      + `<a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a>`;
   }
 
   function initNavCollapse() {
@@ -188,55 +228,11 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     });
   }
 
-  // ---------- Operations sections — 8 editable mini-grids, each backed by its own kokiri_sheet ----------
-  const SECTIONS = [
-    { slug: 'crm', icon: '🧑‍🤝‍🧑', title: 'CRM' },
-    { slug: 'ads', icon: '📣', title: 'Ads' },
-    { slug: 'content', icon: '🎬', title: 'Content' },
-    { slug: 'affiliates-performance', icon: '🤝', title: 'Affiliates Performance' },
-    { slug: 'weekly-report-dash', icon: '🗓', title: 'Weekly Report' },
-    { slug: 'daily-report-dash', icon: '📅', title: 'Daily Report' },
-    { slug: 'calendar-schedule', icon: '📆', title: 'Calendar / Schedule' },
-    { slug: 'tasks-dashboard', icon: '✅', title: 'Tasks' },
-  ];
-
-  function collapsedKey(slug) { return 'kokiri_ops_collapsed_' + slug; }
-
-  async function mountSection(cfg) {
-    const container = document.createElement('div');
-    container.className = 'op-section';
-    container.id = 'op-' + cfg.slug;
-    // Default: closed on first visit; remembers open/closed after that.
-    const wasOpened = localStorage.getItem(collapsedKey(cfg.slug)) === 'open';
-    if (wasOpened) container.classList.add('open');
-
-    container.innerHTML = `
-      <div class="op-head">
-        <span class="op-icon">${cfg.icon}</span>
-        <h2>${escapeHtml(cfg.title)}</h2>
-        <span class="op-count" id="count-${cfg.slug}"></span>
-        <span class="chevron">▸</span>
-      </div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-row" data-slug="${cfg.slug}">+ Add Row</button>
-          <button data-action="add-col" data-slug="${cfg.slug}">+ Add Column</button>
-        </div>
-        <div class="op-grid-wrap" id="grid-wrap-${cfg.slug}"><p class="empty-note">Loading…</p></div>
-      </div>
-    `;
-    document.getElementById('op-sections').appendChild(container);
-
-    container.querySelector('.op-head').addEventListener('click', () => {
-      const nowOpen = container.classList.toggle('open');
-      localStorage.setItem(collapsedKey(cfg.slug), nowOpen ? 'open' : 'closed');
-    });
-
-    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', cfg.slug).maybeSingle();
-    if (!sheet) {
-      document.getElementById('grid-wrap-' + cfg.slug).innerHTML = '<p class="empty-note">Sheet not found.</p>';
-      return;
-    }
+  // ---------- Generic editable-grid mount ----------
+  async function mountGrid(slug, wrapId, onData) {
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    const wrap = document.getElementById(wrapId);
+    if (!sheet) { wrap.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
 
     let columns = [], rows = [];
     async function loadData() {
@@ -247,63 +243,54 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       columns = cols || [];
       rows = rowData || [];
       renderGrid();
+      if (onData) onData(columns, rows);
     }
 
     function renderGrid() {
-      document.getElementById('count-' + cfg.slug).textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
-      const wrap = document.getElementById('grid-wrap-' + cfg.slug);
-      if (!columns.length) {
-        wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>';
-        return;
-      }
+      if (!columns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>'; return; }
       let html = '<table><thead><tr><th class="row-del">×</th>';
       for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
       html += '</tr></thead><tbody>';
       for (const r of rows) {
         html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
-        for (const c of columns) {
-          const val = r.data?.[c.column_key] ?? '';
-          html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(val)}</td>`;
-        }
+        for (const c of columns) html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
         html += '</tr>';
       }
       html += '</tbody></table>';
       wrap.innerHTML = html;
-      attachGridHandlers(wrap);
-    }
-
-    function attachGridHandlers(wrap) {
       wrap.querySelectorAll('td[contenteditable="true"]').forEach(td => {
         td.addEventListener('blur', async () => {
-          const tr = td.closest('tr');
-          const rowId = tr.dataset.rowId;
-          const colKey = td.dataset.colKey;
+          const rowId = td.closest('tr').dataset.rowId;
           const row = rows.find(r => r.id === rowId);
           if (!row) return;
-          row.data = { ...row.data, [colKey]: td.textContent };
+          row.data = { ...row.data, [td.dataset.colKey]: td.textContent };
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+          if (onData) onData(columns, rows);
         });
       });
       wrap.querySelectorAll('[data-action="del-row"]').forEach(el => {
         el.addEventListener('click', async () => {
-          const tr = el.closest('tr');
-          const rowId = tr.dataset.rowId;
+          const rowId = el.closest('tr').dataset.rowId;
           if (!confirm('Delete this row?')) return;
           await supabase.from('kokiri_rows').delete().eq('id', rowId);
           rows = rows.filter(r => r.id !== rowId);
           renderGrid();
+          if (onData) onData(columns, rows);
         });
       });
     }
 
-    container.querySelector('[data-action="add-row"]').addEventListener('click', async () => {
+    const addRowBtn = document.querySelector(`[data-action="add-row"][data-slug="${slug}"]`);
+    const addColBtn = document.querySelector(`[data-action="add-col"][data-slug="${slug}"]`);
+    if (addRowBtn) addRowBtn.addEventListener('click', async () => {
       const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
       const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: {}, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert(error.message); return; }
       rows.push(data);
       renderGrid();
+      if (onData) onData(columns, rows);
     });
-    container.querySelector('[data-action="add-col"]').addEventListener('click', async () => {
+    if (addColBtn) addColBtn.addEventListener('click', async () => {
       const name = prompt('New column name:');
       if (!name) return;
       const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
@@ -317,9 +304,72 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     await loadData();
   }
 
+  // ---------- Sync: six collapsible sub-sheets ----------
+  const SYNC_SECTIONS = [
+    { slug: 'story', name: 'Story', icon: '📖' },
+    { slug: 'system-stats', name: 'System', icon: '⚙️' },
+    { slug: 'state-status', name: 'State', icon: '📡' },
+    { slug: 'sagas', name: 'Sagas', icon: '🗡️' },
+    { slug: 'skills', name: 'Skills', icon: '🧠' },
+    { slug: 'support', name: 'Support', icon: '🤝' },
+  ];
+
+  function mountSyncSection(cfg) {
+    const container = document.getElementById('sync-sections');
+    const collapseKey = 'temple_sync_collapsed_' + cfg.slug;
+    const isOpen = localStorage.getItem(collapseKey) === 'open';
+    const section = document.createElement('div');
+    section.className = 'op-section' + (isOpen ? ' open' : '');
+    section.innerHTML = `
+      <div class="op-head">
+        <span class="op-icon">${cfg.icon}</span>
+        <h3>${escapeHtml(cfg.name)}</h3>
+        <span class="op-count" id="count-${cfg.slug}"></span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="${cfg.slug}">+ Add Row</button>
+          <button data-action="add-col" data-slug="${cfg.slug}">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-${cfg.slug}"><p class="empty-note">Loading…</p></div>
+      </div>
+    `;
+    container.appendChild(section);
+
+    section.querySelector('.op-head').addEventListener('click', () => {
+      const open = section.classList.toggle('open');
+      localStorage.setItem(collapseKey, open ? 'open' : 'closed');
+    });
+
+    mountGrid(cfg.slug, 'grid-' + cfg.slug, (cols, rows) => {
+      document.getElementById('count-' + cfg.slug).textContent = rows.length + ' row' + (rows.length === 1 ? '' : 's');
+    });
+  }
+
+  // ---------- Source progress ----------
+  function updateSourceProgress(cols, rows) {
+    const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
+    const progKey = cols.find(c => /progress/i.test(c.name))?.column_key;
+    let pct = 0;
+    if (rows.length) {
+      if (progKey && rows.some(r => (r.data?.[progKey] || '').trim())) {
+        pct = Math.round(rows.reduce((s, r) => s + numFrom(r.data?.[progKey]), 0) / rows.length);
+      } else if (statusKey) {
+        const done = rows.filter(r => /done|complete/i.test(r.data?.[statusKey] || '')).length;
+        pct = Math.round((done / rows.length) * 100);
+      }
+    }
+    document.getElementById('source-progress-label').textContent = pct + '%';
+    document.getElementById('source-progress-fill').style.width = pct + '%';
+  }
+
   initNavCollapse();
   await loadNav();
-  for (const cfg of SECTIONS) await mountSection(cfg);
+
+  await mountGrid('temple-source', 'grid-temple-source', updateSourceProgress);
+  SYNC_SECTIONS.forEach(mountSyncSection);
+  await mountGrid('temple-syntropy', 'grid-temple-syntropy');
 </script>
 
 <script type="module" src="ambience.js"></script>
