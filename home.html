@@ -72,6 +72,27 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .item-row .content .meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
 .empty { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 
+.main-tasks { margin-bottom: 2.5rem; }
+.main-tasks h2 { font-family: var(--heading); font-size: 0.95rem; color: var(--muted); margin-bottom: 0.9rem; font-weight: 700; text-align: center; }
+.task-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.3rem; display: flex; flex-direction: column; }
+.task-card:hover { border-color: var(--border-bright); }
+.task-card .tnum { font-family: var(--mono); font-size: 0.65rem; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+.task-card .ttitle { font-family: var(--heading); font-weight: 700; font-size: 0.98rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.task-card .tdesc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; flex: 1; }
+.task-card .tlinks { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.task-card a.tlink {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 100px; padding: 0.35rem 0.8rem; text-decoration: none;
+}
+.task-card a.tlink:hover { border-color: var(--leaf); color: var(--leaf-bright); }
+.task-card button.tlink {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 100px; padding: 0.35rem 0.8rem; cursor: pointer;
+}
+.task-card button.tlink:hover { border-color: var(--gold); color: var(--gold-bright, var(--gold)); }
+.task-card button.tlink:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .dispatch-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
 .dispatch-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
 .dispatch-card .sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
@@ -207,6 +228,46 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
             <div class="title">Dashboards</div>
             <div class="sub">Custom views, uploaded sources, AI-generated dashboards.</div>
           </a>
+        </div>
+      </div>
+
+      <div class="main-tasks">
+        <h2>Agents — Main Tasks</h2>
+        <div class="task-grid">
+          <div class="task-card">
+            <div class="tnum">01</div>
+            <div class="ttitle">Apply to Jobs</div>
+            <div class="tdesc">The full pipeline — Personal Training, Operations, Sales/Marketing, plus side income.</div>
+            <div class="tlinks"><a class="tlink" href="portals.html#jobs">Open Jobs →</a></div>
+          </div>
+          <div class="task-card">
+            <div class="tnum">02</div>
+            <div class="ttitle">Scripts + AI VidGen</div>
+            <div class="tdesc">Content scripts and ad creative — draft, version, and track AI-generated cuts.</div>
+            <div class="tlinks">
+              <a class="tlink" href="portals.html#content">Content →</a>
+              <a class="tlink" href="portals.html#ads">Ads →</a>
+            </div>
+          </div>
+          <div class="task-card">
+            <div class="tnum">03</div>
+            <div class="ttitle">Convo Simulations</div>
+            <div class="tdesc">Rehearse sales/discovery conversations before they happen for real.</div>
+            <div class="tlinks"><a class="tlink" href="app.html#simulations">Open Simulations →</a></div>
+          </div>
+          <div class="task-card">
+            <div class="ttitle-row" style="display:flex;justify-content:space-between;align-items:baseline;">
+              <div class="tnum">04</div>
+            </div>
+            <div class="ttitle">Story &amp; Sessions</div>
+            <div class="tdesc">Fill out Story, and quick-start a new Session by type.</div>
+            <div class="tlinks">
+              <a class="tlink" href="app.html#story">Open Story →</a>
+              <button class="tlink" id="qs-events" type="button">+ Description of Events</button>
+              <button class="tlink" id="qs-affirmations" type="button">+ Affirmations</button>
+              <button class="tlink" id="qs-simulations" type="button">+ Simulation Session</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -700,6 +761,24 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     renderQuickLinks();
   });
   document.getElementById('ql-url').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('btn-add-ql').click(); });
+
+  // ---------- Main Tasks: quick-start a new Session by type ----------
+  async function quickAddSession(taskType, btn) {
+    btn.disabled = true;
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'sessions').maybeSingle();
+    if (!sheet) { alert('Sessions sheet not found.'); btn.disabled = false; return; }
+    const { data: maxRow } = await supabase.from('kokiri_rows').select('sort_order').eq('sheet_id', sheet.id).order('sort_order', { ascending: false }).limit(1).maybeSingle();
+    const { error } = await supabase.from('kokiri_rows').insert({
+      sheet_id: sheet.id,
+      data: { session_title: `New ${taskType} — ${new Date().toLocaleDateString()}`, task_type: taskType },
+      sort_order: (maxRow?.sort_order ?? 0) + 1,
+    });
+    if (error) { alert('⚠ ' + error.message); btn.disabled = false; return; }
+    window.location.href = 'app.html#sessions';
+  }
+  document.getElementById('qs-events').addEventListener('click', (e) => quickAddSession('Description of Events', e.target));
+  document.getElementById('qs-affirmations').addEventListener('click', (e) => quickAddSession('Affirmations', e.target));
+  document.getElementById('qs-simulations').addEventListener('click', (e) => quickAddSession('Simulations', e.target));
 
   // ---------- Dispatch ----------
   function initDispatch(agentsList) {
