@@ -115,6 +115,20 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .budget-stats-row .bstat .num { font-family: var(--heading); font-size: 1.1rem; font-weight: 800; color: var(--leaf-bright); }
 .budget-stats-row .bstat .label { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); text-transform: uppercase; margin-top: 0.15rem; }
 
+.arc-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
+.arc-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.arc-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.9rem; }
+.arc-item { display: flex; align-items: center; gap: 0.7rem; font-size: 0.86rem; padding: 0.55rem 0.7rem; background: var(--surface2); border-radius: 6px; }
+.arc-item .alabel { font-family: var(--mono); font-size: 0.72rem; color: var(--gold); background: var(--surface); border-radius: 100px; padding: 0.15rem 0.6rem; white-space: nowrap; min-width: 1.8rem; text-align: center; }
+.arc-item .aobjective { flex: 1; color: var(--text); }
+.arc-item.done .aobjective { color: var(--dim); text-decoration: line-through; }
+.arc-item .adone { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
+.arc-item .adel { color: var(--dim); cursor: pointer; font-size: 0.85rem; background: none; border: none; padding: 0 0.2rem; }
+.arc-add-form { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.arc-add-form input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.55rem 0.75rem; font-size: 0.85rem; }
+.arc-add-form input#arc-objective { flex: 1; min-width: 180px; }
+.arc-add-form button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.55rem 1rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; }
+
 .sing-card-home { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
 .sing-card-home h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; }
 .sing-card-home h2 a { font-family: var(--mono); font-size: 0.72rem; color: var(--leaf); text-decoration: none; font-weight: 400; }
@@ -224,6 +238,17 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       <div class="greeting">
         <h1 id="greeting-text">Welcome back.</h1>
         <div class="date" id="today-date"></div>
+      </div>
+
+      <div class="arc-card">
+        <h2>🧭 Objectives — This Arc</h2>
+        <div data-lineage-page="home.html" data-lineage-section="arc-objectives" data-lineage-label="Objectives — This Arc" style="margin-bottom:0.6rem;"></div>
+        <div class="arc-list" id="arc-list"><p class="empty" style="padding:0.5rem;">Loading…</p></div>
+        <div class="arc-add-form">
+          <input type="text" id="arc-label" placeholder="Label (e.g. 5)" style="max-width:110px;">
+          <input type="text" id="arc-objective" placeholder="Objective">
+          <button id="btn-add-arc">+ Add Objective</button>
+        </div>
       </div>
 
       <div class="where-to">
@@ -399,6 +424,12 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       <div class="nav-group-label" data-group="Singularities">Singularities<span class="chevron">▾</span></div>
       <div class="nav-group-content">
         <a class="nav-link" href="singularities-real.html">♾️ Singularities — Real</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Businesses">Businesses<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="businesses.html">🏢 Businesses</a>
       </div>
     </div>
     <div class="nav-group">
@@ -871,6 +902,44 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     ].map(b => `<div class="bstat"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
   }
 
+  // ---------- Objectives — This Arc ----------
+  async function loadArcObjectives() {
+    const el = document.getElementById('arc-list');
+    const { data } = await supabase.from('kokiri_arc_objectives').select('*').order('sort_order').order('created_at');
+    if (!data || !data.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No objectives yet — add one below.</p>'; return; }
+    el.innerHTML = data.map(o => `
+      <div class="arc-item ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
+        <span class="alabel">${escapeHtml(o.order_label)}</span>
+        <span class="aobjective">${escapeHtml(o.objective)}</span>
+        <button class="adone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
+        <button class="adel" data-id="${o.id}">✕</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.adone').forEach(btn => btn.addEventListener('click', async () => {
+      const newStatus = btn.dataset.status === 'done' ? 'active' : 'done';
+      await supabase.from('kokiri_arc_objectives').update({ status: newStatus }).eq('id', btn.dataset.id);
+      await loadArcObjectives();
+    }));
+    el.querySelectorAll('.adel').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_arc_objectives').delete().eq('id', btn.dataset.id);
+      await loadArcObjectives();
+    }));
+  }
+
+  document.getElementById('btn-add-arc').addEventListener('click', async () => {
+    const labelEl = document.getElementById('arc-label');
+    const objEl = document.getElementById('arc-objective');
+    const order_label = labelEl.value.trim();
+    const objective = objEl.value.trim();
+    if (!order_label || !objective) { alert('Both a label and an objective are required.'); return; }
+    const { data: existing } = await supabase.from('kokiri_arc_objectives').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+    const nextOrder = (Number(existing?.[0]?.sort_order) || 0) + 1;
+    const { error } = await supabase.from('kokiri_arc_objectives').insert({ order_label, objective, sort_order: nextOrder });
+    if (error) { alert('⚠ ' + error.message); return; }
+    labelEl.value = ''; objEl.value = '';
+    await loadArcObjectives();
+  });
+
   // ---------- Singularities — Real ----------
   async function loadSingularitiesHome() {
     const el = document.getElementById('sing-list-home');
@@ -905,7 +974,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
   const { agents } = await loadNav();
   initDispatch(agents);
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome()]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives()]);
   initLineageBadges();
   meetingsSheetId = await getMeetingsSheetId();
 
