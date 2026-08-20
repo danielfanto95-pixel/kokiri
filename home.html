@@ -124,6 +124,15 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .arc-item.done .aobjective { color: var(--dim); text-decoration: line-through; }
 .arc-item .adone { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
 .arc-item .adel { color: var(--dim); cursor: pointer; font-size: 0.85rem; background: none; border: none; padding: 0 0.2rem; }
+.arc-item .atoggle { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
+.arc-subtasks { margin: -0.15rem 0 0.4rem 2.3rem; padding: 0.5rem 0.7rem; background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; }
+.sub-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.1rem; font-size: 0.82rem; }
+.sub-row .sub-text { flex: 1; }
+.sub-row.done .sub-text { color: var(--dim); text-decoration: line-through; }
+.sub-row .sub-del { color: var(--dim); cursor: pointer; font-size: 0.8rem; background: none; border: none; padding: 0 0.2rem; }
+.sub-add-row { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+.sub-add-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.8rem; }
+.sub-add-row button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.7rem; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
 .arc-add-form { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .arc-add-form input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.55rem 0.75rem; font-size: 0.85rem; }
 .arc-add-form input#arc-objective { flex: 1; min-width: 180px; }
@@ -903,18 +912,46 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   }
 
   // ---------- Objectives — This Arc ----------
+  const arcExpanded = new Set();
   async function loadArcObjectives() {
     const el = document.getElementById('arc-list');
     const { data } = await supabase.from('kokiri_arc_objectives').select('*').order('sort_order').order('created_at');
     if (!data || !data.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No objectives yet — add one below.</p>'; return; }
-    el.innerHTML = data.map(o => `
+    const { data: subtasks } = await supabase.from('kokiri_arc_objective_subtasks').select('*').order('sort_order').order('created_at');
+    const subsByObjective = {};
+    (subtasks || []).forEach(s => { (subsByObjective[s.objective_id] ||= []).push(s); });
+
+    el.innerHTML = data.map(o => {
+      const subs = subsByObjective[o.id] || [];
+      const expanded = arcExpanded.has(o.id);
+      return `
       <div class="arc-item ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
         <span class="alabel">${escapeHtml(o.order_label)}</span>
         <span class="aobjective">${escapeHtml(o.objective)}</span>
+        <button class="atoggle" data-id="${o.id}">${expanded ? '▾' : '▸'} Sub-tasks (${subs.length})</button>
         <button class="adone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
         <button class="adel" data-id="${o.id}">✕</button>
       </div>
-    `).join('');
+      <div class="arc-subtasks" data-parent="${o.id}" style="${expanded ? '' : 'display:none;'}">
+        ${subs.length ? subs.map(s => `
+          <div class="sub-row ${s.status === 'done' ? 'done' : ''}" data-id="${s.id}">
+            <input type="checkbox" class="sub-check" data-id="${s.id}" data-status="${s.status}" ${s.status === 'done' ? 'checked' : ''}>
+            <span class="sub-text">${escapeHtml(s.subtask)}</span>
+            <button class="sub-del" data-id="${s.id}">✕</button>
+          </div>
+        `).join('') : '<p class="empty" style="padding:0.3rem 0.5rem;font-size:0.78rem;">No sub-tasks yet.</p>'}
+        <div class="sub-add-row">
+          <input type="text" class="sub-input" data-objective="${o.id}" placeholder="Add a sub-task…">
+          <button class="sub-add-btn" data-objective="${o.id}">+ Add</button>
+        </div>
+      </div>
+    `;
+    }).join('');
+
+    el.querySelectorAll('.atoggle').forEach(btn => btn.addEventListener('click', async () => {
+      if (arcExpanded.has(btn.dataset.id)) arcExpanded.delete(btn.dataset.id); else arcExpanded.add(btn.dataset.id);
+      await loadArcObjectives();
+    }));
     el.querySelectorAll('.adone').forEach(btn => btn.addEventListener('click', async () => {
       const newStatus = btn.dataset.status === 'done' ? 'active' : 'done';
       await supabase.from('kokiri_arc_objectives').update({ status: newStatus }).eq('id', btn.dataset.id);
@@ -923,6 +960,28 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     el.querySelectorAll('.adel').forEach(btn => btn.addEventListener('click', async () => {
       await supabase.from('kokiri_arc_objectives').delete().eq('id', btn.dataset.id);
       await loadArcObjectives();
+    }));
+    el.querySelectorAll('.sub-check').forEach(chk => chk.addEventListener('change', async () => {
+      const newStatus = chk.dataset.status === 'done' ? 'todo' : 'done';
+      await supabase.from('kokiri_arc_objective_subtasks').update({ status: newStatus }).eq('id', chk.dataset.id);
+      await loadArcObjectives();
+    }));
+    el.querySelectorAll('.sub-del').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_arc_objective_subtasks').delete().eq('id', btn.dataset.id);
+      await loadArcObjectives();
+    }));
+    el.querySelectorAll('.sub-add-btn').forEach(btn => btn.addEventListener('click', async () => {
+      const input = el.querySelector(`.sub-input[data-objective="${btn.dataset.objective}"]`);
+      const subtask = input.value.trim();
+      if (!subtask) return;
+      const existing = subsByObjective[btn.dataset.objective] || [];
+      const maxOrder = existing.reduce((m, s) => Math.max(m, s.sort_order || 0), 0);
+      arcExpanded.add(btn.dataset.objective);
+      await supabase.from('kokiri_arc_objective_subtasks').insert({ objective_id: btn.dataset.objective, subtask, sort_order: maxOrder + 1 });
+      await loadArcObjectives();
+    }));
+    el.querySelectorAll('.sub-input').forEach(input => input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') el.querySelector(`.sub-add-btn[data-objective="${input.dataset.objective}"]`).click();
     }));
   }
 
