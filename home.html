@@ -250,6 +250,20 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       </div>
 
       <div class="arc-card">
+        <h2>📖 Saga — Context <a href="saga.html">Open full Saga →</a></h2>
+        <div data-lineage-page="home.html" data-lineage-section="saga-context" data-lineage-label="Saga — Context" style="margin-bottom:0.6rem;"></div>
+        <div class="sub">Resume summary + histories. Stats, chronological history, and past/present/future profile live on the full Saga page.</div>
+        <label style="display:block;font-family:var(--mono);font-size:0.65rem;text-transform:uppercase;color:var(--dim);margin:0.6rem 0 0.3rem;">Resume Summary</label>
+        <textarea id="saga-ctx-resume" style="width:100%;min-height:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:0.6rem 0.8rem;font-family:inherit;font-size:0.83rem;resize:vertical;"></textarea>
+        <label style="display:block;font-family:var(--mono);font-size:0.65rem;text-transform:uppercase;color:var(--dim);margin:0.6rem 0 0.3rem;">Histories</label>
+        <textarea id="saga-ctx-histories" style="width:100%;min-height:60px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:0.6rem 0.8rem;font-family:inherit;font-size:0.83rem;resize:vertical;"></textarea>
+        <div style="margin-top:0.7rem;display:flex;align-items:center;gap:0.7rem;">
+          <button id="btn-save-saga-ctx" style="background:var(--leaf-bright);color:var(--bg);border:none;border-radius:6px;padding:0.5rem 1rem;font-weight:700;font-size:0.8rem;cursor:pointer;">Save</button>
+          <span class="save-note" id="saga-ctx-saved" style="font-family:var(--mono);font-size:0.68rem;color:var(--dim);"></span>
+        </div>
+      </div>
+
+      <div class="arc-card">
         <h2>🧭 Objectives — This Arc</h2>
         <div data-lineage-page="home.html" data-lineage-section="arc-objectives" data-lineage-label="Objectives — This Arc" style="margin-bottom:0.6rem;"></div>
         <div class="arc-list" id="arc-list"><p class="empty" style="padding:0.5rem;">Loading…</p></div>
@@ -439,6 +453,12 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       <div class="nav-group-label" data-group="Businesses">Businesses<span class="chevron">▾</span></div>
       <div class="nav-group-content">
         <a class="nav-link" href="businesses.html">🏢 Businesses</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Saga">Saga<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="saga.html">📖 Saga</a>
       </div>
     </div>
     <div class="nav-group">
@@ -911,6 +931,29 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     ].map(b => `<div class="bstat"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
   }
 
+  // ---------- Saga — Context ----------
+  let sagaCtxId = null;
+  async function loadSagaContext() {
+    const { data } = await supabase.from('kokiri_saga_context').select('*').limit(1).maybeSingle();
+    if (data) {
+      sagaCtxId = data.id;
+      document.getElementById('saga-ctx-resume').value = data.resume_summary || '';
+      document.getElementById('saga-ctx-histories').value = data.histories || '';
+    }
+  }
+  document.getElementById('btn-save-saga-ctx').addEventListener('click', async () => {
+    const resume_summary = document.getElementById('saga-ctx-resume').value.trim();
+    const histories = document.getElementById('saga-ctx-histories').value.trim();
+    if (sagaCtxId) {
+      await supabase.from('kokiri_saga_context').update({ resume_summary, histories, updated_at: new Date().toISOString() }).eq('id', sagaCtxId);
+    } else {
+      const { data } = await supabase.from('kokiri_saga_context').insert({ resume_summary, histories }).select().single();
+      sagaCtxId = data.id;
+    }
+    const note = document.getElementById('saga-ctx-saved');
+    note.textContent = 'Saved ✓'; setTimeout(() => note.textContent = '', 2000);
+  });
+
   // ---------- Objectives — This Arc ----------
   const arcExpanded = new Set();
   async function loadArcObjectives() {
@@ -1033,7 +1076,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
   const { agents } = await loadNav();
   initDispatch(agents);
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives()]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives(), loadSagaContext()]);
   initLineageBadges();
   meetingsSheetId = await getMeetingsSheetId();
 
