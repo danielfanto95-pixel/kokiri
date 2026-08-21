@@ -38,8 +38,24 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
 .page-head .quest-link { font-family: var(--mono); font-size: 0.75rem; color: var(--leaf); text-decoration: none; margin-top: 0.4rem; display: inline-block; }
 
 .section-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
-.section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.8rem; }
 .section-block .desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
+.mini-btn { font-family: var(--mono); font-size: 0.7rem; background: var(--surface2); border: 1px solid var(--border-bright); color: var(--leaf-bright); border-radius: 6px; padding: 0.3rem 0.7rem; cursor: pointer; }
+.mini-btn:hover { border-color: var(--leaf); }
+.tab-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.7rem; }
+.tab-row.sub { margin-top: -0.2rem; }
+.tab-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 100px; padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; font-family: var(--body); font-weight: 600; }
+.tab-btn.active { border-color: var(--leaf-bright); color: var(--leaf-bright); background: var(--bg); }
+.tab-row.sub .tab-btn { font-size: 0.74rem; padding: 0.3rem 0.7rem; }
+.sz-grid-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.7rem; }
+.sz-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+.sz-grid-wrap table { border-collapse: collapse; width: 100%; min-width: max-content; }
+.sz-grid-wrap th, .sz-grid-wrap td { border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; font-size: 0.8rem; vertical-align: top; max-width: 300px; }
+.sz-grid-wrap th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; }
+.sz-grid-wrap td { background: var(--bg); color: var(--text); min-width: 140px; }
+.sz-grid-wrap td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
+.sz-grid-wrap .row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 28px; }
+.sz-grid-wrap .row-del:hover { color: var(--danger); }
 .section-block textarea { width: 100%; min-height: 160px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.85rem; line-height: 1.55; resize: vertical; }
 .btn-save-inline { margin-top: 0.9rem; background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 1rem; font-weight: 700; font-size: 0.8rem; cursor: pointer; }
 .save-note { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); margin-left: 0.8rem; }
@@ -90,6 +106,19 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
       <h1>🌀 Sonzai</h1>
       <p>Overview + document store. Structured entries (title/category/content/notes) live in the Sonzai sheet.</p>
       <a class="quest-link" href="app.html#sonzai">Open the Sonzai sheet →</a>
+    </div>
+
+    <div class="section-block">
+      <h2>🗂 Sections <button class="mini-btn" id="btn-new-section">+ New Section</button></h2>
+      <div class="desc">Each subsection is its own spreadsheet — add/edit columns and rows freely. Also a real Kokiri data source, same as any other sheet.</div>
+      <div class="tab-row" id="section-tabs"></div>
+      <div class="tab-row sub" id="subsection-tabs"></div>
+      <button class="mini-btn" id="btn-new-subsection" style="display:none;margin-bottom:0.8rem;">+ New Subsection</button>
+      <div class="sz-grid-toolbar" id="sz-grid-toolbar" style="display:none;">
+        <button class="mini-btn" id="btn-sz-add-row">+ Add Row</button>
+        <button class="mini-btn" id="btn-sz-add-col">+ Add Column</button>
+      </div>
+      <div class="sz-grid-wrap" id="sz-grid-wrap"></div>
     </div>
 
     <div class="section-block">
@@ -162,6 +191,178 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
     });
   }
 
+  // ---------- Sections / Subsections spreadsheet browser ----------
+  let sections = [];
+  let activeSectionId = null;
+  let activeSubsections = [];
+  let activeSubsectionId = null;
+  let activeSheetId = null;
+  let gridColumns = [];
+  let gridRows = [];
+
+  async function loadSections() {
+    const { data } = await supabase.from('kokiri_sonzai_sections').select('*').order('sort_order');
+    sections = data || [];
+    if (!activeSectionId && sections.length) activeSectionId = sections[0].id;
+    renderSectionTabs();
+    await selectSection(activeSectionId);
+  }
+
+  function renderSectionTabs() {
+    const el = document.getElementById('section-tabs');
+    el.innerHTML = sections.map(s => `<button class="tab-btn ${s.id === activeSectionId ? 'active' : ''}" data-id="${s.id}">${escapeHtml(s.name)}</button>`).join('');
+    el.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => selectSection(btn.dataset.id)));
+  }
+
+  async function selectSection(id) {
+    activeSectionId = id;
+    renderSectionTabs();
+    const section = sections.find(s => s.id === id);
+    if (!section) return;
+
+    if (section.sheet_id) {
+      // Direct mode: section IS a single spreadsheet, no subsections.
+      activeSubsections = [];
+      activeSubsectionId = null;
+      document.getElementById('subsection-tabs').innerHTML = '';
+      document.getElementById('btn-new-subsection').style.display = 'none';
+      await loadGrid(section.sheet_id);
+      return;
+    }
+
+    const { data } = await supabase.from('kokiri_sonzai_subsections').select('*').eq('section_id', id).order('sort_order');
+    activeSubsections = data || [];
+    document.getElementById('btn-new-subsection').style.display = '';
+    if (!activeSubsections.length) {
+      document.getElementById('subsection-tabs').innerHTML = '<p class="empty-note">No subsections yet — add one.</p>';
+      document.getElementById('sz-grid-toolbar').style.display = 'none';
+      document.getElementById('sz-grid-wrap').innerHTML = '';
+      return;
+    }
+    if (!activeSubsectionId || !activeSubsections.some(s => s.id === activeSubsectionId)) activeSubsectionId = activeSubsections[0].id;
+    renderSubsectionTabs();
+    await selectSubsection(activeSubsectionId);
+  }
+
+  function renderSubsectionTabs() {
+    const el = document.getElementById('subsection-tabs');
+    el.innerHTML = activeSubsections.map(s => `<button class="tab-btn ${s.id === activeSubsectionId ? 'active' : ''}" data-id="${s.id}">${escapeHtml(s.name)}</button>`).join('');
+    el.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => selectSubsection(btn.dataset.id)));
+  }
+
+  async function selectSubsection(id) {
+    activeSubsectionId = id;
+    renderSubsectionTabs();
+    const sub = activeSubsections.find(s => s.id === id);
+    if (!sub) return;
+    await loadGrid(sub.sheet_id);
+  }
+
+  async function loadGrid(sheetId) {
+    activeSheetId = sheetId;
+    const [{ data: cols }, { data: rows }] = await Promise.all([
+      supabase.from('kokiri_columns').select('*').eq('sheet_id', sheetId).order('sort_order'),
+      supabase.from('kokiri_rows').select('*').eq('sheet_id', sheetId).order('sort_order'),
+    ]);
+    gridColumns = cols || [];
+    gridRows = rows || [];
+    document.getElementById('sz-grid-toolbar').style.display = 'flex';
+    renderGrid();
+  }
+
+  function renderGrid() {
+    const wrap = document.getElementById('sz-grid-wrap');
+    if (!gridColumns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column".</p>'; return; }
+    let html = '<thead><tr><th class="row-del">×</th>';
+    for (const c of gridColumns) html += `<th>${escapeHtml(c.name)}</th>`;
+    html += '</tr></thead><tbody>';
+    for (const r of gridRows) {
+      html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
+      for (const c of gridColumns) {
+        const val = r.data?.[c.column_key] ?? '';
+        html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(val)}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    wrap.innerHTML = `<table>${html}</table>`;
+    wrap.querySelectorAll('td[contenteditable="true"]').forEach(td => {
+      td.addEventListener('blur', async () => {
+        const rowId = td.closest('tr').dataset.rowId;
+        const colKey = td.dataset.colKey;
+        const row = gridRows.find(r => r.id === rowId);
+        if (!row) return;
+        row.data = { ...row.data, [colKey]: td.textContent };
+        await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+      });
+    });
+    wrap.querySelectorAll('[data-action="del-row"]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const rowId = el.closest('tr').dataset.rowId;
+        if (!confirm('Delete this row?')) return;
+        await supabase.from('kokiri_rows').delete().eq('id', rowId);
+        gridRows = gridRows.filter(r => r.id !== rowId);
+        renderGrid();
+      });
+    });
+  }
+
+  document.getElementById('btn-sz-add-row').addEventListener('click', async () => {
+    if (!activeSheetId) return;
+    const maxOrder = gridRows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: activeSheetId, data: {}, sort_order: maxOrder + 1 }).select().single();
+    if (error) { alert('⚠ ' + error.message); return; }
+    gridRows.push(data);
+    renderGrid();
+  });
+  document.getElementById('btn-sz-add-col').addEventListener('click', async () => {
+    if (!activeSheetId) return;
+    const name = prompt('New column name:');
+    if (!name) return;
+    const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
+    const maxOrder = gridColumns.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_columns').insert({ sheet_id: activeSheetId, column_key: key, name, sort_order: maxOrder + 1 }).select().single();
+    if (error) { alert('⚠ ' + error.message); return; }
+    gridColumns.push(data);
+    renderGrid();
+  });
+
+  document.getElementById('btn-new-section').addEventListener('click', async () => {
+    const name = prompt('New section name:');
+    if (!name) return;
+    const multi = confirm('Click OK if this section will have MULTIPLE subsections (separate spreadsheets).\nClick Cancel for ONE spreadsheet directly in this section.');
+    const maxOrder = sections.reduce((m, s) => Math.max(m, s.sort_order || 0), 0);
+    if (multi) {
+      const { data, error } = await supabase.from('kokiri_sonzai_sections').insert({ name, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert('⚠ ' + error.message); return; }
+      activeSectionId = data.id;
+    } else {
+      const slug = 'sonzai-' + name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + Date.now().toString(36);
+      const { data: sheet, error: sheetErr } = await supabase.from('kokiri_sheets').insert({ slug, name: `Sonzai — ${name}` }).select().single();
+      if (sheetErr) { alert('⚠ ' + sheetErr.message); return; }
+      await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 0 });
+      const { data, error } = await supabase.from('kokiri_sonzai_sections').insert({ name, sheet_id: sheet.id, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert('⚠ ' + error.message); return; }
+      activeSectionId = data.id;
+    }
+    await loadSections();
+  });
+
+  document.getElementById('btn-new-subsection').addEventListener('click', async () => {
+    if (!activeSectionId) return;
+    const name = prompt('New subsection name:');
+    if (!name) return;
+    const slug = 'sonzai-' + name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + Date.now().toString(36);
+    const { data: sheet, error: sheetErr } = await supabase.from('kokiri_sheets').insert({ slug, name: `Sonzai — ${name}` }).select().single();
+    if (sheetErr) { alert('⚠ ' + sheetErr.message); return; }
+    await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 0 });
+    const maxOrder = activeSubsections.reduce((m, s) => Math.max(m, s.sort_order || 0), 0);
+    const { data, error } = await supabase.from('kokiri_sonzai_subsections').insert({ section_id: activeSectionId, name, sheet_id: sheet.id, sort_order: maxOrder + 1 }).select().single();
+    if (error) { alert('⚠ ' + error.message); return; }
+    activeSubsectionId = data.id;
+    await selectSection(activeSectionId);
+  });
+
   let sonzaiRowId = null;
   async function loadSonzaiContext() {
     const { data } = await supabase.from('kokiri_sonzai_context').select('*').limit(1).maybeSingle();
@@ -223,7 +424,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
   });
 
   await loadNav();
-  await Promise.all([loadSonzaiContext(), loadDocs()]);
+  await Promise.all([loadSonzaiContext(), loadDocs(), loadSections()]);
 </script>
 
 <script type="module" src="ambience.js"></script>
