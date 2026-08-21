@@ -278,6 +278,15 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
         </div>
 
         <div class="section-block">
+          <h3>💬 Offer</h3>
+          <textarea id="offer-text" style="width:100%;min-height:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:0.7rem 0.9rem;font-family:inherit;font-size:0.85rem;line-height:1.55;resize:vertical;" placeholder="Offer / pitch copy for this business…">${escapeHtml(biz.offer_text || '')}</textarea>
+          <div style="margin-top:0.7rem;display:flex;align-items:center;gap:0.7rem;">
+            <button id="btn-save-offer" style="background:var(--leaf-bright);color:var(--bg);border:none;border-radius:6px;padding:0.5rem 1rem;font-weight:700;font-size:0.8rem;cursor:pointer;">Save Offer</button>
+            <span id="offer-saved" style="font-family:var(--mono);font-size:0.68rem;color:var(--dim);"></span>
+          </div>
+        </div>
+
+        <div class="section-block">
           <h3>✅ Requirements</h3>
           <div id="req-list">${(reqs && reqs.length) ? reqs.map(r => `
             <div class="req-row ${r.status === 'done' ? 'done' : ''}" data-id="${r.id}">
@@ -313,6 +322,14 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
         </div>
       </div>
     `;
+
+    document.getElementById('btn-save-offer').addEventListener('click', async () => {
+      const offer_text = document.getElementById('offer-text').value;
+      const { error } = await supabase.from('kokiri_businesses').update({ offer_text }).eq('id', biz.id);
+      const note = document.getElementById('offer-saved');
+      if (error) { note.textContent = '⚠ ' + error.message; return; }
+      note.textContent = 'Saved ✓'; setTimeout(() => note.textContent = '', 2000);
+    });
 
     document.getElementById('btn-del-biz').addEventListener('click', async () => {
       if (!confirm(`Delete "${biz.name}" and all its requirements/documents? This cannot be undone.`)) return;
