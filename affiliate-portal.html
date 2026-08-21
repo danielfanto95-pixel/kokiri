@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Affiliate Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068; --danger: #f87171;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 1000px; }
+.page-head { margin-bottom: 1.2rem; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; max-width: 640px; }
+
+.section-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+.section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; }
+.section-block .desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
+.empty-note { color: var(--muted); font-size: 0.82rem; padding: 0.5rem; }
+
+.resource-row { padding: 0.7rem 0.8rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.6rem; }
+.resource-row .rtitle { font-weight: 700; margin-bottom: 0.3rem; }
+.resource-row .rcontent { font-size: 0.85rem; color: var(--muted); line-height: 1.6; white-space: pre-wrap; }
+.resource-row a.rurl { font-family: var(--mono); font-size: 0.78rem; color: var(--leaf); text-decoration: none; }
+
+.link-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.8rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem; }
+.link-row .llabel { font-weight: 600; width: 160px; flex-shrink: 0; }
+.link-row .lurl { flex: 1; font-family: var(--mono); font-size: 0.8rem; color: var(--leaf); word-break: break-all; }
+.link-row .lcopy { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.3rem 0.7rem; font-size: 0.72rem; cursor: pointer; white-space: nowrap; }
+.link-add-form { display: flex; gap: 0.6rem; margin-top: 0.7rem; flex-wrap: wrap; }
+.link-add-form input { flex: 1; min-width: 160px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.82rem; }
+.link-add-form button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; white-space: nowrap; }
+
+table.pipeline-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+table.pipeline-table th { text-align: left; font-family: var(--mono); font-size: 0.65rem; text-transform: uppercase; color: var(--dim); padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
+table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); }
+
+.monthly-row { display: flex; gap: 0.8rem; padding: 0.55rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.4rem; font-size: 0.82rem; align-items: center; }
+.monthly-row .mmonth { font-weight: 700; width: 90px; flex-shrink: 0; }
+.monthly-row .mstat { flex: 1; }
+.monthly-add-form { display: flex; gap: 0.5rem; margin-top: 0.7rem; flex-wrap: wrap; }
+.monthly-add-form input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.6rem; font-size: 0.78rem; width: 110px; }
+.monthly-add-form button { background: var(--surface2); border: 1px solid var(--border-bright); color: var(--leaf-bright); border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.78rem; cursor: pointer; white-space: nowrap; }
+
+.apply-link-box { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; background: var(--surface2); border-radius: 8px; }
+.apply-link-box a { color: var(--leaf-bright); font-weight: 700; text-decoration: none; }
+
+.contact-box { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; margin-bottom: 1rem; }
+.ticket-form { display: flex; flex-direction: column; gap: 0.6rem; }
+.ticket-form input, .ticket-form textarea { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.85rem; }
+.ticket-form textarea { min-height: 70px; resize: vertical; }
+.ticket-form button { align-self: flex-start; background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 1rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+.ticket-row { padding: 0.6rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.82rem; }
+.ticket-row .tsubject { font-weight: 700; }
+.ticket-row .tstatus { font-family: var(--mono); font-size: 0.65rem; color: var(--gold); text-transform: uppercase; margin-left: 0.5rem; }
+
+.admin-panel { border: 1px dashed var(--border-bright); }
+.app-row { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0.8rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.app-row .ainfo { flex: 1; min-width: 200px; font-size: 0.85rem; }
+.app-row .ainfo .aname { font-weight: 700; }
+.app-row .ainfo .ameta { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); }
+.app-row button { border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; font-family: var(--mono); border: 1px solid var(--border); }
+.app-row .approve { background: var(--leaf-bright); color: var(--bg); border: none; font-weight: 700; }
+.app-row .reject { background: transparent; color: var(--danger); }
+.affiliate-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.85rem; margin-bottom: 1rem; }
+.credential-box { background: rgba(230,192,104,0.1); border: 1px solid var(--gold); border-radius: 8px; padding: 0.8rem; margin-top: 0.6rem; font-family: var(--mono); font-size: 0.78rem; }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <h1>🤝 Affiliate Portal</h1>
+      <p id="page-sub">Loading…</p>
+    </div>
+
+    <div id="admin-area"></div>
+    <div id="portal-area"></div>
+  </main>
+
+  <nav class="nav-side" id="nav-side"></nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { requireActiveUser } from './guard.js';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const auth = await requireActiveUser(supabase);
+  if (!auth) throw new Error('redirecting');
+  const isOwner = auth.profile.role === 'owner';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  const APPLY_URL = 'https://form.jotform.com/262175745810055';
+
+  async function renderNav() {
+    const navEl = document.getElementById('nav-side');
+    if (!isOwner) { navEl.innerHTML = ''; return; }
+    navEl.innerHTML = `
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
+        <div class="nav-group-content" id="nav-sheets"></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+        <div class="nav-group-content"><a class="nav-link" href="portals.html">🚪 All Portals</a></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Affiliate">Affiliate<span class="chevron">▾</span></div>
+        <div class="nav-group-content"><a class="nav-link active" href="affiliate-portal.html">🤝 Affiliate Portal</a></div>
+      </div>
+    `;
+    const { data: sheetData } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const content = label.nextElementSibling;
+      label.addEventListener('click', () => { label.classList.toggle('collapsed'); content.classList.toggle('collapsed'); });
+    });
+  }
+
+  async function callUserAdmin(payload) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/user-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  }
+
+  let allAffiliates = [];
+
+  async function renderAdminArea() {
+    const el = document.getElementById('admin-area');
+    if (!isOwner) { el.innerHTML = ''; return; }
+
+    const [{ data: pending }, { data: affiliates }] = await Promise.all([
+      supabase.from('kokiri_affiliate_applications').select('*').eq('status', 'pending_review').order('created_at'),
+      supabase.from('kokiri_affiliates').select('*').order('created_at'),
+    ]);
+    allAffiliates = affiliates || [];
+
+    el.innerHTML = `
+      <div class="section-block admin-panel">
+        <h2>📥 Pending Applications <span style="font-family:var(--mono);font-size:0.7rem;color:var(--gold);">${(pending || []).length}</span></h2>
+        <div class="desc">New Jotform submissions land here automatically. Approve creates a real Kokiri login + referral code for them.</div>
+        <div id="pending-list">${(pending && pending.length) ? pending.map(p => `
+          <div class="app-row" data-id="${p.id}">
+            <div class="ainfo">
+              <div class="aname">${escapeHtml(p.name || '(no name)')} ${p.business_name ? '— ' + escapeHtml(p.business_name) : ''}</div>
+              <div class="ameta">${escapeHtml(p.email || '')} ${p.phone ? '· ' + escapeHtml(p.phone) : ''} · submitted ${new Date(p.created_at).toLocaleDateString()}</div>
+            </div>
+            <button class="approve" data-id="${p.id}">✓ Approve</button>
+            <button class="reject" data-id="${p.id}">✕ Reject</button>
+          </div>
+        `).join('') : '<p class="empty-note">Nothing pending.</p>'}</div>
+      </div>
+
+      <div class="section-block admin-panel">
+        <h2>👥 All Affiliates <span style="font-family:var(--mono);font-size:0.7rem;color:var(--dim);">${allAffiliates.length}</span></h2>
+        <div class="desc">Pick one to preview their portal exactly as they see it.</div>
+        <select class="affiliate-select" id="affiliate-select">
+          <option value="">— Select an affiliate to preview —</option>
+          ${allAffiliates.map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${escapeHtml(a.referral_code)})</option>`).join('')}
+        </select>
+      </div>
+    `;
+
+    el.querySelectorAll('.approve').forEach(btn => btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.textContent = 'Approving…';
+      const result = await callUserAdmin({ type: 'create_affiliate', application_id: btn.dataset.id });
+      if (result.error) { alert('⚠ ' + result.error); btn.disabled = false; btn.textContent = '✓ Approve'; return; }
+      const row = btn.closest('.app-row');
+      row.insertAdjacentHTML('beforeend', `<div class="credential-box">Created. Referral code: <b>${escapeHtml(result.referral_code)}</b>${result.password ? `<br>Login: ${escapeHtml(result.email)} / ${escapeHtml(result.password)} (shown once — send this to them securely)` : '<br>(existing Kokiri account was linked — no new password.)'}</div>`);
+      btn.remove();
+      row.querySelector('.reject')?.remove();
+    }));
+    el.querySelectorAll('.reject').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Reject this application?')) return;
+      const result = await callUserAdmin({ type: 'reject_affiliate', application_id: btn.dataset.id });
+      if (result.error) { alert('⚠ ' + result.error); return; }
+      await renderAdminArea();
+    }));
+    document.getElementById('affiliate-select').addEventListener('change', async (e) => {
+      const affiliate = allAffiliates.find(a => a.id === e.target.value);
+      await renderPortalArea(affiliate || null);
+    });
+  }
+
+  async function renderPortalArea(affiliate) {
+    const el = document.getElementById('portal-area');
+    const sub = document.getElementById('page-sub');
+
+    if (!affiliate) {
+      if (isOwner) { el.innerHTML = ''; sub.textContent = 'Select an affiliate above to preview their portal, or manage pending applications.'; return; }
+      el.innerHTML = `
+        <div class="section-block">
+          <p class="empty-note">You're not registered as an approved affiliate yet.</p>
+          <div class="apply-link-box"><span>Apply here:</span> <a href="${APPLY_URL}" target="_blank">${APPLY_URL}</a></div>
+        </div>
+      `;
+      sub.textContent = 'No affiliate account linked to your login.';
+      return;
+    }
+
+    sub.textContent = `Viewing: ${affiliate.name}${affiliate.business_name ? ' — ' + affiliate.business_name : ''} · Referral code: ${affiliate.referral_code}`;
+
+    const [{ data: resources }, { data: links }, { data: monthly }, { data: crmSheet }, { data: tickets }] = await Promise.all([
+      supabase.from('kokiri_affiliate_resources').select('*').order('category').order('sort_order'),
+      supabase.from('kokiri_affiliate_links').select('*').eq('affiliate_id', affiliate.id).order('sort_order'),
+      supabase.from('kokiri_affiliate_monthly_results').select('*').eq('affiliate_id', affiliate.id).order('month', { ascending: false }),
+      supabase.from('kokiri_sheets').select('id').eq('slug', 'crm').maybeSingle(),
+      supabase.from('kokiri_affiliate_tickets').select('*').eq('affiliate_id', affiliate.id).order('created_at', { ascending: false }),
+    ]);
+
+    let pipelineRows = [];
+    if (crmSheet) {
+      const { data: crmCols } = await supabase.from('kokiri_columns').select('column_key, name').eq('sheet_id', crmSheet.id);
+      const nameKey = crmCols?.find(c => /name/i.test(c.name))?.column_key;
+      const sourceKey = crmCols?.find(c => /lead source/i.test(c.name))?.column_key;
+      const statusKey = crmCols?.find(c => /lead status/i.test(c.name))?.column_key;
+      const { data: crmRows } = await supabase.from('kokiri_rows').select('data').eq('sheet_id', crmSheet.id);
+      pipelineRows = (crmRows || []).filter(r => {
+        const src = (r.data?.[sourceKey] || '').toString().toLowerCase();
+        return src.includes(affiliate.referral_code.toLowerCase()) || src.includes((affiliate.name || '').toLowerCase());
+      }).map(r => ({ name: r.data?.[nameKey] || '(unnamed)', status: r.data?.[statusKey] || '—' }));
+    }
+
+    const resourcesByCat = { 'Sales Collateral': [], 'How-To-Sell Guide': [] };
+    (resources || []).forEach(r => resourcesByCat[r.category]?.push(r));
+
+    el.innerHTML = `
+      <div class="section-block">
+        <h2>🎯 Sales Collateral</h2>
+        <div class="desc">Assets to use when promoting Furin Fitness.</div>
+        ${resourcesByCat['Sales Collateral'].length ? resourcesByCat['Sales Collateral'].map(r => `
+          <div class="resource-row"><div class="rtitle">${escapeHtml(r.title)}</div>${r.content ? `<div class="rcontent">${escapeHtml(r.content)}</div>` : ''}${r.url ? `<a class="rurl" href="${escapeHtml(r.url)}" target="_blank">${escapeHtml(r.url)}</a>` : ''}</div>
+        `).join('') : '<p class="empty-note">No collateral uploaded yet — check back soon.</p>'}
+      </div>
+
+      <div class="section-block">
+        <h2>📖 How to Sell</h2>
+        ${resourcesByCat['How-To-Sell Guide'].map(r => `
+          <div class="resource-row"><div class="rtitle">${escapeHtml(r.title)}</div><div class="rcontent">${escapeHtml(r.content || '')}</div></div>
+        `).join('') || '<p class="empty-note">No guide yet.</p>'}
+      </div>
+
+      <div class="section-block">
+        <h2>🔗 My Links</h2>
+        <div id="links-list">${(links && links.length) ? links.map(l => `
+          <div class="link-row"><span class="llabel">${escapeHtml(l.label)}</span><span class="lurl">${escapeHtml(l.url)}</span><button class="lcopy" data-url="${escapeHtml(l.url)}">Copy</button></div>
+        `).join('') : '<p class="empty-note">No links yet.</p>'}</div>
+        ${isOwner ? `<div class="link-add-form"><input type="text" id="link-label" placeholder="Label"><input type="text" id="link-url" placeholder="URL"><button id="btn-add-link">+ Add Link</button></div>` : ''}
+      </div>
+
+      <div class="section-block">
+        <h2>📊 Current Pipeline & Referrals <span style="font-family:var(--mono);font-size:0.7rem;color:var(--dim);">from CRM</span></h2>
+        <div class="desc">Leads matched by referral code/name in the CRM's Lead Source field.</div>
+        ${pipelineRows.length ? `<table class="pipeline-table"><thead><tr><th>Name</th><th>Status</th></tr></thead><tbody>${pipelineRows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.status)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty-note">No matched leads yet.</p>'}
+      </div>
+
+      <div class="section-block">
+        <h2>📅 History of Results — Month by Month</h2>
+        <div id="monthly-list">${(monthly && monthly.length) ? monthly.map(m => `
+          <div class="monthly-row"><span class="mmonth">${new Date(m.month).toLocaleDateString(undefined,{year:'numeric',month:'short'})}</span><span class="mstat">${m.referrals} referrals · ${m.conversions} conversions · $${Number(m.commission_owed).toFixed(2)} owed · $${Number(m.commission_paid).toFixed(2)} paid</span></div>
+        `).join('') : '<p class="empty-note">No monthly history logged yet.</p>'}</div>
+        ${isOwner ? `<div class="monthly-add-form">
+          <input type="month" id="m-month"><input type="number" id="m-referrals" placeholder="Referrals">
+          <input type="number" id="m-conversions" placeholder="Conversions"><input type="number" step="0.01" id="m-owed" placeholder="Owed $">
+          <input type="number" step="0.01" id="m-paid" placeholder="Paid $"><button id="btn-add-month">+ Log Month</button>
+        </div>` : ''}
+      </div>
+
+      <div class="section-block">
+        <h2>✅ Apply</h2>
+        <div class="apply-link-box"><span>Share with new prospective partners:</span> <a href="${APPLY_URL}" target="_blank">${APPLY_URL}</a></div>
+      </div>
+
+      <div class="section-block">
+        <h2>💬 Contact</h2>
+        <div class="contact-box">
+          <div>Email: danielfanto95@gmail.com</div>
+          <div>Referral code: <b>${escapeHtml(affiliate.referral_code)}</b></div>
+        </div>
+        <div class="desc">Open a ticket for anything — commission questions, materials requests, etc.</div>
+        <div id="ticket-list">${(tickets && tickets.length) ? tickets.map(t => `
+          <div class="ticket-row"><span class="tsubject">${escapeHtml(t.subject)}</span><span class="tstatus">${t.status}</span><div style="margin-top:0.3rem;color:var(--muted);">${escapeHtml(t.message)}</div></div>
+        `).join('') : '<p class="empty-note">No tickets yet.</p>'}</div>
+        <div class="ticket-form" style="margin-top:0.8rem;">
+          <input type="text" id="ticket-subject" placeholder="Subject">
+          <textarea id="ticket-message" placeholder="What do you need?"></textarea>
+          <button id="btn-submit-ticket">Submit Ticket</button>
+        </div>
+      </div>
+    `;
+
+    el.querySelectorAll('.lcopy').forEach(btn => btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(btn.dataset.url);
+      btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500);
+    }));
+
+    document.getElementById('btn-add-link')?.addEventListener('click', async () => {
+      const label = document.getElementById('link-label').value.trim();
+      const url = document.getElementById('link-url').value.trim();
+      if (!label || !url) return;
+      await supabase.from('kokiri_affiliate_links').insert({ affiliate_id: affiliate.id, label, url });
+      await renderPortalArea(affiliate);
+    });
+
+    document.getElementById('btn-add-month')?.addEventListener('click', async () => {
+      const monthVal = document.getElementById('m-month').value;
+      if (!monthVal) { alert('Pick a month.'); return; }
+      const { error } = await supabase.from('kokiri_affiliate_monthly_results').upsert({
+        affiliate_id: affiliate.id,
+        month: monthVal + '-01',
+        referrals: Number(document.getElementById('m-referrals').value) || 0,
+        conversions: Number(document.getElementById('m-conversions').value) || 0,
+        commission_owed: Number(document.getElementById('m-owed').value) || 0,
+        commission_paid: Number(document.getElementById('m-paid').value) || 0,
+      }, { onConflict: 'affiliate_id,month' });
+      if (error) { alert('⚠ ' + error.message); return; }
+      await renderPortalArea(affiliate);
+    });
+
+    document.getElementById('btn-submit-ticket').addEventListener('click', async () => {
+      const subject = document.getElementById('ticket-subject').value.trim();
+      const message = document.getElementById('ticket-message').value.trim();
+      if (!subject || !message) { alert('Subject and message are both required.'); return; }
+      const { error } = await supabase.from('kokiri_affiliate_tickets').insert({ affiliate_id: affiliate.id, subject, message });
+      if (error) { alert('⚠ ' + error.message); return; }
+      await renderPortalArea(affiliate);
+    });
+  }
+
+  await renderNav();
+  await renderAdminArea();
+
+  if (isOwner) {
+    document.getElementById('page-sub').textContent = 'Select an affiliate above to preview their portal, or manage pending applications.';
+  } else {
+    const { data: myAffiliate } = await supabase.from('kokiri_affiliates').select('*').eq('profile_id', auth.session.user.id).maybeSingle();
+    await renderPortalArea(myAffiliate);
+  }
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>
