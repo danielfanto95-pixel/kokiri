@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Sonzai</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068; --danger: #f87171;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
+.page-head { margin-bottom: 1.4rem; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; max-width: 640px; }
+.page-head .quest-link { font-family: var(--mono); font-size: 0.75rem; color: var(--leaf); text-decoration: none; margin-top: 0.4rem; display: inline-block; }
+
+.section-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+.section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.section-block .desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
+.section-block textarea { width: 100%; min-height: 160px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.85rem; line-height: 1.55; resize: vertical; }
+.btn-save-inline { margin-top: 0.9rem; background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 1rem; font-weight: 700; font-size: 0.8rem; cursor: pointer; }
+.save-note { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); margin-left: 0.8rem; }
+
+.doc-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem; }
+.doc-row .dname { flex: 1; font-size: 0.85rem; }
+.doc-row .dmeta { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); white-space: nowrap; }
+.doc-row a.ddownload { font-family: var(--mono); font-size: 0.72rem; color: var(--leaf); text-decoration: none; }
+.doc-row .ddel { color: var(--dim); cursor: pointer; font-size: 0.9rem; background: none; border: none; padding: 0 0.3rem; }
+.doc-upload-row { display: flex; align-items: center; gap: 0.7rem; margin-top: 0.8rem; }
+.doc-upload-row input[type=file] { font-size: 0.8rem; color: var(--muted); flex: 1; }
+.doc-upload-row button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.55rem 1rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; }
+.doc-upload-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+.empty-note { color: var(--muted); font-size: 0.82rem; padding: 0.4rem; }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <h1>🌀 Sonzai</h1>
+      <p>Overview + document store. Structured entries (title/category/content/notes) live in the Sonzai sheet.</p>
+      <a class="quest-link" href="app.html#sonzai">Open the Sonzai sheet →</a>
+    </div>
+
+    <div class="section-block">
+      <h2>📝 Overview</h2>
+      <div class="desc">Nothing here yet — paste in the real content (or a summary of it) once the source docs are uploaded below, and I can help organize it into Story/Saga per the "Put my story together" objective.</div>
+      <textarea id="sonzai-content" placeholder="What is Sonzai? Paste context, notes, or a summary here…"></textarea>
+      <div style="margin-top:0.7rem;display:flex;align-items:center;gap:0.7rem;">
+        <button class="btn-save-inline" id="btn-save-sonzai">Save</button>
+        <span class="save-note" id="sonzai-saved"></span>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <h2>📄 Documents</h2>
+      <div class="desc">Upload the Sonzai source files here (from Downloads/Files) — this is the "Upload Bridge profile & previous Sonzai docs" sub-task.</div>
+      <div id="doc-list"><p class="empty-note">Loading…</p></div>
+      <div class="doc-upload-row">
+        <input type="file" id="doc-file">
+        <button id="btn-upload-doc">Upload</button>
+      </div>
+    </div>
+  </main>
+
+  <nav class="nav-side" id="nav-side"></nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { requireOwnerPage } from './guard.js';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const auth = await requireOwnerPage(supabase);
+  if (!auth) throw new Error('redirecting');
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtBytes(n) { if (!n) return ''; if (n < 1024) return n + ' B'; if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB'; return (n/1024/1024).toFixed(1) + ' MB'; }
+
+  async function loadNav() {
+    const navEl = document.getElementById('nav-side');
+    navEl.innerHTML = `
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
+        <div class="nav-group-content" id="nav-sheets"></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+        <div class="nav-group-content"><a class="nav-link" href="portals.html">🚪 All Portals</a></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Sonzai">Sonzai<span class="chevron">▾</span></div>
+        <div class="nav-group-content"><a class="nav-link active" href="sonzai.html">🌀 Sonzai</a></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+        <div class="nav-group-content"><a class="nav-link" href="context.html">📝 Global Instructions</a></div>
+      </div>
+    `;
+    const { data: sheetData } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const content = label.nextElementSibling;
+      label.addEventListener('click', () => { label.classList.toggle('collapsed'); content.classList.toggle('collapsed'); });
+    });
+  }
+
+  let sonzaiRowId = null;
+  async function loadSonzaiContext() {
+    const { data } = await supabase.from('kokiri_sonzai_context').select('*').limit(1).maybeSingle();
+    if (data) { sonzaiRowId = data.id; document.getElementById('sonzai-content').value = data.content || ''; }
+  }
+  document.getElementById('btn-save-sonzai').addEventListener('click', async () => {
+    const content = document.getElementById('sonzai-content').value.trim();
+    if (sonzaiRowId) {
+      await supabase.from('kokiri_sonzai_context').update({ content, updated_at: new Date().toISOString() }).eq('id', sonzaiRowId);
+    } else {
+      const { data } = await supabase.from('kokiri_sonzai_context').insert({ content }).select().single();
+      sonzaiRowId = data.id;
+    }
+    const note = document.getElementById('sonzai-saved');
+    note.textContent = 'Saved ✓'; setTimeout(() => note.textContent = '', 2000);
+  });
+
+  async function loadDocs() {
+    const el = document.getElementById('doc-list');
+    const { data: docs } = await supabase.from('kokiri_documents').select('*').eq('category', 'Sonzai').order('created_at', { ascending: false });
+    if (!docs || !docs.length) { el.innerHTML = '<p class="empty-note">No documents uploaded yet.</p>'; return; }
+    el.innerHTML = docs.map(d => `
+      <div class="doc-row" data-id="${d.id}">
+        <span class="dname">${escapeHtml(d.name)}</span>
+        <span class="dmeta">${fmtBytes(d.size_bytes)}</span>
+        <a class="ddownload" data-path="${escapeHtml(d.storage_path)}" href="#">Download</a>
+        <button class="ddel" data-id="${d.id}" data-path="${escapeHtml(d.storage_path)}">✕</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('a.ddownload').forEach(a => a.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const { data, error } = await supabase.storage.from('kokiri-repository').createSignedUrl(a.dataset.path, 60);
+      if (error) { alert('⚠ ' + error.message); return; }
+      window.open(data.signedUrl, '_blank');
+    }));
+    el.querySelectorAll('.ddel').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Delete this document?')) return;
+      await supabase.storage.from('kokiri-repository').remove([btn.dataset.path]);
+      await supabase.from('kokiri_documents').delete().eq('id', btn.dataset.id);
+      await loadDocs();
+    }));
+  }
+
+  document.getElementById('btn-upload-doc').addEventListener('click', async () => {
+    const fileInput = document.getElementById('doc-file');
+    const file = fileInput.files[0];
+    if (!file) { alert('Choose a file first.'); return; }
+    const btn = document.getElementById('btn-upload-doc');
+    btn.disabled = true; btn.textContent = 'Uploading…';
+    const path = `sonzai/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error: upErr } = await supabase.storage.from('kokiri-repository').upload(path, file);
+    if (upErr) { alert('⚠ ' + upErr.message); btn.disabled = false; btn.textContent = 'Upload'; return; }
+    await supabase.from('kokiri_documents').insert({
+      name: file.name, category: 'Sonzai', mime_type: file.type, size_bytes: file.size, storage_path: path,
+    });
+    fileInput.value = '';
+    btn.disabled = false; btn.textContent = 'Upload';
+    await loadDocs();
+  });
+
+  await loadNav();
+  await Promise.all([loadSonzaiContext(), loadDocs()]);
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>

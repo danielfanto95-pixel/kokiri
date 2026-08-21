@@ -166,6 +166,10 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
         <div class="nav-group-label" data-group="Affiliate">Affiliate<span class="chevron">▾</span></div>
         <div class="nav-group-content"><a class="nav-link active" href="affiliate-portal.html">🤝 Affiliate Portal</a></div>
       </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-group="Sonzai">Sonzai<span class="chevron">▾</span></div>
+        <div class="nav-group-content"><a class="nav-link" href="sonzai.html">🌀 Sonzai</a></div>
+      </div>
     `;
     const { data: sheetData } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
