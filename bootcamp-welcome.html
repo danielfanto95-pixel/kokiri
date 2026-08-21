@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to Furin Fitness Bootcamp</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh;
+  display: flex; justify-content: center; padding: 3rem 1.5rem;
+  background-image: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(124,197,118,0.12) 0%, transparent 60%);
+}
+.wrap { width: 100%; max-width: 640px; }
+.header { text-align: center; margin-bottom: 2.2rem; }
+.header .icon { font-size: 2.4rem; margin-bottom: 0.6rem; }
+.header h1 { font-family: var(--heading); font-size: 1.7rem; color: var(--leaf-bright); }
+.header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+
+.step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.6rem; margin-bottom: 1.2rem; display: flex; gap: 1.1rem; }
+.step-card .num {
+  font-family: var(--heading); font-weight: 800; font-size: 1.3rem; color: var(--bg); background: var(--leaf-bright);
+  width: 2.4rem; height: 2.4rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-card .body { flex: 1; }
+.step-card h2 { font-family: var(--heading); font-size: 1.15rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.step-card p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.9rem; }
+.step-card a.btn {
+  display: inline-block; background: var(--leaf-bright); color: var(--bg); text-decoration: none; font-weight: 700;
+  border-radius: 8px; padding: 0.65rem 1.3rem; font-size: 0.88rem;
+}
+.step-card a.btn:hover { opacity: 0.9; }
+.step-card .note { font-size: 0.78rem; color: var(--gold); margin-top: 0.7rem; }
+
+.footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+.footer a { color: var(--leaf); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="icon">🎉</div>
+    <h1>Welcome to Furin Fitness Bootcamp</h1>
+    <p>You're in. Two quick steps before your first session.</p>
+  </div>
+
+  <div class="step-card">
+    <div class="num">1</div>
+    <div class="body">
+      <h2>Fill Out Your Waiver</h2>
+      <p>Complete this before we can get you started — it covers your waiver/liability agreement and a few quick health questions.</p>
+      <a class="btn" href="https://form.jotform.com/261385185844062" target="_blank">Fill Out Waiver →</a>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="num">2</div>
+    <div class="body">
+      <h2>Create Your Everfit Account</h2>
+      <p>This is where your programming, check-ins, and progress tracking will live. Click below, create your account, and your first program will be waiting for you there — instructions are included once you sign in.</p>
+      <a class="btn" href="https://invite.everfit.io/IIFZGLA6ZW" target="_blank">Set Up Everfit →</a>
+      <div class="note">Do this right after the waiver so everything's ready before your first session.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Questions? Email <a href="mailto:danielfanto95@gmail.com">danielfanto95@gmail.com</a>
+  </div>
+</div>
+</body>
+</html>
