@@ -330,6 +330,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
               <button class="tlink" id="qs-events" type="button">+ Description of Events</button>
               <button class="tlink" id="qs-affirmations" type="button">+ Affirmations</button>
               <button class="tlink" id="qs-simulations" type="button">+ Simulation Session</button>
+              <button class="tlink" id="qs-situations" type="button">+ Situations Session</button>
             </div>
           </div>
         </div>
@@ -873,6 +874,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   document.getElementById('qs-events').addEventListener('click', (e) => quickAddSession('Description of Events', e.target));
   document.getElementById('qs-affirmations').addEventListener('click', (e) => quickAddSession('Affirmations', e.target));
   document.getElementById('qs-simulations').addEventListener('click', (e) => quickAddSession('Simulations', e.target));
+  document.getElementById('qs-situations').addEventListener('click', (e) => quickAddSession('Situations', e.target));
 
   // ---------- Dispatch ----------
   function initDispatch(agentsList) {
