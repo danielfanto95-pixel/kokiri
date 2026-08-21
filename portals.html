@@ -561,7 +561,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       const { data: agentData } = await supabase.from('agents').select('id, name, icon').order('sort_order');
       document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
       document.getElementById('nav-dashboards').insertAdjacentHTML('beforeend',
-        `<a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="backups.html">🗄️ Backups</a><a class="nav-link" href="users.html">👤 Users</a>`);
+        `<a class="nav-link" href="backups.html">🗄️ Versions/Backups</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="users.html">👤 Users</a>`);
     } else {
       // Guests only ever reach Portals/Dashboards/Operations — hide every other admin nav-group.
       ['Agents', 'Repository', 'Context', 'Architecture'].forEach(g => {
