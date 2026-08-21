@@ -1028,7 +1028,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
 
   async function uploadResumes(fileList) {
     for (const file of Array.from(fileList)) {
-      const storagePath = `resumes/${crypto.randomUUID()}-${file.name}`;
+      const storagePath = `resumes/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       const { error } = await supabase.storage.from(REPO_BUCKET).upload(storagePath, file);
       if (error) { alert(`⚠ Failed to upload ${file.name}: ${error.message}`); continue; }
       await supabase.from('kokiri_documents').insert({

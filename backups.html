@@ -289,7 +289,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 
   async function uploadFiles(fileList) {
     for (const file of Array.from(fileList)) {
-      const storagePath = `backups/${crypto.randomUUID()}-${file.name}`;
+      const storagePath = `backups/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       const { error } = await supabase.storage.from(REPO_BUCKET).upload(storagePath, file);
       if (error) { alert(`⚠ Failed to upload ${file.name}: ${error.message}`); continue; }
       await supabase.from('kokiri_documents').insert({

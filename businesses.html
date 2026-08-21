@@ -377,7 +377,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       if (!file) { alert('Choose a file first.'); return; }
       const btn = document.getElementById('btn-upload-doc');
       btn.disabled = true; btn.textContent = 'Uploading…';
-      const path = `businesses/${biz.id}/${Date.now()}-${file.name}`;
+      const path = `businesses/${biz.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       const { error: upErr } = await supabase.storage.from('kokiri-repository').upload(path, file);
       if (upErr) { alert('⚠ ' + upErr.message); btn.disabled = false; btn.textContent = 'Upload'; return; }
       const { error: dbErr } = await supabase.from('kokiri_documents').insert({
