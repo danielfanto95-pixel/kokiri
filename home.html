@@ -115,6 +115,21 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .budget-stats-row .bstat .num { font-family: var(--heading); font-size: 1.1rem; font-weight: 800; color: var(--leaf-bright); }
 .budget-stats-row .bstat .label { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); text-transform: uppercase; margin-top: 0.15rem; }
 
+.hotlist-card { background: var(--surface); border: 1px solid var(--gold); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
+.hotlist-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--gold); margin-bottom: 0.3rem; }
+.hotlist-card .sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
+.hotlist-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.9rem; }
+.hotlist-chip { display: flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 0.5rem 0.6rem 0.5rem 1rem; font-size: 0.85rem; }
+.hotlist-chip a { color: var(--text); text-decoration: none; font-weight: 600; }
+.hotlist-chip a:hover { color: var(--gold); }
+.hotlist-chip .htype { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); text-transform: uppercase; }
+.hotlist-chip .hdel { color: var(--dim); cursor: pointer; padding: 0 0.2rem; font-size: 0.8rem; background: none; border: none; }
+.hotlist-chip .hdel:hover { color: var(--danger); }
+.hotlist-add-form { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.hotlist-add-form select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.82rem; }
+.hotlist-add-form select#hotlist-item { flex: 1; min-width: 200px; }
+.hotlist-add-form button { background: var(--gold); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 1rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; }
+
 .arc-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
 .arc-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
 .arc-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.9rem; }
@@ -247,6 +262,21 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       <div class="greeting">
         <h1 id="greeting-text">Welcome back.</h1>
         <div class="date" id="today-date"></div>
+      </div>
+
+      <div class="hotlist-card">
+        <h2>🔥 Hotlist</h2>
+        <div class="sub">Pin any sheet, dashboard, or page for one-click access.</div>
+        <div class="hotlist-grid" id="hotlist-grid"><p class="empty" style="padding:0.5rem;">Loading…</p></div>
+        <div class="hotlist-add-form">
+          <select id="hotlist-type">
+            <option value="sheet">Sheet</option>
+            <option value="dashboard">Dashboard</option>
+            <option value="page">Page</option>
+          </select>
+          <select id="hotlist-item"><option value="">Loading…</option></select>
+          <button id="btn-add-hotlist">+ Pin</button>
+        </div>
       </div>
 
       <div class="arc-card">
@@ -939,6 +969,59 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     ].map(b => `<div class="bstat"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
   }
 
+  // ---------- Hotlist ----------
+  let hotlistOptions = { sheet: [], dashboard: [], page: [] };
+  async function loadHotlistOptions() {
+    const [{ data: sheets }, { data: dashboardsData }, { data: pages }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').order('name'),
+      supabase.from('dashboards').select('id, name, icon').order('name'),
+      supabase.from('kokiri_pages').select('slug, name, url').order('name'),
+    ]);
+    hotlistOptions.sheet = (sheets || []).map(s => ({ ref: s.slug, label: s.name, icon: '📄', href: `app.html#${s.slug}` }));
+    hotlistOptions.dashboard = (dashboardsData || []).map(d => ({ ref: d.id, label: d.name, icon: d.icon || '📊', href: `dashboards.html#${d.id}` }));
+    hotlistOptions.page = (pages || []).map(p => ({ ref: p.slug, label: p.name, icon: '🔗', href: p.url }));
+    populateHotlistItemSelect();
+  }
+  function populateHotlistItemSelect() {
+    const type = document.getElementById('hotlist-type').value;
+    const sel = document.getElementById('hotlist-item');
+    const opts = hotlistOptions[type] || [];
+    sel.innerHTML = opts.length ? opts.map(o => `<option value="${escapeHtml(o.ref)}">${escapeHtml(o.label)}</option>`).join('') : '<option value="">None available</option>';
+  }
+  document.getElementById('hotlist-type').addEventListener('change', populateHotlistItemSelect);
+
+  async function loadHotlist() {
+    const el = document.getElementById('hotlist-grid');
+    const { data } = await supabase.from('kokiri_hotlist').select('*').order('sort_order').order('created_at');
+    if (!data || !data.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">Nothing pinned yet — add one below.</p>'; return; }
+    el.innerHTML = data.map(h => `
+      <div class="hotlist-chip" data-id="${h.id}">
+        <span class="htype">${escapeHtml(h.resource_type)}</span>
+        <a href="${escapeHtml(h.href)}">${escapeHtml(h.icon)} ${escapeHtml(h.label)}</a>
+        <button class="hdel" data-id="${h.id}">✕</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.hdel').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_hotlist').delete().eq('id', btn.dataset.id);
+      await loadHotlist();
+    }));
+  }
+
+  document.getElementById('btn-add-hotlist').addEventListener('click', async () => {
+    const type = document.getElementById('hotlist-type').value;
+    const itemSel = document.getElementById('hotlist-item');
+    const ref = itemSel.value;
+    if (!ref) { alert('Nothing to pin.'); return; }
+    const opt = (hotlistOptions[type] || []).find(o => o.ref === ref);
+    if (!opt) return;
+    const { data: existing } = await supabase.from('kokiri_hotlist').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+    const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+    await supabase.from('kokiri_hotlist').insert({
+      resource_type: type, resource_ref: ref, label: opt.label, icon: opt.icon, href: opt.href, sort_order: nextOrder,
+    });
+    await loadHotlist();
+  });
+
   // ---------- Saga — Context ----------
   let sagaCtxId = null;
   async function loadSagaContext() {
@@ -1084,7 +1167,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
   const { agents } = await loadNav();
   initDispatch(agents);
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives(), loadSagaContext()]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives(), loadSagaContext(), loadHotlistOptions().then(loadHotlist)]);
   initLineageBadges();
   meetingsSheetId = await getMeetingsSheetId();
 
