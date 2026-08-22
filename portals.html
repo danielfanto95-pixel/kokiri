@@ -447,6 +447,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   </main>
 
   <nav class="nav-side">
+    <a class="nav-link" id="nav-repo-toplevel" href="app.html#repository" style="margin-bottom:0.8rem;padding-bottom:0.8rem;border-bottom:1px solid var(--border);">📁 Repository</a>
     <div class="nav-group">
       <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
       <div class="nav-group-content" id="nav-sheets"></div>
@@ -519,11 +520,13 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   import { requireActiveUser } from './guard.js';
+  import { initPageSearch } from './search.js';
   import { initLineageBadges, appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const auth = await requireActiveUser(supabase);
   if (!auth) throw new Error('redirecting');
+  await initPageSearch(supabase);
 
   document.getElementById('btn-logout').addEventListener('click', async () => {
     await supabase.auth.signOut();
@@ -551,10 +554,11 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         `<a class="nav-link" href="backups.html">🗄️ Versions/Backups</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="users.html">👤 Users</a>`);
     } else {
       // Guests only ever reach Portals/Dashboards/Operations — hide every other admin nav-group.
-      ['Agents', 'Repository', 'Context', 'Architecture'].forEach(g => {
+      ['Agents', 'Context', 'Architecture'].forEach(g => {
         const label = document.querySelector(`.nav-group-label[data-group="${g}"]`);
         if (label) label.closest('.nav-group').style.display = 'none';
       });
+      document.getElementById('nav-repo-toplevel')?.remove();
     }
   }
 

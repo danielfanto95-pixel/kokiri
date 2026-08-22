@@ -169,11 +169,13 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 1100px; }
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   import { requireActiveUser } from './guard.js';
+  import { initPageSearch } from './search.js';
   import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const auth = await requireActiveUser(supabase);
   if (!auth) throw new Error('redirecting');
+  await initPageSearch(supabase);
   const isOwner = auth.profile.role === 'owner';
 
   document.getElementById('btn-logout').addEventListener('click', async () => {
@@ -192,6 +194,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 1100px; }
     const navEl = document.getElementById('nav-side');
     if (!isOwner) { navEl.innerHTML = ''; return; }
     navEl.innerHTML = `
+      <a class="nav-link" href="app.html#repository" style="margin-bottom:0.8rem;padding-bottom:0.8rem;border-bottom:1px solid var(--border);">📁 Repository</a>
       <div class="nav-group"><div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div><div class="nav-group-content" id="nav-sheets"></div></div>
       <div class="nav-group"><div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div><div class="nav-group-content">
         <a class="nav-link" href="portals.html">🚪 All Portals</a>

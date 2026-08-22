@@ -123,6 +123,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
   </main>
 
   <nav class="nav-side">
+    <a class="nav-link" href="app.html#repository" style="margin-bottom:0.8rem;padding-bottom:0.8rem;border-bottom:1px solid var(--border);">📁 Repository</a>
     <div class="nav-group">
       <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
       <div class="nav-group-content" id="nav-sheets"></div>
@@ -188,11 +189,13 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   import { requireOwnerPage } from './guard.js';
+  import { initPageSearch } from './search.js';
   import { appendNonSheetSourcesToNav } from './lineage.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const auth = await requireOwnerPage(supabase);
   if (!auth) throw new Error('redirecting');
+  await initPageSearch(supabase);
 
   document.getElementById('btn-logout').addEventListener('click', async () => {
     await supabase.auth.signOut();
