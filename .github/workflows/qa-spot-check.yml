@@ -1,0 +1,59 @@
+name: QA Spot Check
+
+# Runs after the GitHub Pages build finishes and independently verifies the
+# live site actually served the new content — catches the case (seen during
+# a GitHub-wide incident on 2026-08-17) where the deployment step itself
+# fails or silently serves stale content even though the push succeeded.
+on:
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+  workflow_dispatch: {}
+
+jobs:
+  spot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail fast if the Pages build/deploy itself failed
+        if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' }}
+        run: |
+          echo "::error::pages build and deployment concluded '${{ github.event.workflow_run.conclusion }}' — skipping content checks, this needs a re-run or a look at githubstatus.com."
+          exit 1
+
+      - name: Spot-check live pages for expected content
+        run: |
+          set -e
+          BASE="https://danielfanto95-pixel.github.io/kokiri"
+          fail=0
+
+          check() {
+            url="$1"; marker="$2"; label="$3"
+            body=$(curl -s -L --max-time 20 "$BASE/$url" || echo "")
+            if echo "$body" | grep -qF "$marker"; then
+              echo "✅ $label ($url)"
+            else
+              echo "❌ $label ($url) — expected marker not found: $marker"
+              fail=1
+            fi
+          }
+
+          check "home.html" "Quick Links" "Home — Quick Links"
+          check "portals.html" "Budgets" "Portals — Budgets tab"
+          check "agents.html" "btn-messaging" "Agents — Messaging panel"
+          check "architecture.html" "Rules" "Architecture — Rules & Requirements"
+          check "context.html" "ctx-saga-select" "Context — Saga selector"
+          check "app.html" "repo-dropzone" "App — Repository upload"
+          check "operations.html" "Operations Dashboard" "Operations Dashboard"
+          check "replicas.html" "New Replica" "Replicas"
+          check "reports.html" "Business Pulse" "Reports — Business Pulse"
+          check "schedule.html" "backlog-container" "Schedule — backlog"
+          check "temple-of-time.html" "Syntropy" "Temple of Time — Syntropy"
+          check "backups.html" "Create Backup Now" "Backups"
+          check "users.html" "Invite User" "Users"
+          check "login.html" "invite-only" "Login — invite-only"
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::One or more pages did not serve the expected content — the live site is likely stale or a deploy is still propagating."
+            exit 1
+          fi
+          echo "All spot checks passed."
