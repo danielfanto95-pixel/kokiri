@@ -172,7 +172,6 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
       <div class="nav-group-content" id="nav-dashboards"></div>
     </div>
-    </div>
     <div class="nav-group">
       <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
       <div class="nav-group-content">
@@ -259,7 +258,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     navDashboards.innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
       + `<a class="nav-link" href="backups.html">🗄️ Versions/Backups</a><a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="users.html">👤 Users</a>`;
 
-    document.getElementById('nav-repository').addEventListener('click', selectRepository);
+    document.getElementById('nav-repo-toplevel').addEventListener('click', selectRepository);
 
     const hashSlug = window.location.hash.replace('#', '');
     if (hashSlug === 'repository') { selectRepository(); return; }
@@ -298,7 +297,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     document.getElementById('sheet-view').style.display = 'none';
     document.getElementById('repository-view').style.display = '';
     document.querySelectorAll('#nav-sheets .nav-link').forEach(b => b.classList.remove('active'));
-    document.getElementById('nav-repository').classList.add('active');
+    document.getElementById('nav-repo-toplevel').classList.add('active');
     await loadDocuments();
   }
 
@@ -397,7 +396,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     window.location.hash = slug;
     document.getElementById('sheet-view').style.display = '';
     document.getElementById('repository-view').style.display = 'none';
-    document.getElementById('nav-repository').classList.remove('active');
+    document.getElementById('nav-repo-toplevel').classList.remove('active');
     document.querySelectorAll('#nav-sheets .nav-link').forEach(b => b.classList.toggle('active', b.dataset.slug === slug));
     document.getElementById('sheet-title').textContent = currentSheet.name;
 
