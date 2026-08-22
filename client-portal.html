@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Client Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c120d; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068; --danger: #f87171;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+.topbar { display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10; }
+.brand { font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap; position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; }
+#btn-logout { margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.78rem; }
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 1100px; }
+
+.page-head { margin-bottom: 1.2rem; }
+.page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
+.page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; }
+
+.portal-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 0.9rem; }
+.ptab { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 100px; padding: 0.45rem 0.95rem; font-size: 0.8rem; cursor: pointer; font-weight: 600; }
+.ptab.active { background: var(--surface2); border-color: var(--leaf-bright); color: var(--leaf-bright); }
+
+.panel { display: none; }
+.panel.active { display: block; }
+.section-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+.section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
+.section-block .desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
+.empty-note { color: var(--muted); font-size: 0.82rem; padding: 0.5rem; }
+.mini-btn { font-family: var(--mono); font-size: 0.7rem; background: var(--surface2); border: 1px solid var(--border-bright); color: var(--leaf-bright); border-radius: 6px; padding: 0.3rem 0.7rem; cursor: pointer; }
+
+/* Feed */
+.feed-item { padding: 0.9rem 1rem; background: var(--surface2); border-radius: 10px; margin-bottom: 0.7rem; }
+.feed-item .ftitle { font-weight: 700; margin-bottom: 0.3rem; }
+.feed-item .fbody { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+.feed-item .fdate { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); margin-top: 0.4rem; }
+
+/* Resources */
+.resource-card { padding: 0.9rem 1rem; background: var(--surface2); border-radius: 10px; margin-bottom: 0.7rem; }
+.resource-card .rtitle { font-weight: 700; margin-bottom: 0.3rem; display: flex; justify-content: space-between; align-items: center; }
+.resource-card textarea { width: 100%; min-height: 80px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.6rem 0.7rem; font-family: inherit; font-size: 0.83rem; margin-top: 0.5rem; resize: vertical; }
+.resource-card a.rurl { font-family: var(--mono); font-size: 0.75rem; color: var(--leaf); }
+
+/* Exercise library */
+.exercise-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.ex-card { background: var(--surface2); border-radius: 10px; overflow: hidden; }
+.ex-card iframe { width: 100%; aspect-ratio: 16/9; border: none; display: block; }
+.ex-card .ex-body { padding: 0.8rem 0.9rem; }
+.ex-card .ex-cat { font-family: var(--mono); font-size: 0.62rem; color: var(--gold); text-transform: uppercase; }
+.ex-card .ex-name { font-weight: 700; margin: 0.2rem 0 0.3rem; }
+.ex-card .ex-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+/* Quizzes/Tools */
+.quiz-card, .tool-card { padding: 1rem 1.1rem; background: var(--surface2); border-radius: 10px; margin-bottom: 0.8rem; }
+.quiz-card h3, .tool-card h3 { font-size: 0.95rem; margin-bottom: 0.4rem; }
+.quiz-q { margin-bottom: 0.7rem; }
+.quiz-q label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.3rem; }
+.quiz-q input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.83rem; }
+.tool-inputs { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.tool-inputs input, .tool-inputs select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.82rem; width: 130px; }
+.tool-result { font-family: var(--mono); font-size: 0.85rem; color: var(--gold); margin-top: 0.6rem; }
+
+/* Stats/Plan */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.7rem; margin-bottom: 1rem; }
+.stat-box { background: var(--surface2); border-radius: 8px; padding: 0.7rem; text-align: center; }
+.stat-box input { width: 100%; background: transparent; border: none; color: var(--leaf-bright); font-family: var(--heading); font-size: 1.1rem; font-weight: 800; text-align: center; }
+.stat-box .label { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); text-transform: uppercase; margin-top: 0.2rem; }
+.task-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.4rem; }
+.task-row.done span.ttext { text-decoration: line-through; color: var(--dim); }
+.task-add-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+.task-add-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.82rem; }
+
+/* Log */
+.log-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
+.log-tab { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 100px; padding: 0.35rem 0.8rem; font-size: 0.76rem; cursor: pointer; }
+.log-tab.active { border-color: var(--leaf-bright); color: var(--leaf-bright); }
+.log-form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+.log-form input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.82rem; }
+.log-entry { padding: 0.6rem 0.8rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.4rem; font-size: 0.82rem; }
+.log-entry .ldate { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); }
+
+/* University */
+.uni-cat { margin-bottom: 1rem; }
+.uni-cat h3 { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; color: var(--gold); letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+.uni-topic { padding: 0.5rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.4rem; font-size: 0.85rem; }
+
+/* Mindset/Simulations */
+.practice-card { padding: 0.9rem 1rem; background: var(--surface2); border-radius: 10px; margin-bottom: 0.7rem; }
+.practice-card .ptype { font-family: var(--mono); font-size: 0.62rem; color: var(--gold); text-transform: uppercase; }
+.practice-card h3 { margin: 0.2rem 0 0.4rem; }
+.practice-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.6; }
+.sim-success { border-left: 3px solid var(--leaf-bright); }
+.sim-setback { border-left: 3px solid var(--danger); }
+.sim-challenge { border-left: 3px solid var(--gold); }
+
+/* FAQ */
+.faq-item { padding: 0.8rem 0.9rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem; }
+.faq-item .fq { font-weight: 700; margin-bottom: 0.3rem; cursor: pointer; }
+.faq-item .fa { font-size: 0.83rem; color: var(--muted); line-height: 1.5; display: none; }
+.faq-item.open .fa { display: block; }
+
+/* Chat */
+.chat-window { height: 360px; overflow-y: auto; background: var(--surface2); border-radius: 10px; padding: 1rem; margin-bottom: 0.8rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.chat-msg { max-width: 80%; padding: 0.6rem 0.8rem; border-radius: 10px; font-size: 0.85rem; line-height: 1.5; }
+.chat-msg.user { align-self: flex-end; background: var(--leaf-bright); color: var(--bg); }
+.chat-msg.assistant { align-self: flex-start; background: var(--bg); border: 1px solid var(--border); }
+.chat-input-row { display: flex; gap: 0.6rem; }
+.chat-input-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.85rem; }
+.chat-input-row button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 8px; padding: 0.6rem 1.1rem; font-weight: 700; cursor: pointer; }
+
+/* Admin */
+.admin-panel { border: 1px dashed var(--border-bright); }
+.app-row { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0.8rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.app-row .ainfo { flex: 1; min-width: 200px; font-size: 0.85rem; }
+.app-row .ainfo .aname { font-weight: 700; }
+.app-row .ainfo .ameta { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); }
+.app-row button { border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; font-family: var(--mono); border: 1px solid var(--border); }
+.app-row .approve { background: var(--leaf-bright); color: var(--bg); border: none; font-weight: 700; }
+.app-row .reject { background: transparent; color: var(--danger); }
+.credential-box { background: rgba(230,192,104,0.1); border: 1px solid var(--gold); border-radius: 8px; padding: 0.8rem; margin-top: 0.6rem; font-family: var(--mono); font-size: 0.78rem; }
+.client-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.85rem; margin-bottom: 1rem; }
+
+.nav-side { width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface); padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px); }
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0; }
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px; cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none; }
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <h1>💪 Client Portal</h1>
+      <p id="page-sub">Loading…</p>
+    </div>
+
+    <div id="admin-area"></div>
+
+    <div id="client-area" style="display:none;">
+      <div class="portal-tabs" id="portal-tabs"></div>
+      <div id="panels"></div>
+    </div>
+  </main>
+
+  <nav class="nav-side" id="nav-side"></nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { requireActiveUser } from './guard.js';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const auth = await requireActiveUser(supabase);
+  if (!auth) throw new Error('redirecting');
+  const isOwner = auth.profile.role === 'owner';
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function ytEmbed(url) {
+    if (!url) return '';
+    const m = url.match(/(?:youtu\.be\/|v=)([a-zA-Z0-9_-]{6,})/);
+    return m ? `https://www.youtube.com/embed/${m[1]}` : '';
+  }
+
+  async function renderNav() {
+    const navEl = document.getElementById('nav-side');
+    if (!isOwner) { navEl.innerHTML = ''; return; }
+    navEl.innerHTML = `
+      <div class="nav-group"><div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div><div class="nav-group-content" id="nav-sheets"></div></div>
+      <div class="nav-group"><div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div><div class="nav-group-content"><a class="nav-link" href="portals.html">🚪 All Portals</a></div></div>
+      <div class="nav-group"><div class="nav-group-label" data-group="Client">Client<span class="chevron">▾</span></div><div class="nav-group-content"><a class="nav-link active" href="client-portal.html">💪 Client Portal</a></div></div>
+    `;
+    const { data: sheetData } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const content = label.nextElementSibling;
+      label.addEventListener('click', () => { label.classList.toggle('collapsed'); content.classList.toggle('collapsed'); });
+    });
+  }
+
+  async function callUserAdmin(payload) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/user-admin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  }
+
+  let allClients = [];
+  async function renderAdminArea() {
+    const el = document.getElementById('admin-area');
+    if (!isOwner) { el.innerHTML = ''; return; }
+    const [{ data: pending }, { data: clients }] = await Promise.all([
+      supabase.from('kokiri_client_applications').select('*').eq('status', 'pending_review').order('created_at'),
+      supabase.from('kokiri_clients').select('*').order('created_at'),
+    ]);
+    allClients = clients || [];
+    el.innerHTML = `
+      <div class="section-block admin-panel">
+        <h2>📥 Pending Client Applications <span style="font-family:var(--mono);font-size:0.7rem;color:var(--gold);">${(pending||[]).length}</span></h2>
+        <div class="desc">New onboarding/waiver Jotform submissions land here. Approve creates a real login.</div>
+        <div id="pending-list">${(pending && pending.length) ? pending.map(p => `
+          <div class="app-row" data-id="${p.id}">
+            <div class="ainfo"><div class="aname">${escapeHtml(p.name || '(no name)')}</div><div class="ameta">${escapeHtml(p.email||'')} ${p.phone?'· '+escapeHtml(p.phone):''} · ${new Date(p.created_at).toLocaleDateString()}</div></div>
+            <button class="approve" data-id="${p.id}">✓ Approve</button>
+            <button class="reject" data-id="${p.id}">✕ Reject</button>
+          </div>
+        `).join('') : '<p class="empty-note">Nothing pending.</p>'}</div>
+      </div>
+      <div class="section-block admin-panel">
+        <h2>👥 All Clients <span style="font-family:var(--mono);font-size:0.7rem;color:var(--dim);">${allClients.length}</span></h2>
+        <div class="desc">Pick one to view their portal exactly as they see it.</div>
+        <select class="client-select" id="client-select">
+          <option value="">— None selected (viewing shared content only) —</option>
+          ${allClients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
+        </select>
+      </div>
+    `;
+    el.querySelectorAll('.approve').forEach(btn => btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.textContent = 'Approving…';
+      const r = await callUserAdmin({ type: 'create_client', application_id: btn.dataset.id });
+      if (r.error) { alert('⚠ ' + r.error); btn.disabled = false; btn.textContent = '✓ Approve'; return; }
+      const row = btn.closest('.app-row');
+      row.insertAdjacentHTML('beforeend', `<div class="credential-box">Created.${r.password ? `<br>Login: ${escapeHtml(r.email)} / ${escapeHtml(r.password)} (shown once)` : '<br>(existing account linked)'}</div>`);
+      btn.remove(); row.querySelector('.reject')?.remove();
+    }));
+    el.querySelectorAll('.reject').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Reject this application?')) return;
+      await callUserAdmin({ type: 'reject_client', application_id: btn.dataset.id });
+      await renderAdminArea();
+    }));
+    document.getElementById('client-select').addEventListener('change', async (e) => {
+      const client = allClients.find(c => c.id === e.target.value) || null;
+      await initClientArea(client);
+    });
+  }
+
+  const TABS = [
+    { key: 'feed', label: '📰 Feed' },
+    { key: 'resources', label: '📚 Resources & Guides' },
+    { key: 'exercises', label: '🏋️ Exercise Library' },
+    { key: 'quizzes', label: '🧩 Quizzes & Tools' },
+    { key: 'plan', label: '⭐ My Stats & Plan' },
+    { key: 'log', label: '📝 Log' },
+    { key: 'university', label: '🎓 University' },
+    { key: 'mindset', label: '🧠 Mindset' },
+    { key: 'simulations', label: '🎭 Simulations' },
+    { key: 'faq', label: '❓ FAQ' },
+    { key: 'chat', label: '💬 Coach Chat' },
+  ];
+  let activeTab = 'feed';
+  let currentClient = null;
+
+  async function initClientArea(client) {
+    currentClient = client;
+    const sub = document.getElementById('page-sub');
+    const area = document.getElementById('client-area');
+    if (!client && !isOwner) {
+      sub.textContent = "You're not yet registered as a client.";
+      area.style.display = 'none';
+      document.getElementById('admin-area').insertAdjacentHTML('beforeend', `<div class="section-block"><p class="empty-note">No client account linked to your login. Contact your coach.</p></div>`);
+      return;
+    }
+    sub.textContent = client ? `Viewing: ${client.name}` : 'Shared content (no specific client selected)';
+    area.style.display = 'block';
+    document.getElementById('portal-tabs').innerHTML = TABS.map(t => `<button class="ptab ${t.key === activeTab ? 'active' : ''}" data-key="${t.key}">${t.label}</button>`).join('');
+    document.querySelectorAll('.ptab').forEach(btn => btn.addEventListener('click', () => { activeTab = btn.dataset.key; renderTabs(); renderPanel(); }));
+    renderTabs();
+    await renderPanel();
+  }
+  function renderTabs() {
+    document.querySelectorAll('.ptab').forEach(btn => btn.classList.toggle('active', btn.dataset.key === activeTab));
+  }
+
+  async function renderPanel() {
+    const el = document.getElementById('panels');
+    el.innerHTML = '<p class="empty-note">Loading…</p>';
+    if (activeTab === 'feed') return renderFeed(el);
+    if (activeTab === 'resources') return renderResources(el);
+    if (activeTab === 'exercises') return renderExercises(el);
+    if (activeTab === 'quizzes') return renderQuizzesTools(el);
+    if (activeTab === 'plan') return renderPlan(el);
+    if (activeTab === 'log') return renderLog(el);
+    if (activeTab === 'university') return renderUniversity(el);
+    if (activeTab === 'mindset') return renderMindset(el);
+    if (activeTab === 'simulations') return renderSimulations(el);
+    if (activeTab === 'faq') return renderFaq(el);
+    if (activeTab === 'chat') return renderChat(el);
+  }
+
+  async function renderFeed(el) {
+    const { data } = await supabase.from('kokiri_client_feed').select('*').order('sort_order', { ascending: false }).order('created_at', { ascending: false });
+    el.innerHTML = `<div class="section-block"><h2>📰 Feed</h2>${(data && data.length) ? data.map(f => `
+      <div class="feed-item"><div class="ftitle">${escapeHtml(f.title)}</div><div class="fbody">${escapeHtml(f.body||'')}</div><div class="fdate">${new Date(f.created_at).toLocaleDateString()}</div></div>
+    `).join('') : '<p class="empty-note">No updates yet.</p>'}</div>`;
+  }
+
+  async function renderResources(el) {
+    const { data } = await supabase.from('kokiri_client_resources').select('*').order('sort_order');
+    el.innerHTML = `<div class="section-block"><h2>📚 Resources & Free Guides</h2><div class="desc">Editable by you — click Save after making changes.</div>
+      <div id="res-list">${(data && data.length) ? data.map(r => `
+        <div class="resource-card" data-id="${r.id}">
+          <div class="rtitle"><span>${escapeHtml(r.title)}</span>${r.url ? `<a class="rurl" href="${escapeHtml(r.url)}" target="_blank">Open →</a>` : ''}</div>
+          <textarea data-id="${r.id}">${escapeHtml(r.content||'')}</textarea>
+          <button class="mini-btn" data-save="${r.id}" style="margin-top:0.5rem;">Save</button>
+        </div>
+      `).join('') : '<p class="empty-note">No resources yet.</p>'}</div>
+      ${isOwner ? `<div style="margin-top:0.8rem;"><input type="text" id="new-res-title" placeholder="New resource title" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:0.5rem 0.7rem;font-size:0.82rem;margin-right:0.5rem;"><button class="mini-btn" id="btn-add-res">+ Add Resource</button></div>` : ''}
+    </div>`;
+    el.querySelectorAll('[data-save]').forEach(btn => btn.addEventListener('click', async () => {
+      const id = btn.dataset.save;
+      const content = el.querySelector(`textarea[data-id="${id}"]`).value;
+      await supabase.from('kokiri_client_resources').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+      btn.textContent = 'Saved ✓'; setTimeout(() => btn.textContent = 'Save', 1500);
+    }));
+    document.getElementById('btn-add-res')?.addEventListener('click', async () => {
+      const title = document.getElementById('new-res-title').value.trim();
+      if (!title) return;
+      await supabase.from('kokiri_client_resources').insert({ title, content: '' });
+      await renderResources(el);
+    });
+  }
+
+  async function renderExercises(el) {
+    const { data } = await supabase.from('kokiri_client_exercises').select('*').order('category').order('sort_order');
+    el.innerHTML = `<div class="section-block"><h2>🏋️ Exercise Library</h2>
+      <div class="exercise-grid">${(data && data.length) ? data.map(x => `
+        <div class="ex-card">
+          ${ytEmbed(x.video_url) ? `<iframe src="${ytEmbed(x.video_url)}" allowfullscreen></iframe>` : ''}
+          <div class="ex-body"><div class="ex-cat">${escapeHtml(x.category)}</div><div class="ex-name">${escapeHtml(x.name)}</div><div class="ex-desc">${escapeHtml(x.description||'')}</div></div>
+        </div>
+      `).join('') : '<p class="empty-note">No exercises yet.</p>'}</div>
+    </div>`;
+  }
+
+  async function renderQuizzesTools(el) {
+    const [{ data: quizzes }, { data: tools }] = await Promise.all([
+      supabase.from('kokiri_client_quizzes').select('*').order('sort_order'),
+      supabase.from('kokiri_client_tools').select('*').order('sort_order'),
+    ]);
+    el.innerHTML = `
+      <div class="section-block"><h2>🧩 Quizzes</h2>
+        ${(quizzes||[]).map(q => `
+          <div class="quiz-card" data-id="${q.id}">
+            <h3>${escapeHtml(q.title)}</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.6rem;">${escapeHtml(q.description||'')}</p>
+            ${(q.questions||[]).map((qq,i) => `<div class="quiz-q"><label>${escapeHtml(qq.q)}</label><input type="text" data-qidx="${i}"></div>`).join('')}
+            <button class="mini-btn" data-submit-quiz="${q.id}">Submit</button>
+          </div>
+        `).join('') || '<p class="empty-note">No quizzes yet.</p>'}
+      </div>
+      <div class="section-block"><h2>🛠 Cool Tools</h2>
+        <div class="tool-card"><h3>BMR / TDEE Calculator</h3>
+          <div class="tool-inputs">
+            <select id="bmr-sex"><option value="male">Male</option><option value="female">Female</option></select>
+            <input type="number" id="bmr-age" placeholder="Age">
+            <input type="number" id="bmr-height" placeholder="Height (cm)">
+            <input type="number" id="bmr-weight" placeholder="Weight (kg)">
+            <select id="bmr-activity"><option value="1.2">Sedentary</option><option value="1.375">Light</option><option value="1.55">Moderate</option><option value="1.725">Very Active</option></select>
+          </div>
+          <button class="mini-btn" id="btn-calc-bmr">Calculate</button>
+          <div class="tool-result" id="bmr-result"></div>
+        </div>
+        <div class="tool-card"><h3>Macro Calculator</h3>
+          <div class="tool-inputs"><input type="number" id="macro-cals" placeholder="Daily calories"><input type="number" id="macro-protein-pct" placeholder="Protein %" value="30"><input type="number" id="macro-fat-pct" placeholder="Fat %" value="30"></div>
+          <button class="mini-btn" id="btn-calc-macro">Calculate</button>
+          <div class="tool-result" id="macro-result"></div>
+        </div>
+        <div class="tool-card"><h3>1-Rep Max Estimator</h3>
+          <div class="tool-inputs"><input type="number" id="orm-weight" placeholder="Weight"><input type="number" id="orm-reps" placeholder="Reps"></div>
+          <button class="mini-btn" id="btn-calc-orm">Calculate</button>
+          <div class="tool-result" id="orm-result"></div>
+        </div>
+      </div>
+    `;
+    el.querySelectorAll('[data-submit-quiz]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!currentClient) { alert('No client selected.'); return; }
+      const card = btn.closest('.quiz-card');
+      const answers = Array.from(card.querySelectorAll('[data-qidx]')).map(inp => inp.value);
+      await supabase.from('kokiri_client_quiz_results').insert({ client_id: currentClient.id, quiz_id: card.dataset.id, answers: JSON.stringify(answers) });
+      btn.textContent = 'Submitted ✓';
+    }));
+    document.getElementById('btn-calc-bmr').addEventListener('click', () => {
+      const sex = document.getElementById('bmr-sex').value, age = +document.getElementById('bmr-age').value, h = +document.getElementById('bmr-height').value, w = +document.getElementById('bmr-weight').value, act = +document.getElementById('bmr-activity').value;
+      const bmr = sex === 'male' ? 10*w + 6.25*h - 5*age + 5 : 10*w + 6.25*h - 5*age - 161;
+      document.getElementById('bmr-result').textContent = `BMR: ${Math.round(bmr)} cal · TDEE: ${Math.round(bmr*act)} cal/day`;
+    });
+    document.getElementById('btn-calc-macro').addEventListener('click', () => {
+      const cals = +document.getElementById('macro-cals').value, pPct = +document.getElementById('macro-protein-pct').value/100, fPct = +document.getElementById('macro-fat-pct').value/100;
+      const protein = Math.round(cals*pPct/4), fat = Math.round(cals*fPct/9), carbs = Math.round((cals - protein*4 - fat*9)/4);
+      document.getElementById('macro-result').textContent = `Protein: ${protein}g · Fat: ${fat}g · Carbs: ${carbs}g`;
+    });
+    document.getElementById('btn-calc-orm').addEventListener('click', () => {
+      const w = +document.getElementById('orm-weight').value, r = +document.getElementById('orm-reps').value;
+      const orm = Math.round(w * (1 + r/30));
+      document.getElementById('orm-result').textContent = `Estimated 1RM: ${orm}`;
+    });
+  }
+
+  async function renderPlan(el) {
+    if (!currentClient) { el.innerHTML = '<div class="section-block"><p class="empty-note">Select a client to view their stats & plan.</p></div>'; return; }
+    const [{ data: stats }, { data: tasks }] = await Promise.all([
+      supabase.from('kokiri_client_stats').select('*').eq('client_id', currentClient.id),
+      supabase.from('kokiri_client_daily_tasks').select('*').eq('client_id', currentClient.id).eq('task_date', new Date().toISOString().slice(0,10)).order('sort_order'),
+    ]);
+    const statMap = {}; (stats||[]).forEach(s => statMap[s.stat_key] = s.stat_value);
+    const statKeys = ['Level','XP','Strength','Endurance','Consistency Streak'];
+    el.innerHTML = `
+      <div class="section-block"><h2>⭐ Character Stats</h2>
+        <div class="stats-grid">${statKeys.map(k => `<div class="stat-box"><input type="text" data-stat="${k}" value="${escapeHtml(statMap[k]||'')}" placeholder="—"><div class="label">${k}</div></div>`).join('')}</div>
+        <button class="mini-btn" id="btn-save-stats">Save Stats</button>
+      </div>
+      <div class="section-block"><h2>📋 Today's Daily Tasks</h2>
+        <div id="task-list">${(tasks && tasks.length) ? tasks.map(t => `
+          <div class="task-row ${t.status==='done'?'done':''}" data-id="${t.id}"><input type="checkbox" data-check="${t.id}" ${t.status==='done'?'checked':''}><span class="ttext">${escapeHtml(t.task)}</span></div>
+        `).join('') : '<p class="empty-note">No tasks for today.</p>'}</div>
+        <div class="task-add-row"><input type="text" id="new-task" placeholder="Add today's task…"><button class="mini-btn" id="btn-add-task">+ Add</button></div>
+      </div>
+    `;
+    document.getElementById('btn-save-stats').addEventListener('click', async () => {
+      const rows = statKeys.map(k => ({ client_id: currentClient.id, stat_key: k, stat_value: el.querySelector(`[data-stat="${k}"]`).value, updated_at: new Date().toISOString() }));
+      await supabase.from('kokiri_client_stats').upsert(rows, { onConflict: 'client_id,stat_key' });
+    });
+    el.querySelectorAll('[data-check]').forEach(chk => chk.addEventListener('change', async () => {
+      await supabase.from('kokiri_client_daily_tasks').update({ status: chk.checked ? 'done' : 'todo' }).eq('id', chk.dataset.check);
+      await renderPlan(el);
+    }));
+    document.getElementById('btn-add-task').addEventListener('click', async () => {
+      const task = document.getElementById('new-task').value.trim();
+      if (!task) return;
+      await supabase.from('kokiri_client_daily_tasks').insert({ client_id: currentClient.id, task });
+      await renderPlan(el);
+    });
+  }
+
+  let activeLogType = 'exercise';
+  async function renderLog(el) {
+    if (!currentClient) { el.innerHTML = '<div class="section-block"><p class="empty-note">Select a client to view their log.</p></div>'; return; }
+    const { data } = await supabase.from('kokiri_client_log_entries').select('*').eq('client_id', currentClient.id).eq('log_type', activeLogType).order('entry_date', { ascending: false }).limit(20);
+    const fieldsByType = {
+      exercise: [['exercise','Exercise'],['sets','Sets'],['reps','Reps'],['weight','Weight']],
+      diet: [['meal','Meal'],['calories','Calories'],['protein','Protein g']],
+      metrics: [['weight','Weight'],['body_fat','Body Fat %'],['waist','Waist']],
+    };
+    const fields = fieldsByType[activeLogType];
+    el.innerHTML = `
+      <div class="section-block"><h2>📝 Log — Exercise + Diet + Metrics</h2>
+        <div class="desc">Synchronous log across all three — switch tabs, same flow.</div>
+        <div class="log-tabs">${['exercise','diet','metrics'].map(t => `<button class="log-tab ${t===activeLogType?'active':''}" data-type="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>
+        <div class="log-form">${fields.map(([k,l]) => `<input type="text" data-field="${k}" placeholder="${l}">`).join('')}<button class="mini-btn" id="btn-add-log">+ Log Entry</button></div>
+        <div id="log-list">${(data && data.length) ? data.map(l => `<div class="log-entry"><span class="ldate">${l.entry_date}</span> — ${Object.entries(l.data).map(([k,v])=>`${escapeHtml(k)}: ${escapeHtml(v)}`).join(' · ')}</div>`).join('') : '<p class="empty-note">No entries yet.</p>'}</div>
+      </div>
+    `;
+    el.querySelectorAll('.log-tab').forEach(btn => btn.addEventListener('click', () => { activeLogType = btn.dataset.type; renderLog(el); }));
+    document.getElementById('btn-add-log').addEventListener('click', async () => {
+      const data = {};
+      el.querySelectorAll('[data-field]').forEach(inp => { if (inp.value) data[inp.dataset.field] = inp.value; });
+      if (!Object.keys(data).length) return;
+      await supabase.from('kokiri_client_log_entries').insert({ client_id: currentClient.id, log_type: activeLogType, data });
+      await renderLog(el);
+    });
+  }
+
+  async function renderUniversity(el) {
+    const { data } = await supabase.from('kokiri_client_university').select('*').order('category').order('sort_order');
+    const byCat = {}; (data||[]).forEach(u => (byCat[u.category] ||= []).push(u));
+    el.innerHTML = `<div class="section-block"><h2>🎓 University</h2><div class="desc">Topics & research across the full curriculum.</div>
+      ${Object.entries(byCat).map(([cat, topics]) => `<div class="uni-cat"><h3>${escapeHtml(cat)}</h3>${topics.map(t => `<div class="uni-topic">${escapeHtml(t.subtopic)}${t.content ? '<br><span style="color:var(--muted);font-size:0.8rem;">'+escapeHtml(t.content)+'</span>' : ''}</div>`).join('')}</div>`).join('') || '<p class="empty-note">No topics yet.</p>'}
+    </div>`;
+  }
+
+  async function renderMindset(el) {
+    const { data } = await supabase.from('kokiri_client_mindset_practices').select('*').order('sort_order');
+    el.innerHTML = `<div class="section-block"><h2>🧠 Mindset Practice</h2>
+      ${(data||[]).map(p => `<div class="practice-card"><div class="ptype">${escapeHtml(p.practice_type||'')}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml(p.content||'')}</p></div>`).join('') || '<p class="empty-note">No practices yet.</p>'}
+    </div>`;
+  }
+
+  async function renderSimulations(el) {
+    const { data } = await supabase.from('kokiri_client_simulations').select('*').order('sort_order');
+    el.innerHTML = `<div class="section-block"><h2>🎭 Simulations</h2><div class="desc">Mentally rehearse success, setbacks, and challenges before they happen.</div>
+      ${(data||[]).map(s => `<div class="practice-card sim-${s.scenario_type}"><div class="ptype">${escapeHtml(s.scenario_type||'')}</div><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.content||'')}</p></div>`).join('') || '<p class="empty-note">No simulations yet.</p>'}
+    </div>`;
+  }
+
+  async function renderFaq(el) {
+    const { data } = await supabase.from('kokiri_client_faq').select('*').order('sort_order');
+    el.innerHTML = `<div class="section-block"><h2>❓ FAQ</h2>
+      ${(data||[]).map(f => `<div class="faq-item"><div class="fq">${escapeHtml(f.question)}</div><div class="fa">${escapeHtml(f.answer)}</div></div>`).join('') || '<p class="empty-note">No FAQs yet.</p>'}
+    </div>`;
+    el.querySelectorAll('.faq-item').forEach(item => item.querySelector('.fq').addEventListener('click', () => item.classList.toggle('open')));
+  }
+
+  async function renderChat(el) {
+    if (!currentClient) { el.innerHTML = '<div class="section-block"><p class="empty-note">Select a client to use the chat.</p></div>'; return; }
+    const { data } = await supabase.from('kokiri_client_chat_messages').select('*').eq('client_id', currentClient.id).order('created_at').limit(30);
+    el.innerHTML = `<div class="section-block"><h2>💬 Coach Chat</h2><div class="desc">Knows your stats and recent tasks.</div>
+      <div class="chat-window" id="chat-window">${(data||[]).map(m => `<div class="chat-msg ${m.role}">${escapeHtml(m.content)}</div>`).join('')}</div>
+      <div class="chat-input-row"><input type="text" id="chat-input" placeholder="Ask your coach…"><button id="btn-send-chat">Send</button></div>
+    </div>`;
+    const win = document.getElementById('chat-window');
+    win.scrollTop = win.scrollHeight;
+    document.getElementById('btn-send-chat').addEventListener('click', async () => {
+      const input = document.getElementById('chat-input');
+      const message = input.value.trim();
+      if (!message) return;
+      win.insertAdjacentHTML('beforeend', `<div class="chat-msg user">${escapeHtml(message)}</div>`);
+      input.value = ''; win.scrollTop = win.scrollHeight;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/client-chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ client_id: currentClient.id, message }),
+      });
+      const result = await res.json();
+      win.insertAdjacentHTML('beforeend', `<div class="chat-msg assistant">${escapeHtml(result.reply || result.error || 'Error')}</div>`);
+      win.scrollTop = win.scrollHeight;
+    });
+    document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('btn-send-chat').click(); });
+  }
+
+  await renderNav();
+  await renderAdminArea();
+  if (!isOwner) {
+    const { data: myClient } = await supabase.from('kokiri_clients').select('*').eq('profile_id', auth.session.user.id).maybeSingle();
+    await initClientArea(myClient);
+  } else {
+    document.getElementById('page-sub').textContent = 'Select an application to approve, or pick a client to preview their portal.';
+  }
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>
