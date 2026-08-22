@@ -160,19 +160,14 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
       </div>
       <div class="nav-group">
         <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
-        <div class="nav-group-content"><a class="nav-link" href="portals.html">🚪 All Portals</a></div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-label" data-group="Affiliate">Affiliate<span class="chevron">▾</span></div>
-        <div class="nav-group-content"><a class="nav-link active" href="affiliate-portal.html">🤝 Affiliate Portal</a></div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-label" data-group="Sonzai">Sonzai<span class="chevron">▾</span></div>
-        <div class="nav-group-content"><a class="nav-link" href="sonzai.html">🌀 Sonzai</a></div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-label" data-group="Client">Client<span class="chevron">▾</span></div>
-        <div class="nav-group-content"><a class="nav-link" href="client-portal.html">💪 Client Portal</a></div>
+        <div class="nav-group-content">
+          <a class="nav-link" href="portals.html">🚪 All Portals</a>
+          <a class="nav-link" href="portals.html#content">🎬 Content</a>
+          <a class="nav-link" href="portals.html#ads">📢 Ads</a>
+          <a class="nav-link active" href="affiliate-portal.html">🤝 Affiliate Portal</a>
+          <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
+          <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
+        </div>
       </div>
     `;
     const { data: sheetData } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
