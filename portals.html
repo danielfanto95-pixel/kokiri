@@ -243,7 +243,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   <main>
     <div class="page-head">
       <h1>🚪 Portals</h1>
-      <p>Affiliate, Client, CRM, Content, Tasks, Ads, Funnel, Impact Map, Jobs, and Agent Builder in one place. These are internal views for you, not external logins. Affiliates now DO get real external logins of their own — see <a href="affiliate-portal.html" style="color:var(--leaf-bright);">the Affiliate Portal</a> (sales collateral, links, pipeline, results history) with applications auto-imported from Jotform for your approval.</p>
+      <p>Affiliate, Client, CRM, Content, Tasks, Ad Funnels, Funnel, Impact Map, Jobs, and Agent Builder in one place. These are internal views for you, not external logins. Affiliates now DO get real external logins of their own — see <a href="affiliate-portal.html" style="color:var(--leaf-bright);">the Affiliate Portal</a> (sales collateral, links, pipeline, results history) with applications auto-imported from Jotform for your approval.</p>
     </div>
 
     <details class="index-box" id="portal-index">
@@ -257,7 +257,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="crm"><span class="dot"></span>📇 CRM</button>
       <button class="portal-tab" data-portal="content"><span class="dot"></span>✍️ Content</button>
       <button class="portal-tab" data-portal="tasks"><span class="dot"></span>✅ Tasks</button>
-      <button class="portal-tab" data-portal="ads"><span class="dot"></span>📣 Ads Portal</button>
+      <button class="portal-tab" data-portal="ads"><span class="dot"></span>🎯 Ad Funnels</button>
       <button class="portal-tab" data-portal="funnel"><span class="dot"></span>🌪️ Funnel</button>
       <button class="portal-tab" data-portal="impact"><span class="dot"></span>🧠 Impact Map</button>
       <button class="portal-tab" data-portal="jobs"><span class="dot"></span>💼 Jobs</button>
@@ -346,8 +346,8 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <button data-action="add-col" data-slug="ads">+ Add Column</button>
       </div>
       <div class="op-grid-wrap" id="grid-ads"><p class="empty-note">Loading…</p></div>
-      <div data-lineage-page="portals.html" data-lineage-section="ads" data-lineage-label="Ads Portal"></div>
-      <div class="portal-note">Ad creatives tracked here — which have AI-generated versions made yet.</div>
+      <div data-lineage-page="portals.html" data-lineage-section="ads" data-lineage-label="Ad Funnels"></div>
+      <div class="portal-note">Ad creatives and the funnel each feeds — landing page, targeting, budget, and the follow-up nurture sequence that runs after someone converts.</div>
     </div>
 
     <div class="portal-panel" id="panel-funnel">
@@ -473,7 +473,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div class="nav-group-content">
         <a class="nav-link active" href="portals.html">🚪 All Portals</a>
         <a class="nav-link" href="portals.html#content">🎬 Content</a>
-        <a class="nav-link" href="portals.html#ads">📢 Ads</a>
+        <a class="nav-link" href="portals.html#ads">🎯 Ad Funnels</a>
         <a class="nav-link" href="affiliate-portal.html">🤝 Affiliate Portal</a>
         <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
         <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
@@ -865,7 +865,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ads Portal', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -874,7 +874,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'crm', label: '📇 CRM', desc: 'Leads and contacts, Salesforce-style, pipeline by Lead Status.' },
     { key: 'content', label: '✍️ Content', desc: 'Scripts, outlines, versions, plus AI drafting.' },
     { key: 'tasks', label: '✅ Tasks', desc: 'Notion-style board — same data as the Operations Dashboard table.' },
-    { key: 'ads', label: '📣 Ads Portal', desc: 'Ad creatives and which have AI versions made.' },
+    { key: 'ads', label: '🎯 Ad Funnels', desc: 'Ad creatives, landing pages, and the follow-up nurture sequence for each — plus which have AI versions made.' },
     { key: 'funnel', label: '🌪️ Funnel', desc: 'Landers → CRM Leads → Active Clients conversion funnel.' },
     { key: 'impact', label: '🧠 Impact Map', desc: 'Personal reflection framework, progress cards per entry.' },
     { key: 'jobs', label: '💼 Jobs', desc: 'Job-application CRM — PT/Operations listings around SLC, plus AI-eval side income and resume uploads.' },
