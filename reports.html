@@ -222,7 +222,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 
   async function loadNav() {
     const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
-      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('kokiri_sheets').select('slug, name').not('slug', 'like', 'biz-%').order('sort_order'),
       supabase.from('agents').select('id, name, icon').order('sort_order'),
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);

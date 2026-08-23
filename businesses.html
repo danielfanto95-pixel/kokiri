@@ -54,6 +54,41 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .section-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
 .section-block h3 { font-family: var(--heading); font-size: 1rem; color: var(--leaf-bright); margin-bottom: 0.9rem; }
 
+.op-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; overflow: hidden; }
+.op-head {
+  display: flex; align-items: center; gap: 0.7rem; padding: 0.9rem 1.1rem; cursor: pointer; user-select: none;
+  border-bottom: 1px solid transparent;
+}
+.op-head:hover { background: var(--surface2); }
+.op-section.open .op-head { border-bottom-color: var(--border); }
+.op-head .op-icon { font-size: 1.2rem; }
+.op-head h2 { font-family: var(--heading); font-size: 1rem; color: var(--leaf-bright); flex: 1; }
+.op-head .op-count { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+.op-head .chevron { transition: transform 0.15s; font-size: 0.7rem; color: var(--muted); }
+.op-section.open .op-head .chevron { transform: rotate(90deg); }
+.op-body { display: none; padding: 1rem 1.1rem 1.2rem; }
+.op-section.open .op-body { display: block; }
+.op-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; }
+.op-toolbar button {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer;
+}
+.op-toolbar button:hover { border-color: var(--leaf); }
+.op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+.op-grid-wrap table { border-collapse: collapse; width: 100%; min-width: max-content; }
+.op-grid-wrap th, .op-grid-wrap td {
+  border: 1px solid var(--border); padding: 0.5rem 0.65rem; text-align: left;
+  font-size: 0.8rem; vertical-align: top; max-width: 280px;
+}
+.op-grid-wrap th {
+  background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright);
+  white-space: nowrap; font-size: 0.72rem;
+}
+.op-grid-wrap td { background: var(--surface); color: var(--text); min-width: 130px; }
+.op-grid-wrap td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
+.op-grid-wrap .row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 26px; }
+.op-grid-wrap .row-del:hover { color: #f87171; }
+
 .req-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem; }
 .req-row select { background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.72rem; font-family: var(--mono); }
 .req-row .rtext { flex: 1; font-size: 0.86rem; }
@@ -120,7 +155,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     <div class="page-head">
       <div>
         <h1>🏢 Businesses</h1>
-        <p>Each business gets its own requirements checklist and document uploads (contracts, certifications, filings — anything).</p>
+        <p>Each business gets its own Offer, plus 7 collapsible spreadsheet sections: Questionnaires, Requirements, Content, Ad Funnels, Email/Nurture/ManyChat Funnels, To Do's, and Documents — every grid supports adding/editing rows and columns.</p>
       </div>
       <button id="btn-new-biz">+ New Business</button>
     </div>
@@ -213,7 +248,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 
   async function loadNav() {
     const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
-      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('kokiri_sheets').select('slug, name').not('slug', 'like', 'biz-%').order('sort_order'),
       supabase.from('agents').select('id, name, icon').order('sort_order'),
       supabase.from('dashboards').select('id, name, icon').order('sort_order'),
     ]);
@@ -269,16 +304,111 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     }));
   }
 
+  // ---------- Per-business spreadsheet sections ----------
+  const BIZ_GRID_SECTIONS = [
+    { key: 'questionnaires', icon: '🧾', title: 'Questionnaires' },
+    { key: 'requirements', icon: '✅', title: 'Requirements' },
+    { key: 'content', icon: '🎬', title: 'Content' },
+    { key: 'ad-funnels', icon: '🎯', title: 'Ad Funnels' },
+    { key: 'msg-funnels', icon: '📧', title: 'Email/Nurture/ManyChat Funnels' },
+    { key: 'todos', icon: '✅', title: "To Do's" },
+  ];
+  function bizCollapsedKey(bizId, key) { return `kokiri_biz_collapsed_${bizId}_${key}`; }
+
+  async function ensureBizSheet(bizId, key, label, bizName) {
+    const slug = `biz-${bizId}-${key}`;
+    let { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    if (!sheet) {
+      const { data: created, error } = await supabase.from('kokiri_sheets').insert({ name: `${bizName} — ${label}`, slug, sort_order: 9000 }).select().single();
+      if (error) throw error;
+      sheet = created;
+      await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 1 });
+    }
+    return sheet.id;
+  }
+
+  async function mountBizGridSection(container, sheetId, sectionKey) {
+    let columns = [], rows = [];
+    const wrapId = `grid-wrap-${sectionKey}`;
+    const countId = `count-${sectionKey}`;
+
+    async function loadData() {
+      const [{ data: cols }, { data: rowData }] = await Promise.all([
+        supabase.from('kokiri_columns').select('*').eq('sheet_id', sheetId).order('sort_order'),
+        supabase.from('kokiri_rows').select('*').eq('sheet_id', sheetId).order('sort_order'),
+      ]);
+      columns = cols || [];
+      rows = rowData || [];
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const countEl = document.getElementById(countId);
+      if (countEl) countEl.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
+      const wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      if (!columns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>'; return; }
+      let html = '<table><thead><tr><th class="row-del">×</th>';
+      for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
+      html += '</tr></thead><tbody>';
+      for (const r of rows) {
+        html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
+        for (const c of columns) html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+      wrap.querySelectorAll('td[contenteditable="true"]').forEach(td => {
+        td.addEventListener('blur', async () => {
+          const rowId = td.closest('tr').dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          if (!row) return;
+          row.data = { ...row.data, [td.dataset.colKey]: td.textContent };
+          await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+        });
+      });
+      wrap.querySelectorAll('[data-action="del-row"]').forEach(elx => {
+        elx.addEventListener('click', async () => {
+          const rowId = elx.closest('tr').dataset.rowId;
+          if (!confirm('Delete this row?')) return;
+          await supabase.from('kokiri_rows').delete().eq('id', rowId);
+          rows = rows.filter(r => r.id !== rowId);
+          renderGrid();
+        });
+      });
+    }
+
+    container.querySelector(`[data-action="add-row"][data-section="${sectionKey}"]`).addEventListener('click', async () => {
+      const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheetId, data: {}, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      rows.push(data);
+      renderGrid();
+    });
+    container.querySelector(`[data-action="add-col"][data-section="${sectionKey}"]`).addEventListener('click', async () => {
+      const name = prompt('New column name:');
+      if (!name) return;
+      const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
+      const maxOrder = columns.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_columns').insert({ sheet_id: sheetId, column_key: key, name, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      columns.push(data);
+      renderGrid();
+    });
+
+    await loadData();
+  }
+
   async function renderPanels() {
     const el = document.getElementById('biz-panels');
     if (!businesses.length) { el.innerHTML = '<p class="empty-note">No businesses yet — click "+ New Business" to add one.</p>'; return; }
     const biz = businesses.find(b => b.id === activeBizId);
     if (!biz) { el.innerHTML = ''; return; }
 
-    const [{ data: reqs }, { data: docs }] = await Promise.all([
-      supabase.from('kokiri_business_requirements').select('*').eq('business_id', biz.id).order('sort_order').order('created_at'),
-      supabase.from('kokiri_documents').select('*').eq('business_id', biz.id).order('created_at', { ascending: false }),
-    ]);
+    const { data: docs } = await supabase.from('kokiri_documents').select('*').eq('business_id', biz.id).order('created_at', { ascending: false });
+
+    const offerOpen = localStorage.getItem(bizCollapsedKey(biz.id, 'offer')) === 'open';
+    const docsOpen = localStorage.getItem(bizCollapsedKey(biz.id, 'documents')) === 'open';
 
     el.innerHTML = `
       <div class="biz-panel active">
@@ -288,51 +418,61 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
           <button class="del-biz" id="btn-del-biz">Delete this business</button>
         </div>
 
-        <div class="section-block">
-          <h3>💬 Offer</h3>
-          <textarea id="offer-text" style="width:100%;min-height:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:0.7rem 0.9rem;font-family:inherit;font-size:0.85rem;line-height:1.55;resize:vertical;" placeholder="Offer / pitch copy for this business…">${escapeHtml(biz.offer_text || '')}</textarea>
-          <div style="margin-top:0.7rem;display:flex;align-items:center;gap:0.7rem;">
-            <button id="btn-save-offer" style="background:var(--leaf-bright);color:var(--bg);border:none;border-radius:6px;padding:0.5rem 1rem;font-weight:700;font-size:0.8rem;cursor:pointer;">Save Offer</button>
-            <span id="offer-saved" style="font-family:var(--mono);font-size:0.68rem;color:var(--dim);"></span>
+        <div class="op-section ${offerOpen ? 'open' : ''}" id="op-offer">
+          <div class="op-head"><span class="op-icon">💬</span><h2>Offer</h2><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <textarea id="offer-text" style="width:100%;min-height:160px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:0.7rem 0.9rem;font-family:inherit;font-size:0.85rem;line-height:1.55;resize:vertical;" placeholder="Offer / pitch copy for this business…">${escapeHtml(biz.offer_text || '')}</textarea>
+            <div style="margin-top:0.7rem;display:flex;align-items:center;gap:0.7rem;">
+              <button id="btn-save-offer" style="background:var(--leaf-bright);color:var(--bg);border:none;border-radius:6px;padding:0.5rem 1rem;font-weight:700;font-size:0.8rem;cursor:pointer;">Save Offer</button>
+              <span id="offer-saved" style="font-family:var(--mono);font-size:0.68rem;color:var(--dim);"></span>
+            </div>
           </div>
         </div>
 
-        <div class="section-block">
-          <h3>✅ Requirements</h3>
-          <div id="req-list">${(reqs && reqs.length) ? reqs.map(r => `
-            <div class="req-row ${r.status === 'done' ? 'done' : ''}" data-id="${r.id}">
-              <select data-id="${r.id}">
-                <option value="todo" ${r.status === 'todo' ? 'selected' : ''}>Todo</option>
-                <option value="in_progress" ${r.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                <option value="done" ${r.status === 'done' ? 'selected' : ''}>Done</option>
-              </select>
-              <span class="rtext">${escapeHtml(r.requirement)}</span>
-              <button class="rdel" data-id="${r.id}">✕</button>
+        ${BIZ_GRID_SECTIONS.map((s, i) => {
+          const isOpen = localStorage.getItem(bizCollapsedKey(biz.id, s.key)) === 'open';
+          return `
+          <div class="op-section ${isOpen ? 'open' : ''}" id="op-${s.key}">
+            <div class="op-head"><span class="op-icon">${s.icon}</span><h2>${i}. ${escapeHtml(s.title)}</h2><span class="op-count" id="count-${s.key}"></span><span class="chevron">▸</span></div>
+            <div class="op-body">
+              <div class="op-toolbar">
+                <button data-action="add-row" data-section="${s.key}">+ Add Row</button>
+                <button data-action="add-col" data-section="${s.key}">+ Add Column</button>
+              </div>
+              <div class="op-grid-wrap" id="grid-wrap-${s.key}"><p class="empty-note">Loading…</p></div>
             </div>
-          `).join('') : '<p class="empty-note">No requirements yet.</p>'}</div>
-          <div class="req-add-form">
-            <input type="text" id="req-input" placeholder="Add a requirement…">
-            <button id="btn-add-req">+ Add</button>
-          </div>
-        </div>
+          </div>`;
+        }).join('')}
 
-        <div class="section-block">
-          <h3>📄 Documents</h3>
-          <div id="doc-list">${(docs && docs.length) ? docs.map(d => `
-            <div class="doc-row" data-id="${d.id}">
-              <span class="dname">${escapeHtml(d.name)}</span>
-              <span class="dmeta">${fmtBytes(d.size_bytes)}</span>
-              <a class="ddownload" data-path="${escapeHtml(d.storage_path)}" href="#">Download</a>
-              <button class="ddel" data-id="${d.id}" data-path="${escapeHtml(d.storage_path)}">✕</button>
+        <div class="op-section ${docsOpen ? 'open' : ''}" id="op-documents">
+          <div class="op-head"><span class="op-icon">📄</span><h2>6. Documents</h2><span class="op-count" id="count-documents"></span><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <div id="doc-list">${(docs && docs.length) ? docs.map(d => `
+              <div class="doc-row" data-id="${d.id}">
+                <span class="dname">${escapeHtml(d.name)}</span>
+                <span class="dmeta">${fmtBytes(d.size_bytes)}</span>
+                <a class="ddownload" data-path="${escapeHtml(d.storage_path)}" href="#">Download</a>
+                <button class="ddel" data-id="${d.id}" data-path="${escapeHtml(d.storage_path)}">✕</button>
+              </div>
+            `).join('') : '<p class="empty-note">No documents uploaded yet.</p>'}</div>
+            <div class="doc-upload-row">
+              <input type="file" id="doc-file">
+              <button id="btn-upload-doc">Upload</button>
             </div>
-          `).join('') : '<p class="empty-note">No documents uploaded yet.</p>'}</div>
-          <div class="doc-upload-row">
-            <input type="file" id="doc-file">
-            <button id="btn-upload-doc">Upload</button>
           </div>
         </div>
       </div>
     `;
+
+    document.getElementById('count-documents').textContent = `${(docs || []).length} file${(docs || []).length === 1 ? '' : 's'}`;
+
+    ['offer', ...BIZ_GRID_SECTIONS.map(s => s.key), 'documents'].forEach(key => {
+      const sec = document.getElementById('op-' + key);
+      sec.querySelector('.op-head').addEventListener('click', () => {
+        const nowOpen = sec.classList.toggle('open');
+        localStorage.setItem(bizCollapsedKey(biz.id, key), nowOpen ? 'open' : 'closed');
+      });
+    });
 
     document.getElementById('btn-save-offer').addEventListener('click', async () => {
       const offer_text = document.getElementById('offer-text').value;
@@ -343,31 +483,12 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     });
 
     document.getElementById('btn-del-biz').addEventListener('click', async () => {
-      if (!confirm(`Delete "${biz.name}" and all its requirements/documents? This cannot be undone.`)) return;
+      if (!confirm(`Delete "${biz.name}" and all its sections/documents? This cannot be undone.`)) return;
+      await supabase.from('kokiri_sheets').delete().like('slug', `biz-${biz.id}-%`);
       await supabase.from('kokiri_businesses').delete().eq('id', biz.id);
       activeBizId = null;
       await loadBusinesses();
     });
-
-    document.getElementById('btn-add-req').addEventListener('click', async () => {
-      const input = document.getElementById('req-input');
-      const requirement = input.value.trim();
-      if (!requirement) return;
-      const maxOrder = (reqs || []).reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
-      await supabase.from('kokiri_business_requirements').insert({ business_id: biz.id, requirement, sort_order: maxOrder + 1 });
-      input.value = '';
-      await renderPanels();
-    });
-    document.getElementById('req-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('btn-add-req').click(); });
-
-    el.querySelectorAll('.req-row select').forEach(sel => sel.addEventListener('change', async () => {
-      await supabase.from('kokiri_business_requirements').update({ status: sel.value }).eq('id', sel.dataset.id);
-      await renderPanels();
-    }));
-    el.querySelectorAll('.req-row .rdel').forEach(btn => btn.addEventListener('click', async () => {
-      await supabase.from('kokiri_business_requirements').delete().eq('id', btn.dataset.id);
-      await renderPanels();
-    }));
 
     el.querySelectorAll('.doc-row a.ddownload').forEach(a => a.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -399,6 +520,11 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       btn.disabled = false; btn.textContent = 'Upload';
       await renderPanels();
     });
+
+    for (const s of BIZ_GRID_SECTIONS) {
+      const sheetId = await ensureBizSheet(biz.id, s.key, s.title, biz.name);
+      await mountBizGridSection(document.getElementById('op-' + s.key), sheetId, s.key);
+    }
   }
 
   document.getElementById('btn-new-biz').addEventListener('click', () => {

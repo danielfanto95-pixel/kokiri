@@ -220,7 +220,7 @@ td { background: var(--bg); }
   async function loadNav() {
     const isOwner = auth.profile.role === 'owner';
     const [{ data: sheetData }, { data: dashData }] = await Promise.all([
-      supabase.from('kokiri_sheets').select('slug, name').order('sort_order'),
+      supabase.from('kokiri_sheets').select('slug, name').not('slug', 'like', 'biz-%').order('sort_order'),
       supabase.from('dashboards').select('*').order('sort_order'),
     ]);
     dashboardsList = dashData || [];

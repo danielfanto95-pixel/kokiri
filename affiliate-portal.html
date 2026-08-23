@@ -174,7 +174,7 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
         </div>
       </div>
     `;
-    const { data: sheetData } = await supabase.from('kokiri_sheets').select('slug, name').order('sort_order');
+    const { data: sheetData } = await supabase.from('kokiri_sheets').select('slug, name').not('slug', 'like', 'biz-%').order('sort_order');
     document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
     await appendNonSheetSourcesToNav('nav-sheets');
     document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {

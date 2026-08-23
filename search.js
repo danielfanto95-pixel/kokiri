@@ -42,7 +42,7 @@ export async function initPageSearch(supabase) {
 
   const [{ data: pages }, { data: sheets }] = await Promise.all([
     supabase.from('kokiri_pages').select('name, url, description, category').order('name'),
-    supabase.from('kokiri_sheets').select('name, slug').order('name'),
+    supabase.from('kokiri_sheets').select('name, slug').not('slug', 'like', 'biz-%').order('name'),
   ]);
 
   const items = [
