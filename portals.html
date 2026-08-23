@@ -544,6 +544,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   import { requireActiveUser } from './guard.js';
   import { initPageSearch } from './search.js';
   import { initLineageBadges, appendNonSheetSourcesToNav } from './lineage.js';
+  import { openChecklistModal, getChecklistCounts, checklistBadgeHtml } from './checklist.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const auth = await requireActiveUser(supabase);
@@ -725,21 +726,24 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       if (computeStats) computeStats(columns, rows);
     }
 
-    function renderGrid() {
+    async function renderGrid() {
       if (!columns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>'; return; }
+      const checklistCounts = deployConfig?.checklist ? await getChecklistCounts(supabase, rows.map(r => r.id)) : {};
       let html = '<table><thead><tr><th class="row-del">×</th>';
       for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
-      if (deployConfig) html += '<th>Deploy</th>';
+      if (deployConfig?.kind) html += '<th>Deploy</th>';
+      if (deployConfig?.checklist) html += '<th>Checklist</th>';
       html += '</tr></thead><tbody>';
       for (const r of rows) {
         html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
         for (const c of columns) html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
-        if (deployConfig) html += `<td style="min-width:110px;"><button class="deploy-btn" data-row-id="${r.id}" style="background:var(--leaf);color:#0c120d;border:none;border-radius:6px;padding:0.3rem 0.7rem;font-family:var(--heading);font-weight:700;font-size:0.72rem;cursor:pointer;">🚀 Deploy</button><div class="deploy-status" data-row-id="${r.id}" style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);margin-top:0.3rem;word-break:break-word;"></div></td>`;
+        if (deployConfig?.kind) html += `<td style="min-width:110px;"><button class="deploy-btn" data-row-id="${r.id}" style="background:var(--leaf);color:#0c120d;border:none;border-radius:6px;padding:0.3rem 0.7rem;font-family:var(--heading);font-weight:700;font-size:0.72rem;cursor:pointer;">🚀 Deploy</button><div class="deploy-status" data-row-id="${r.id}" style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);margin-top:0.3rem;word-break:break-word;"></div></td>`;
+        if (deployConfig?.checklist) html += `<td><button class="kc-open-btn" data-row-id="${r.id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--leaf-bright);border-radius:6px;padding:0.3rem 0.6rem;font-family:var(--mono);font-size:0.7rem;cursor:pointer;white-space:nowrap;">${checklistBadgeHtml(checklistCounts, r.id)}</button></td>`;
         html += '</tr>';
       }
       html += '</tbody></table>';
       wrap.innerHTML = html;
-      if (deployConfig) {
+      if (deployConfig?.kind) {
         wrap.querySelectorAll('.deploy-btn').forEach(btn => btn.addEventListener('click', async () => {
           const rowId = btn.dataset.rowId;
           const row = rows.find(r => r.id === rowId);
@@ -747,6 +751,21 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
           if (!row || !statusEl) return;
           if (deployConfig.kind === 'content') await deployContentRow(row, columns, statusEl);
           else await deployAdRow(row, columns, statusEl);
+        }));
+      }
+      if (deployConfig?.checklist) {
+        wrap.querySelectorAll('.kc-open-btn').forEach(btn => btn.addEventListener('click', async () => {
+          const rowId = btn.dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          const firstColKey = columns[0]?.column_key;
+          const rowLabel = (row?.data?.[firstColKey] || '').trim() || null;
+          await openChecklistModal(supabase, {
+            rowId, sheetId: sheet.id, rowLabel,
+            onChange: async () => {
+              const counts = await getChecklistCounts(supabase, [rowId]);
+              btn.textContent = checklistBadgeHtml(counts, rowId);
+            },
+          });
         }));
       }
       wrap.querySelectorAll('td[contenteditable="true"]').forEach(td => {
@@ -966,7 +985,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
   document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendPortalChat(); });
 
   // ---------- Tasks board view (Notion-style, over the same tasks-dashboard sheet as the Table view) ----------
-  function renderTasksBoard(columns, rows, sheetId) {
+  async function renderTasksBoard(columns, rows, sheetId) {
     const board = document.getElementById('tasks-board');
     const statusKey = columns.find(c => /status/i.test(c.name))?.column_key;
     const titleKey = columns.find(c => /task|title|name/i.test(c.name))?.column_key || columns[0]?.column_key;
@@ -977,6 +996,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
 
     const statuses = [...new Set(rows.map(r => (r.data?.[statusKey] || '').trim()).filter(Boolean))];
     const cols = statuses.length ? statuses : ['To Do', 'In Progress', 'Done'];
+    const checklistCounts = await getChecklistCounts(supabase, rows.map(r => r.id));
 
     board.innerHTML = `<div class="board">${cols.map(status => {
       const cardRows = rows.filter(r => (r.data?.[statusKey] || '').trim() === status);
@@ -988,6 +1008,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
               <div class="bctitle">${escapeHtml(r.data?.[titleKey] || '(untitled)')}</div>
               <select data-status-select>${cols.map(s => `<option ${s === status ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}</select>
               <div class="bmeta">${[ownerKey && r.data?.[ownerKey], priorityKey && r.data?.[priorityKey], dueKey && r.data?.[dueKey]].filter(Boolean).map(escapeHtml).join(' · ')}</div>
+              <button class="kc-open-btn" data-row-id="${r.id}" style="margin-top:0.4rem;background:var(--surface2);border:1px solid var(--border);color:var(--leaf-bright);border-radius:6px;padding:0.25rem 0.55rem;font-family:var(--mono);font-size:0.68rem;cursor:pointer;">${checklistBadgeHtml(checklistCounts, r.id)}</button>
             </div>
           `).join('') || '<p style="font-size:0.75rem;color:var(--dim);">Empty</p>'}
         </div>
@@ -1002,6 +1023,21 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
         row.data = { ...row.data, [statusKey]: e.target.value };
         await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
         renderTasksBoard(columns, rows, sheetId);
+      });
+    });
+    board.querySelectorAll('.kc-open-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const rowId = btn.dataset.rowId;
+        const row = rows.find(r => r.id === rowId);
+        const rowLabel = (row?.data?.[titleKey] || '').trim() || null;
+        await openChecklistModal(supabase, {
+          rowId, sheetId, rowLabel,
+          onChange: async () => {
+            const counts = await getChecklistCounts(supabase, [rowId]);
+            btn.textContent = checklistBadgeHtml(counts, rowId);
+          },
+        });
       });
     });
   }
@@ -1311,7 +1347,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     if (!sheetId) { const { data } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'tasks-dashboard').maybeSingle(); sheetId = data?.id; }
     portalData.tasks = { columns: cols, rows, sheetId };
     renderTasksBoard(cols, rows, sheetId);
-  });
+  }, { checklist: true });
 
   mountGrid('ads', (cols, rows) => {
     portalData.ads = { columns: cols, rows, sheetId: rows[0]?.sheet_id };

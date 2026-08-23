@@ -232,6 +232,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
   import { requireOwnerPage } from './guard.js';
   import { initPageSearch } from './search.js';
   import { appendNonSheetSourcesToNav } from './lineage.js';
+  import { openChecklistModal, getChecklistCounts, checklistBadgeHtml } from './checklist.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const auth = await requireOwnerPage(supabase);
@@ -342,18 +343,21 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       renderGrid();
     }
 
-    function renderGrid() {
+    async function renderGrid() {
       const countEl = document.getElementById(countId);
       if (countEl) countEl.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
       const wrap = document.getElementById(wrapId);
       if (!wrap) return;
       if (!columns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>'; return; }
+      const checklistCounts = await getChecklistCounts(supabase, rows.map(r => r.id));
       let html = '<table><thead><tr><th class="row-del">×</th>';
       for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
+      html += '<th>Checklist</th>';
       html += '</tr></thead><tbody>';
       for (const r of rows) {
         html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
         for (const c of columns) html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+        html += `<td><button class="kc-open-btn" data-row-id="${r.id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--leaf-bright);border-radius:6px;padding:0.3rem 0.6rem;font-family:var(--mono);font-size:0.7rem;cursor:pointer;white-space:nowrap;">${checklistBadgeHtml(checklistCounts, r.id)}</button></td>`;
         html += '</tr>';
       }
       html += '</tbody></table>';
@@ -374,6 +378,21 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
           await supabase.from('kokiri_rows').delete().eq('id', rowId);
           rows = rows.filter(r => r.id !== rowId);
           renderGrid();
+        });
+      });
+      wrap.querySelectorAll('.kc-open-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const rowId = btn.dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          const firstColKey = columns[0]?.column_key;
+          const rowLabel = (row?.data?.[firstColKey] || '').trim() || null;
+          await openChecklistModal(supabase, {
+            rowId, sheetId, rowLabel,
+            onChange: async () => {
+              const counts = await getChecklistCounts(supabase, [rowId]);
+              btn.textContent = checklistBadgeHtml(counts, rowId);
+            },
+          });
         });
       });
     }
