@@ -307,6 +307,10 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         </div>
         <div class="ai-draft-output" id="ai-draft-output"></div>
       </div>
+      <div style="background:var(--surface2);border:1px solid var(--border-bright);border-radius:10px;padding:0.8rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+        <span style="font-size:0.82rem;color:var(--muted);flex:1;min-width:220px;">Connect Buffer to schedule posts straight from this table — set Business, Platforms, Assets, Caption and Buffer Account per row, then hit 🚀 Deploy.</span>
+        <a href="agents.html?open=mcp&amp;preset=Buffer" target="_blank" style="background:var(--leaf);color:#0c120d;border:none;border-radius:8px;padding:0.5rem 1rem;font-family:var(--heading);font-weight:700;font-size:0.8rem;cursor:pointer;text-decoration:none;">🔌 Connect Buffer</a>
+      </div>
       <div class="op-toolbar">
         <button data-action="add-row" data-slug="content">+ Add Row</button>
         <button data-action="add-col" data-slug="content">+ Add Column</button>
@@ -333,6 +337,10 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 
     <div class="portal-panel" id="panel-ads">
       <div class="portal-stats" id="stats-ads"></div>
+      <div style="background:var(--surface2);border:1px solid var(--border-bright);border-radius:10px;padding:0.8rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+        <span style="font-size:0.82rem;color:var(--muted);flex:1;min-width:220px;">Connect Adspirer to auto-launch ads from this table. After connecting, define a "create campaign" action (Manage Actions on the connection) so 🚀 Deploy knows what to call.</span>
+        <a href="agents.html?open=api&amp;preset=Adspirer" target="_blank" style="background:var(--leaf);color:#0c120d;border:none;border-radius:8px;padding:0.5rem 1rem;font-family:var(--heading);font-weight:700;font-size:0.8rem;cursor:pointer;text-decoration:none;">🔌 Connect Adspirer</a>
+      </div>
       <div class="op-toolbar">
         <button data-action="add-row" data-slug="ads">+ Add Row</button>
         <button data-action="add-col" data-slug="ads">+ Add Column</button>
@@ -588,8 +596,105 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     });
   });
 
+  // ---------- Generic MCP/API client (same pattern as agents.html / widget.js) — powers the Deploy buttons below ----------
+  async function callMcpClient(body) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/mcp-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'mcp-client request failed');
+    return json;
+  }
+  async function callApiClient(body) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('https://qahriykfwknuoqctsaek.supabase.co/functions/v1/api-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'api-client request failed');
+    return json;
+  }
+  function colValByName(columns, row, nameRegex) {
+    const col = columns.find(c => nameRegex.test(c.name));
+    return col ? String(row.data?.[col.column_key] ?? '') : '';
+  }
+  function colKeyByName(columns, nameRegex) {
+    const col = columns.find(c => nameRegex.test(c.name));
+    return col ? col.column_key : null;
+  }
+  async function setRowFields(row, updates) {
+    row.data = { ...row.data, ...updates };
+    await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', row.id);
+  }
+
+  async function deployContentRow(row, columns, statusEl) {
+    statusEl.textContent = '…';
+    try {
+      const { data: mcpServers } = await supabase.from('kokiri_mcp_servers').select('*');
+      const buffer = (mcpServers || []).find(s => /buffer/i.test(s.name));
+      if (!buffer) throw new Error('Connect Buffer first (button above).');
+      const accountName = colValByName(columns, row, /buffer account/i).toLowerCase();
+      const caption = colValByName(columns, row, /caption/i);
+      const assets = colValByName(columns, row, /assets/i);
+      if (!caption.trim()) throw new Error('Add a Caption before deploying.');
+      const { result: channelsResult } = await callMcpClient({ type: 'call_tool', server_id: buffer.id, tool_name: 'list_channels', arguments: {} });
+      const channelList = Array.isArray(channelsResult) ? channelsResult : (channelsResult?.channels || channelsResult?.data || []);
+      const channel = (accountName && channelList.find(c => (c.name || c.service || '').toLowerCase().includes(accountName))) || channelList[0];
+      if (!channel) throw new Error('No matching Buffer channel found' + (accountName ? ` for "${accountName}"` : '') + '.');
+      const args = { channelId: channel.id || channel.channelId, text: caption };
+      if (assets.trim()) args.media = { photo: assets.trim() };
+      const { result } = await callMcpClient({ type: 'call_tool', server_id: buffer.id, tool_name: 'create_post', arguments: args });
+      const postId = result?.id || result?.updateId || result?.update?.id || '(see Buffer dashboard)';
+      const statusKey = colKeyByName(columns, /^status$/i);
+      const metricsKey = colKeyByName(columns, /post metrics/i);
+      const updates = {};
+      if (statusKey) updates[statusKey] = 'Deployed ' + new Date().toLocaleString();
+      if (metricsKey) updates[metricsKey] = `Deployed via Buffer → ${channel.name || channel.service || 'channel'}. Post ID: ${postId}`;
+      await setRowFields(row, updates);
+      statusEl.textContent = '✓ Deployed';
+    } catch (e) {
+      statusEl.textContent = '⚠ ' + e.message;
+    }
+  }
+
+  async function deployAdRow(row, columns, statusEl) {
+    statusEl.textContent = '…';
+    try {
+      const { data: apiServers } = await supabase.from('kokiri_api_servers').select('*');
+      const adspirer = (apiServers || []).find(s => /adspirer/i.test(s.name));
+      if (!adspirer) throw new Error('Connect Adspirer first (button above).');
+      const { data: actions } = await supabase.from('kokiri_api_actions').select('*').eq('server_id', adspirer.id);
+      const action = (actions || []).find(a => /create|launch|campaign|deploy/i.test(a.name));
+      if (!action) throw new Error('Define a "create campaign" action on the Adspirer connection first (Manage Actions).');
+      const args = {
+        business: colValByName(columns, row, /business/i),
+        landing_page: colValByName(columns, row, /landing page/i),
+        keywords: colValByName(columns, row, /keywords/i),
+        targeting: colValByName(columns, row, /targeting/i),
+        campaign: colValByName(columns, row, /campaign/i),
+        platform: colValByName(columns, row, /platform/i),
+        budget: colValByName(columns, row, /budget/i),
+      };
+      const { result } = await callApiClient({ type: 'call_action', action_id: action.id, arguments: args });
+      const statusKey = colKeyByName(columns, /^status$/i);
+      const metricsKey = colKeyByName(columns, /metrics/i);
+      const updates = {};
+      if (statusKey) updates[statusKey] = 'Deployed ' + new Date().toLocaleString();
+      if (metricsKey) updates[metricsKey] = `Deployed via Adspirer (${action.name}). Response: ${JSON.stringify(result).slice(0, 200)}`;
+      await setRowFields(row, updates);
+      statusEl.textContent = '✓ Deployed';
+    } catch (e) {
+      statusEl.textContent = '⚠ ' + e.message;
+    }
+  }
+
   // ---------- Generic editable-grid mount (same pattern as Operations Dashboard) ----------
-  async function mountGrid(slug, computeStats) {
+  async function mountGrid(slug, computeStats, deployConfig) {
     const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
     const wrap = document.getElementById('grid-' + slug);
     if (!sheet) { wrap.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
@@ -610,14 +715,26 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       if (!columns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>'; return; }
       let html = '<table><thead><tr><th class="row-del">×</th>';
       for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
+      if (deployConfig) html += '<th>Deploy</th>';
       html += '</tr></thead><tbody>';
       for (const r of rows) {
         html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
         for (const c of columns) html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+        if (deployConfig) html += `<td style="min-width:110px;"><button class="deploy-btn" data-row-id="${r.id}" style="background:var(--leaf);color:#0c120d;border:none;border-radius:6px;padding:0.3rem 0.7rem;font-family:var(--heading);font-weight:700;font-size:0.72rem;cursor:pointer;">🚀 Deploy</button><div class="deploy-status" data-row-id="${r.id}" style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);margin-top:0.3rem;word-break:break-word;"></div></td>`;
         html += '</tr>';
       }
       html += '</tbody></table>';
       wrap.innerHTML = html;
+      if (deployConfig) {
+        wrap.querySelectorAll('.deploy-btn').forEach(btn => btn.addEventListener('click', async () => {
+          const rowId = btn.dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          const statusEl = wrap.querySelector(`.deploy-status[data-row-id="${rowId}"]`);
+          if (!row || !statusEl) return;
+          if (deployConfig.kind === 'content') await deployContentRow(row, columns, statusEl);
+          else await deployAdRow(row, columns, statusEl);
+        }));
+      }
       wrap.querySelectorAll('td[contenteditable="true"]').forEach(td => {
         td.addEventListener('blur', async () => {
           const rowId = td.closest('tr').dataset.rowId;
@@ -1172,7 +1289,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     let sheetId = rows[0]?.sheet_id;
     if (!sheetId) { const { data } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'content').maybeSingle(); sheetId = data?.id; }
     portalData.content = { columns: cols, rows, sheetId };
-  });
+  }, { kind: 'content' });
 
   mountGrid('tasks-dashboard', async (cols, rows) => {
     let sheetId = rows[0]?.sheet_id;
@@ -1189,7 +1306,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
       { val: rows.length, label: 'Ad Creatives' },
       { val: withAi, label: 'AI Versions Made' },
     ]);
-  });
+  }, { kind: 'ads' });
 
   mountGrid('landers', (cols, rows) => {
     portalData.funnel = { columns: cols, rows, sheetId: rows[0]?.sheet_id, label: 'Landers (raw lines feeding the funnel)' };

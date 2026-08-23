@@ -980,6 +980,25 @@ main { padding: 1.5rem; overflow-x: hidden; }
     renderApiModal();
   });
 
+  // Deep-link support: agents.html?open=mcp&preset=Buffer or ?open=api&preset=Adspirer
+  // opens the right connections modal pre-filled, so other pages (like the Ads & Content
+  // Portal) can send the user straight here to connect a service instead of duplicating
+  // this whole modal system.
+  (async () => {
+    const params = new URLSearchParams(location.search);
+    const openParam = params.get('open');
+    const presetParam = params.get('preset');
+    if (openParam === 'mcp') {
+      await loadMcpServers();
+      renderMcpModal();
+      if (presetParam && document.getElementById('mcp-name')) document.getElementById('mcp-name').value = presetParam;
+    } else if (openParam === 'api') {
+      await loadApiServers();
+      renderApiModal();
+      if (presetParam && document.getElementById('api-name')) document.getElementById('api-name').value = presetParam;
+    }
+  })();
+
   // ---------- Messaging (Telegram / Slack / WhatsApp -> Navi) ----------
   const FN_BASE = 'https://qahriykfwknuoqctsaek.supabase.co/functions/v1';
 
