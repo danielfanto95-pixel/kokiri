@@ -48,6 +48,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="ads"] .dot { background: #6fb8e6; }
 .portal-tab[data-portal="crm"] .dot { background: #c586e6; }
 .portal-tab[data-portal="content"] .dot { background: #e68686; }
+.portal-tab[data-portal="msgfunnels"] .dot { background: #e6b866; }
 .portal-tab[data-portal="tasks"] .dot { background: #86c5e6; }
 .portal-tab[data-portal="funnel"] .dot { background: #86e6b8; }
 .portal-tab[data-portal="impact"] .dot { background: #d086e6; }
@@ -258,6 +259,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="content"><span class="dot"></span>✍️ Content</button>
       <button class="portal-tab" data-portal="tasks"><span class="dot"></span>✅ Tasks</button>
       <button class="portal-tab" data-portal="ads"><span class="dot"></span>🎯 Ad Funnels</button>
+      <button class="portal-tab" data-portal="msgfunnels"><span class="dot"></span>📧 Email/Nurture/ManyChat Funnels</button>
       <button class="portal-tab" data-portal="funnel"><span class="dot"></span>🌪️ Funnel</button>
       <button class="portal-tab" data-portal="impact"><span class="dot"></span>🧠 Impact Map</button>
       <button class="portal-tab" data-portal="jobs"><span class="dot"></span>💼 Jobs</button>
@@ -348,6 +350,17 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div class="op-grid-wrap" id="grid-ads"><p class="empty-note">Loading…</p></div>
       <div data-lineage-page="portals.html" data-lineage-section="ads" data-lineage-label="Ad Funnels"></div>
       <div class="portal-note">Ad creatives and the funnel each feeds — landing page, targeting, budget, and the follow-up nurture sequence that runs after someone converts.</div>
+    </div>
+
+    <div class="portal-panel" id="panel-msgfunnels">
+      <div class="portal-stats" id="stats-msgfunnels"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="message-funnels">+ Add Row</button>
+        <button data-action="add-col" data-slug="message-funnels">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-message-funnels"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="msgfunnels" data-lineage-label="Email/Nurture/ManyChat Funnels"></div>
+      <div class="portal-note">Email sequences, nurture drips, and ManyChat flows in one table — use Type to tell them apart, ID for the platform's own sequence/flow ID, and the media columns for whatever image/video/audio each step sends.</div>
     </div>
 
     <div class="portal-panel" id="panel-funnel">
@@ -474,6 +487,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <a class="nav-link active" href="portals.html">🚪 All Portals</a>
         <a class="nav-link" href="portals.html#content">🎬 Content</a>
         <a class="nav-link" href="portals.html#ads">🎯 Ad Funnels</a>
+        <a class="nav-link" href="portals.html#msgfunnels">📧 Email/Nurture/ManyChat Funnels</a>
         <a class="nav-link" href="affiliate-portal.html">🤝 Affiliate Portal</a>
         <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
         <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
@@ -865,7 +879,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -875,6 +889,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'content', label: '✍️ Content', desc: 'Scripts, outlines, versions, plus AI drafting.' },
     { key: 'tasks', label: '✅ Tasks', desc: 'Notion-style board — same data as the Operations Dashboard table.' },
     { key: 'ads', label: '🎯 Ad Funnels', desc: 'Ad creatives, landing pages, and the follow-up nurture sequence for each — plus which have AI versions made.' },
+    { key: 'msgfunnels', label: '📧 Email/Nurture/ManyChat Funnels', desc: 'Email sequences, nurture drips, and ManyChat flows — Type, platform ID, and media specs for each.' },
     { key: 'funnel', label: '🌪️ Funnel', desc: 'Landers → CRM Leads → Active Clients conversion funnel.' },
     { key: 'impact', label: '🧠 Impact Map', desc: 'Personal reflection framework, progress cards per entry.' },
     { key: 'jobs', label: '💼 Jobs', desc: 'Job-application CRM — PT/Operations listings around SLC, plus AI-eval side income and resume uploads.' },
@@ -1307,6 +1322,19 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
       { val: withAi, label: 'AI Versions Made' },
     ]);
   }, { kind: 'ads' });
+
+  mountGrid('message-funnels', (cols, rows) => {
+    portalData.msgfunnels = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
+    const typeKey = cols.find(c => /^type$/i.test(c.name))?.column_key;
+    const byType = {};
+    if (typeKey) rows.forEach(r => { const t = (r.data?.[typeKey] || 'Untyped').trim() || 'Untyped'; byType[t] = (byType[t] || 0) + 1; });
+    statsBoxes(document.getElementById('stats-msgfunnels'), 'ads', [
+      { val: rows.length, label: 'Total Funnels' },
+      { val: byType['Email Funnel'] || 0, label: 'Email' },
+      { val: byType['Nurture Funnel'] || 0, label: 'Nurture' },
+      { val: byType['ManyChat Funnel'] || 0, label: 'ManyChat' },
+    ]);
+  });
 
   mountGrid('landers', (cols, rows) => {
     portalData.funnel = { columns: cols, rows, sheetId: rows[0]?.sheet_id, label: 'Landers (raw lines feeding the funnel)' };
