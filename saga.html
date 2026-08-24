@@ -70,6 +70,13 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
 .hist-add-form button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.55rem 1rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; align-self: flex-start; }
 .empty-note { color: var(--muted); font-size: 0.82rem; padding: 0.4rem; }
 
+.obj-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.4rem; }
+.obj-row.done .otext { color: var(--dim); text-decoration: line-through; }
+.obj-row .olabel { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); width: 32px; flex-shrink: 0; }
+.obj-row .otext { flex: 1; font-size: 0.85rem; }
+.obj-row .odone { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
+.obj-row .odel { color: var(--dim); cursor: pointer; font-size: 0.85rem; background: none; border: none; padding: 0 0.2rem; }
+
 .nav-side {
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
   padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
@@ -142,6 +149,17 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
       <div class="hist-add-form">
         <textarea id="hist-input" placeholder="Add a history entry…"></textarea>
         <button id="btn-add-hist">+ Add</button>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <h2>🎯 Arc Objectives</h2>
+      <div class="desc">The current arc, in order. Same list as home.html's Arc Objectives — one shared source of truth, editable from either page.</div>
+      <div id="objectives-list"><p class="empty-note">Loading…</p></div>
+      <div class="stat-add-form">
+        <input type="text" id="obj-order" placeholder="Order (e.g. 8)" style="max-width:120px;">
+        <input type="text" id="obj-text" placeholder="New objective…" style="flex:1;">
+        <button id="btn-add-objective">+ Add</button>
       </div>
     </div>
 
@@ -382,9 +400,47 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
     note.textContent = 'Saved ✓'; setTimeout(() => note.textContent = '', 2000);
   });
 
+  // ---------- Arc Objectives (shared table with home.html) ----------
+  async function loadObjectives() {
+    const el = document.getElementById('objectives-list');
+    const { data } = await supabase.from('kokiri_arc_objectives').select('*').order('sort_order').order('created_at');
+    if (!data || !data.length) { el.innerHTML = '<p class="empty-note">No objectives yet.</p>'; return; }
+    el.innerHTML = data.map(o => `
+      <div class="obj-row ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
+        <span class="olabel">${escapeHtml(o.order_label)}</span>
+        <span class="otext">${escapeHtml(o.objective)}</span>
+        <button class="odone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
+        <button class="odel" data-id="${o.id}">✕</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.odone').forEach(btn => btn.addEventListener('click', async () => {
+      const newStatus = btn.dataset.status === 'done' ? 'active' : 'done';
+      await supabase.from('kokiri_arc_objectives').update({ status: newStatus }).eq('id', btn.dataset.id);
+      await loadObjectives();
+    }));
+    el.querySelectorAll('.odel').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Delete this objective?')) return;
+      await supabase.from('kokiri_arc_objectives').delete().eq('id', btn.dataset.id);
+      await loadObjectives();
+    }));
+  }
+  document.getElementById('btn-add-objective').addEventListener('click', async () => {
+    const orderEl = document.getElementById('obj-order');
+    const textEl = document.getElementById('obj-text');
+    const order_label = orderEl.value.trim();
+    const objective = textEl.value.trim();
+    if (!order_label || !objective) { alert('Both an order and an objective are required.'); return; }
+    const { data: existing } = await supabase.from('kokiri_arc_objectives').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+    const nextOrder = (Number(existing?.[0]?.sort_order) || 0) + 1;
+    const { error } = await supabase.from('kokiri_arc_objectives').insert({ order_label, objective, sort_order: nextOrder });
+    if (error) { alert('⚠ ' + error.message); return; }
+    orderEl.value = ''; textEl.value = '';
+    await loadObjectives();
+  });
+
   initNavCollapse();
   await loadNav();
-  await Promise.all([loadContext(), loadStats(), loadHistory(), loadProfile()]);
+  await Promise.all([loadContext(), loadStats(), loadHistory(), loadProfile(), loadObjectives()]);
 </script>
 
 <script type="module" src="ambience.js"></script>
