@@ -771,7 +771,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   const SLUG_TO_TAB = {
     'affiliates-performance': 'affiliate', 'clients': 'client', 'crm': 'crm', 'content': 'content',
     'tasks-dashboard': 'tasks', 'ads': 'ads', 'message-funnels': 'msgfunnels', 'landers': 'funnel',
-    'impact-map': 'impact', 'job-applications': 'jobs', 'claude-tasks': 'claude-tasks', 'sales-objections': 'sales',
+    'impact-map': 'impact', 'job-applications': 'jobs', 'resumereviews-jobs': 'jobs', 'claude-tasks': 'claude-tasks', 'sales-objections': 'sales',
     'sales-best-practices': 'sales', 'budgets': 'budgets',
     // Journals has no separate "primary" sheet — every one of its own sections logs into its own Change Log.
     'entries-journals': 'journals', 'learnings-journals': 'journals', 'questionnaires-journals': 'journals',
@@ -870,6 +870,13 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     for (const sec of JOURNALS_SECTIONS) {
       await mountExtraSection('journals', 'panel-journals', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
     }
+    await mountExtraSection('jobs', 'panel-jobs', 'resumereviews', '📝', 'Resume Reviews', [
+      { key: 'resume_name', name: 'Resume Name' },
+      { key: 'changes', name: 'Suggested Changes' },
+      { key: 'file_link', name: 'File' },
+      { key: 'approval', name: 'Approval' },
+      { key: 'triage_notes', name: 'Triage Notes (if Disapproved)' },
+    ]);
   }
 
   // ---------- Generic editable-grid mount (same pattern as Operations Dashboard) ----------
