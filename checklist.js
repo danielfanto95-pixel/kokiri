@@ -52,6 +52,7 @@ function ensureHost() {
         <button class="kc-secondary" id="kc-save-template">💾 Save as Template</button>
         <select id="kc-template-select"><option value="">Apply a template…</option></select>
         <button class="kc-secondary" id="kc-apply-template">Apply</button>
+        <button class="kc-secondary" id="kc-manage-templates">🗂 Manage Templates</button>
         <button class="kc-close" id="kc-close">Close</button>
       </div>
     </div>
@@ -64,6 +65,199 @@ function ensureHost() {
 export function closeChecklistModal() {
   const overlay = document.getElementById('kokiri-checklist-overlay');
   if (overlay) overlay.classList.remove('open');
+}
+
+function ensureTemplateHost() {
+  if (document.getElementById('kokiri-template-overlay')) return;
+  const style = document.createElement('style');
+  style.textContent = `
+#kokiri-template-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 210; padding: 2rem; }
+#kokiri-template-overlay.open { display: flex; }
+#kokiri-template-box { background: #121a13; border: 1px solid rgba(163,214,140,0.32); border-radius: 12px; padding: 1.4rem 1.5rem; width: 560px; max-width: 100%; max-height: 84vh; display: flex; flex-direction: column; font-family: 'Inter', sans-serif; color: #e4ede0; }
+#kokiri-template-box h2 { font-family: 'Cinzel', serif; font-size: 1.05rem; color: #a8e79f; margin-bottom: 0.9rem; }
+.kt-list { overflow-y: auto; flex: 1; margin-bottom: 0.9rem; }
+.kt-template-row { display: flex; align-items: center; gap: 0.6rem; background: #17201a; border: 1px solid rgba(163,214,140,0.14); border-radius: 7px; padding: 0.55rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer; }
+.kt-template-row:hover { border-color: rgba(163,214,140,0.32); }
+.kt-template-row .kt-name { flex: 1; font-size: 0.86rem; }
+.kt-template-row .kt-count { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: #6b8065; }
+.kt-template-row .kt-del { background: none; border: none; color: #6b8065; cursor: pointer; font-size: 0.78rem; }
+.kt-template-row .kt-del:hover { color: #f87171; }
+.kt-back { background: none; border: none; color: #a8e79f; cursor: pointer; font-size: 0.78rem; margin-bottom: 0.7rem; text-align: left; padding: 0; }
+#kokiri-template-box .kt-addform { display: flex; gap: 0.5rem; margin-bottom: 0.9rem; }
+#kokiri-template-box .kt-addform input { flex: 1; background: #17201a; border: 1px solid rgba(163,214,140,0.14); color: #e4ede0; border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.84rem; font-family: inherit; }
+#kokiri-template-box .kt-addform button, #kokiri-template-box .kt-toolbar button {
+  background: #a8e79f; color: #0c120d; border: none; border-radius: 6px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.8rem; cursor: pointer; white-space: nowrap; font-family: inherit;
+}
+#kokiri-template-box .kt-toolbar { display: flex; gap: 0.6rem; border-top: 1px solid rgba(163,214,140,0.14); padding-top: 0.9rem; }
+#kokiri-template-box .kt-toolbar .kt-close { background: transparent; border: 1px solid rgba(163,214,140,0.32); color: #9db396; margin-left: auto; }
+`;
+  document.head.appendChild(style);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'kokiri-template-overlay';
+  overlay.innerHTML = `
+    <div id="kokiri-template-box">
+      <h2 id="kt-title">🗂 Manage Templates</h2>
+      <div id="kokiri-template-body" class="kt-list"><p class="kc-empty">Loading…</p></div>
+      <div class="kt-toolbar">
+        <button class="kt-close" id="kt-close">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target.id === 'kokiri-template-overlay') closeTemplateManager(); });
+  document.getElementById('kt-close').addEventListener('click', closeTemplateManager);
+}
+
+export function closeTemplateManager() {
+  const overlay = document.getElementById('kokiri-template-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+export async function openTemplateManager(supabase) {
+  ensureHost();
+  ensureTemplateHost();
+  document.getElementById('kokiri-template-overlay').classList.add('open');
+  document.getElementById('kt-close').onclick = async () => {
+    closeTemplateManager();
+    const sel = document.getElementById('kc-template-select');
+    if (sel) {
+      const { data: templates } = await supabase.from('kokiri_checklist_templates').select('id, name').order('name');
+      sel.innerHTML = '<option value="">Apply a template…</option>' + (templates || []).map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    }
+  };
+  await renderTemplateList(supabase);
+}
+
+async function renderTemplateList(supabase) {
+  document.getElementById('kt-title').textContent = '🗂 Manage Templates';
+  const body = document.getElementById('kokiri-template-body');
+  const { data: templates } = await supabase.from('kokiri_checklist_templates').select('id, name').order('name');
+  const { data: allItems } = await supabase.from('kokiri_checklist_template_items').select('template_id');
+  const counts = {};
+  (allItems || []).forEach(i => { counts[i.template_id] = (counts[i.template_id] || 0) + 1; });
+
+  body.innerHTML = (templates && templates.length)
+    ? templates.map(t => `
+      <div class="kt-template-row" data-id="${t.id}">
+        <span class="kt-name">${escapeHtml(t.name)}</span>
+        <span class="kt-count">${counts[t.id] || 0} item${(counts[t.id] || 0) === 1 ? '' : 's'}</span>
+        <button class="kt-del" data-id="${t.id}" title="Delete template">✕</button>
+      </div>
+    `).join('')
+    : '<p class="kc-empty">No templates yet — add one below.</p>';
+  body.innerHTML += `
+    <div class="kt-addform" style="margin-top:0.8rem;">
+      <input id="kt-new-template" placeholder="New template name…">
+      <button id="kt-add-template">+ New Template</button>
+    </div>
+  `;
+
+  body.querySelectorAll('.kt-template-row').forEach(row => row.addEventListener('click', (e) => {
+    if (e.target.classList.contains('kt-del')) return;
+    renderTemplateEditor(supabase, row.dataset.id);
+  }));
+  body.querySelectorAll('.kt-del').forEach(btn => btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this template? This cannot be undone.')) return;
+    await supabase.from('kokiri_checklist_templates').delete().eq('id', btn.dataset.id);
+    await renderTemplateList(supabase);
+  }));
+  document.getElementById('kt-add-template').onclick = async () => {
+    const input = document.getElementById('kt-new-template');
+    const name = input.value.trim();
+    if (!name) return;
+    const { data, error } = await supabase.from('kokiri_checklist_templates').insert({ name }).select().single();
+    if (error) { alert('⚠ ' + error.message); return; }
+    await renderTemplateEditor(supabase, data.id);
+  };
+  document.getElementById('kt-new-template').onkeydown = (e) => { if (e.key === 'Enter') document.getElementById('kt-add-template').click(); };
+}
+
+async function renderTemplateEditor(supabase, templateId) {
+  const { data: template } = await supabase.from('kokiri_checklist_templates').select('id, name').eq('id', templateId).single();
+  document.getElementById('kt-title').textContent = `🗂 ${template.name}`;
+  const body = document.getElementById('kokiri-template-body');
+
+  let items = [];
+  async function loadItems() {
+    const { data } = await supabase.from('kokiri_checklist_template_items').select('*').eq('template_id', templateId).order('sort_order');
+    items = data || [];
+    renderTree();
+  }
+
+  function renderTree() {
+    const tree = buildTree(items);
+    const topLevel = tree['root'] || [];
+    const treeHtml = topLevel.length ? topLevel.map(item => {
+      const subItems = tree[item.id] || [];
+      return `
+        <div class="kc-item">
+          <div class="kc-row" data-id="${item.id}">
+            <input class="kc-text" data-id="${item.id}" value="${escapeHtml(item.text)}">
+            <button class="kc-addsub" data-id="${item.id}" title="Add sub-step">+ sub</button>
+            <button class="kc-del" data-id="${item.id}" title="Delete">✕</button>
+          </div>
+          ${subItems.map(sub => `
+            <div class="kc-row kc-sub-row" data-id="${sub.id}">
+              <input class="kc-text" data-id="${sub.id}" value="${escapeHtml(sub.text)}">
+              <button class="kc-del" data-id="${sub.id}" title="Delete">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('') : '<p class="kc-empty">No steps yet — add one below.</p>';
+
+    body.innerHTML = `
+      <button class="kt-back" id="kt-back">← Back to templates</button>
+      <div>${treeHtml}</div>
+      <div class="kt-addform" style="margin-top:0.8rem;">
+        <input id="kt-new-item" placeholder="Add a step…">
+        <button id="kt-add-item">+ Add</button>
+      </div>
+    `;
+
+    document.getElementById('kt-back').addEventListener('click', () => renderTemplateList(supabase));
+    body.querySelectorAll('.kc-text').forEach(inp => inp.addEventListener('blur', async () => {
+      const it = items.find(i => i.id === inp.dataset.id);
+      if (!it || it.text === inp.value) return;
+      it.text = inp.value;
+      await supabase.from('kokiri_checklist_template_items').update({ text: inp.value }).eq('id', it.id);
+    }));
+    body.querySelectorAll('.kc-del').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_checklist_template_items').delete().eq('id', btn.dataset.id);
+      items = items.filter(i => i.id !== btn.dataset.id && i.parent_id !== btn.dataset.id);
+      renderTree();
+    }));
+    body.querySelectorAll('.kc-addsub').forEach(btn => btn.addEventListener('click', async () => {
+      const text = prompt('Sub-step:');
+      if (!text || !text.trim()) return;
+      const siblings = items.filter(i => i.parent_id === btn.dataset.id);
+      const maxOrder = siblings.reduce((m, i) => Math.max(m, i.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_checklist_template_items').insert({
+        template_id: templateId, parent_id: btn.dataset.id, text: text.trim(), sort_order: maxOrder + 1,
+      }).select().single();
+      if (error) { alert('⚠ ' + error.message); return; }
+      items.push(data);
+      renderTree();
+    }));
+    document.getElementById('kt-add-item').onclick = async () => {
+      const input = document.getElementById('kt-new-item');
+      const text = input.value.trim();
+      if (!text) return;
+      const topLevelItems = items.filter(i => !i.parent_id);
+      const maxOrder = topLevelItems.reduce((m, i) => Math.max(m, i.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_checklist_template_items').insert({
+        template_id: templateId, parent_id: null, text, sort_order: maxOrder + 1,
+      }).select().single();
+      if (error) { alert('⚠ ' + error.message); return; }
+      items.push(data);
+      renderTree();
+    };
+    document.getElementById('kt-new-item').onkeydown = (e) => { if (e.key === 'Enter') document.getElementById('kt-add-item').click(); };
+  }
+
+  await loadItems();
 }
 
 function buildTree(items) {
@@ -243,6 +437,10 @@ export async function openChecklistModal(supabase, { rowId, sheetId, rowLabel, o
       }
     }
     renderTree();
+  };
+
+  document.getElementById('kc-manage-templates').onclick = async () => {
+    await openTemplateManager(supabase);
   };
 
   await loadTemplateOptions();
