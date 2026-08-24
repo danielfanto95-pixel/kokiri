@@ -186,6 +186,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
         <a class="nav-link" href="portals.html#ads">🎯 Ad Funnels</a>
         <a class="nav-link" href="portals.html#msgfunnels">📧 Email/Nurture/ManyChat Funnels</a>
         <a class="nav-link" href="portals.html#journals">📔 Journals</a>
+        <a class="nav-link" href="portals.html#claude-tasks">🤖 Claude Code Tasks</a>
         <a class="nav-link" href="affiliate-portal.html">🤝 Affiliate Portal</a>
         <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
         <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
@@ -324,7 +325,10 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       const { data: created, error } = await supabase.from('kokiri_sheets').insert({ name: `${bizName} — ${label}`, slug, sort_order: 9000 }).select().single();
       if (error) throw error;
       sheet = created;
-      await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 1 });
+      await supabase.from('kokiri_columns').insert([
+        { sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 1 },
+        { sheet_id: sheet.id, column_key: 'status', name: 'Status', sort_order: 2 },
+      ]);
     }
     return sheet.id;
   }
@@ -336,7 +340,10 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     const slug = `biz-${customSection.business_id}-custom-${customSection.id}`;
     const { data: sheet, error } = await supabase.from('kokiri_sheets').insert({ name: `${bizName} — ${customSection.name}`, slug, sort_order: 9000 }).select().single();
     if (error) throw error;
-    await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 1 });
+    await supabase.from('kokiri_columns').insert([
+      { sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 1 },
+      { sheet_id: sheet.id, column_key: 'status', name: 'Status', sort_order: 2 },
+    ]);
     await supabase.from('kokiri_business_custom_sections').update({ sheet_id: sheet.id }).eq('id', customSection.id);
     customSection.sheet_id = sheet.id;
     return sheet.id;

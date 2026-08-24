@@ -56,6 +56,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="sales"] .dot { background: #e68699; }
 .portal-tab[data-portal="budgets"] .dot { background: #86e6c5; }
 .portal-tab[data-portal="journals"] .dot { background: #c5e686; }
+.portal-tab[data-portal="claude-tasks"] .dot { background: #e68686; }
 .portal-tab[data-portal="builder"] .dot { background: #e6a868; }
 
 .budget-track { height: 8px; border-radius: 100px; background: var(--surface2); overflow: hidden; margin-top: 0.4rem; }
@@ -287,6 +288,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="funnel"><span class="dot"></span>🌪️ Funnel</button>
       <button class="portal-tab" data-portal="impact"><span class="dot"></span>🧠 Impact Map</button>
       <button class="portal-tab" data-portal="jobs"><span class="dot"></span>💼 Jobs</button>
+      <button class="portal-tab" data-portal="claude-tasks"><span class="dot"></span>🤖 Claude Code Tasks</button>
       <button class="portal-tab" data-portal="sales"><span class="dot"></span>💬 Sales</button>
       <button class="portal-tab" data-portal="budgets"><span class="dot"></span>💰 Budgets</button>
       <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
@@ -428,6 +430,17 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div class="portal-note">Personal Training + Operations listings around Salt Lake City, plus AI-eval side-income platforms as a separate category. Edit Status inline as you apply.</div>
     </div>
 
+    <div class="portal-panel" id="panel-claude-tasks">
+      <div class="portal-stats" id="stats-claude-tasks"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="claude-tasks">+ Add Row</button>
+        <button data-action="add-col" data-slug="claude-tasks">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-claude-tasks"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="claude-tasks" data-lineage-label="Claude Code Tasks"></div>
+      <div class="portal-note">Non-trivial plans get logged here before I execute — Approval starts Pending; flip it to Approved (editing the plan first if needed) to greenlight it.</div>
+    </div>
+
     <div class="portal-panel" id="panel-sales">
       <div class="offer-box">
         <h4>📋 Furin Fitness Offer — Quick Reference</h4>
@@ -519,6 +532,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <a class="nav-link" href="portals.html#ads">🎯 Ad Funnels</a>
         <a class="nav-link" href="portals.html#msgfunnels">📧 Email/Nurture/ManyChat Funnels</a>
         <a class="nav-link" href="portals.html#journals">📔 Journals</a>
+        <a class="nav-link" href="portals.html#claude-tasks">🤖 Claude Code Tasks</a>
         <a class="nav-link" href="affiliate-portal.html">🤝 Affiliate Portal</a>
         <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
         <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
@@ -757,7 +771,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   const SLUG_TO_TAB = {
     'affiliates-performance': 'affiliate', 'clients': 'client', 'crm': 'crm', 'content': 'content',
     'tasks-dashboard': 'tasks', 'ads': 'ads', 'message-funnels': 'msgfunnels', 'landers': 'funnel',
-    'impact-map': 'impact', 'job-applications': 'jobs', 'sales-objections': 'sales',
+    'impact-map': 'impact', 'job-applications': 'jobs', 'claude-tasks': 'claude-tasks', 'sales-objections': 'sales',
     'sales-best-practices': 'sales', 'budgets': 'budgets',
     // Journals has no separate "primary" sheet — every one of its own sections logs into its own Change Log.
     'entries-journals': 'journals', 'learnings-journals': 'journals', 'questionnaires-journals': 'journals',
@@ -792,6 +806,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'funnel', panel: 'panel-funnel', title: 'Funnel' },
     { key: 'impact', panel: 'panel-impact', title: 'Impact Map' },
     { key: 'jobs', panel: 'panel-jobs', title: 'Jobs' },
+    { key: 'claude-tasks', panel: 'panel-claude-tasks', title: 'Claude Code Tasks' },
     { key: 'sales', panel: 'panel-sales', title: 'Sales' },
     { key: 'budgets', panel: 'panel-budgets', title: 'Budgets' },
     { key: 'builder', panel: 'panel-builder', title: 'Agent Builder' },
@@ -828,7 +843,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     await mountGrid(slug, null);
   }
 
-  const NOTES_COL = [{ key: 'notes', name: 'Notes' }];
+  const NOTES_COL = [{ key: 'notes', name: 'Notes' }, { key: 'status', name: 'Status' }];
   const CHANGELOG_COLS = [{ key: 'timestamp', name: 'Timestamp' }, { key: 'change', name: 'Change' }];
 
   // Journals isn't backed by one pre-existing sheet like the other 13 tabs — every one of its
@@ -1052,7 +1067,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1070,6 +1085,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'budgets', label: '💰 Budgets', desc: 'Monthly Budget vs. Actual Spent per category, with totals and progress bars.' },
     { key: 'builder', label: '🧩 Agent Builder', desc: 'Questionnaire → agent team template → website/ad brief.' },
     { key: 'journals', label: '📔 Journals', desc: 'Entries and Learnings, plus the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
+    { key: 'claude-tasks', label: '🤖 Claude Code Tasks', desc: 'Non-trivial plans, logged with an inferred approach before execution — Approval gates whether I actually do it.' },
   ];
   function renderIndex() {
     document.getElementById('index-grid').innerHTML = INDEX_DATA.map(i => `
@@ -1549,6 +1565,18 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
       { val: ptCount, label: 'Personal Training' },
       { val: opsCount, label: 'Operations' },
       { val: applied, label: 'Applied' },
+    ]);
+  });
+
+  mountGrid('claude-tasks', (cols, rows) => {
+    portalData.claudeTasks = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
+    const approvalKey = cols.find(c => /approval/i.test(c.name))?.column_key;
+    const pending = approvalKey ? rows.filter(r => /pending/i.test(r.data?.[approvalKey] || '') || !r.data?.[approvalKey]).length : 0;
+    const approved = approvalKey ? rows.filter(r => /^approved$/i.test((r.data?.[approvalKey] || '').trim())).length : 0;
+    statsBoxes(document.getElementById('stats-claude-tasks'), 'affiliate', [
+      { val: rows.length, label: 'Total Plans' },
+      { val: pending, label: 'Pending Approval' },
+      { val: approved, label: 'Approved' },
     ]);
   });
 
