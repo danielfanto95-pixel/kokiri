@@ -231,6 +231,29 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
 .nav-link:hover { background: var(--surface2); color: var(--text); }
 .nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
 @media (max-width: 900px) { .nav-side { display: none; } }
+
+.op-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-top: 1.2rem; overflow: hidden; }
+.op-head { display: flex; align-items: center; gap: 0.7rem; padding: 0.9rem 1.1rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; }
+.op-head:hover { background: var(--surface2); }
+.op-section.open .op-head { border-bottom-color: var(--border); }
+.op-head .op-icon { font-size: 1.2rem; }
+.op-head h2 { font-family: var(--heading); font-size: 1rem; color: var(--leaf-bright); flex: 1; }
+.op-head .op-count { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+.op-head .chevron { transition: transform 0.15s; font-size: 0.7rem; color: var(--muted); }
+.op-section.open .op-head .chevron { transform: rotate(90deg); }
+.op-body { display: none; padding: 1rem 1.1rem 1.2rem; }
+.op-section.open .op-body { display: block; }
+.op-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; }
+.op-toolbar button { font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer; }
+.op-toolbar button:hover { border-color: var(--leaf); }
+.op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+.op-grid-wrap table { border-collapse: collapse; width: 100%; min-width: max-content; }
+.op-grid-wrap th, .op-grid-wrap td { border: 1px solid var(--border); padding: 0.5rem 0.65rem; text-align: left; font-size: 0.8rem; vertical-align: top; max-width: 280px; }
+.op-grid-wrap th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; font-size: 0.72rem; }
+.op-grid-wrap td { background: var(--surface); color: var(--text); min-width: 130px; }
+.op-grid-wrap td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
+.op-grid-wrap .row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 26px; }
+.op-grid-wrap .row-del:hover { color: #f87171; }
 </style>
 </head>
 <body>
@@ -708,6 +731,98 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     }
   }
 
+  // ---------- Pre-Reqs / Change Log — one extra pair of collapsible sections per portal tab ----------
+  const changeLogSheetIds = {}; // tabKey -> sheet id, cached so logChange doesn't re-lookup every call
+
+  async function ensureExtraSheet(slug, name, columns) {
+    let { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    if (!sheet) {
+      const { data: created, error } = await supabase.from('kokiri_sheets').insert({ name, slug, sort_order: 9500 }).select().single();
+      if (error) throw error;
+      sheet = created;
+      await supabase.from('kokiri_columns').insert(columns.map((c, i) => ({ sheet_id: sheet.id, column_key: c.key, name: c.name, sort_order: i + 1 })));
+    }
+    return sheet.id;
+  }
+
+  // Maps a mountGrid() sheet slug to the portal tab whose Change Log should receive its edits.
+  const SLUG_TO_TAB = {
+    'affiliates-performance': 'affiliate', 'clients': 'client', 'crm': 'crm', 'content': 'content',
+    'tasks-dashboard': 'tasks', 'ads': 'ads', 'message-funnels': 'msgfunnels', 'landers': 'funnel',
+    'impact-map': 'impact', 'job-applications': 'jobs', 'sales-objections': 'sales',
+    'sales-best-practices': 'sales', 'budgets': 'budgets',
+  };
+
+  async function logChange(gridSlug, description) {
+    if (gridSlug.startsWith('prereqs-') || gridSlug.startsWith('changelog-')) return; // don't log edits to the log/prereqs sections themselves
+    const tabKey = SLUG_TO_TAB[gridSlug];
+    if (!tabKey) return; // this grid isn't one of the 13 portal tabs with a Change Log section
+    try {
+      let sheetId = changeLogSheetIds[tabKey];
+      if (!sheetId) {
+        sheetId = await ensureExtraSheet(`changelog-${tabKey}`, `Change Log — ${tabKey}`, [{ key: 'timestamp', name: 'Timestamp' }, { key: 'change', name: 'Change' }]);
+        changeLogSheetIds[tabKey] = sheetId;
+      }
+      const { data: existing } = await supabase.from('kokiri_rows').select('sort_order').eq('sheet_id', sheetId).order('sort_order', { ascending: false }).limit(1);
+      const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+      await supabase.from('kokiri_rows').insert({ sheet_id: sheetId, sort_order: nextOrder, data: { timestamp: new Date().toLocaleString(), change: description } });
+    } catch { /* best-effort — never block the actual edit on logging */ }
+  }
+
+  const EXTRA_SECTIONS_TABS = [
+    { key: 'affiliate', panel: 'panel-affiliate', title: 'Affiliate' },
+    { key: 'client', panel: 'panel-client', title: 'Client' },
+    { key: 'crm', panel: 'panel-crm', title: 'CRM' },
+    { key: 'content', panel: 'panel-content', title: 'Content' },
+    { key: 'tasks', panel: 'panel-tasks', title: 'Tasks' },
+    { key: 'ads', panel: 'panel-ads', title: 'Ad Funnels' },
+    { key: 'msgfunnels', panel: 'panel-msgfunnels', title: 'Email/Nurture/ManyChat Funnels' },
+    { key: 'funnel', panel: 'panel-funnel', title: 'Funnel' },
+    { key: 'impact', panel: 'panel-impact', title: 'Impact Map' },
+    { key: 'jobs', panel: 'panel-jobs', title: 'Jobs' },
+    { key: 'sales', panel: 'panel-sales', title: 'Sales' },
+    { key: 'budgets', panel: 'panel-budgets', title: 'Budgets' },
+    { key: 'builder', panel: 'panel-builder', title: 'Agent Builder' },
+  ];
+
+  function extraCollapsedKey(tabKey, kind) { return `kokiri_extra_collapsed_${tabKey}_${kind}`; }
+
+  async function mountExtraSection(tabKey, panelId, kind, icon, label, columns) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const slug = `${kind}-${tabKey}`;
+    const sectionId = `op-${slug}`;
+    const isOpen = localStorage.getItem(extraCollapsedKey(tabKey, kind)) === 'open';
+    const el = document.createElement('div');
+    el.className = `op-section ${isOpen ? 'open' : ''}`;
+    el.id = sectionId;
+    el.innerHTML = `
+      <div class="op-head"><span class="op-icon">${icon}</span><h2>${label}</h2><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="${slug}">+ Add Row</button>
+          <button data-action="add-col" data-slug="${slug}">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-${slug}"><p class="empty-note">Loading…</p></div>
+      </div>
+    `;
+    panel.appendChild(el);
+    el.querySelector('.op-head').addEventListener('click', () => {
+      const nowOpen = el.classList.toggle('open');
+      localStorage.setItem(extraCollapsedKey(tabKey, kind), nowOpen ? 'open' : 'closed');
+    });
+    const sheetId = await ensureExtraSheet(slug, `${label} — ${tabKey}`, columns);
+    if (kind === 'changelog') changeLogSheetIds[tabKey] = sheetId;
+    await mountGrid(slug, null);
+  }
+
+  async function mountAllExtraSections() {
+    for (const tab of EXTRA_SECTIONS_TABS) {
+      await mountExtraSection(tab.key, tab.panel, 'prereqs', '📋', 'Pre-Reqs', [{ key: 'notes', name: 'Notes' }]);
+      await mountExtraSection(tab.key, tab.panel, 'changelog', '📜', 'Change Log', [{ key: 'timestamp', name: 'Timestamp' }, { key: 'change', name: 'Change' }]);
+    }
+  }
+
   // ---------- Generic editable-grid mount (same pattern as Operations Dashboard) ----------
   async function mountGrid(slug, computeStats, deployConfig) {
     const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
@@ -773,8 +888,10 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
           const rowId = td.closest('tr').dataset.rowId;
           const row = rows.find(r => r.id === rowId);
           if (!row) return;
+          const col = columns.find(c => c.column_key === td.dataset.colKey);
           row.data = { ...row.data, [td.dataset.colKey]: td.textContent };
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+          logChange(slug, `Edited "${col?.name || td.dataset.colKey}" on a row`);
           if (computeStats) computeStats(columns, rows);
         });
       });
@@ -785,6 +902,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
           await supabase.from('kokiri_rows').delete().eq('id', rowId);
           rows = rows.filter(r => r.id !== rowId);
           renderGrid();
+          logChange(slug, 'Deleted a row');
           if (computeStats) computeStats(columns, rows);
         });
       });
@@ -796,12 +914,14 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       if (error) { alert(error.message); return; }
       rows.push(data);
       renderGrid();
+      logChange(slug, 'Added a row');
       if (computeStats) computeStats(columns, rows);
     });
     document.querySelector(`[data-action="add-col"][data-slug="${slug}"]`).addEventListener('click', async () => {
       const name = prompt('New column name:');
       if (!name) return;
       const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
+      logChange(slug, `Added column "${name}"`);
       const maxOrder = columns.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
       const { data, error } = await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: key, name, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert(error.message); return; }
@@ -1437,6 +1557,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
   loadResumes();
   renderIndex();
   initLineageBadges();
+  mountAllExtraSections();
 
   // Deep-link to a specific tab, e.g. portals.html#budgets
   const hashTab = window.location.hash.replace('#', '');

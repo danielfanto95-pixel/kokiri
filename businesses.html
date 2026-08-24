@@ -232,7 +232,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
   import { requireOwnerPage } from './guard.js';
   import { initPageSearch } from './search.js';
   import { appendNonSheetSourcesToNav } from './lineage.js';
-  import { openChecklistModal, getChecklistCounts, checklistBadgeHtml } from './checklist.js';
+  import { openChecklistModal, getChecklistCounts, checklistBadgeHtml, listSectionTemplates, getSectionTemplateItems } from './checklist.js';
   const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
 
   const auth = await requireOwnerPage(supabase);
@@ -325,6 +325,19 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       sheet = created;
       await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 1 });
     }
+    return sheet.id;
+  }
+
+  // Custom sections added ad-hoc or via a Sections Template — same idea as ensureBizSheet, but
+  // keyed by the custom section's own row (its sheet_id is created lazily and cached on itself).
+  async function ensureCustomSectionSheet(customSection, bizName) {
+    if (customSection.sheet_id) return customSection.sheet_id;
+    const slug = `biz-${customSection.business_id}-custom-${customSection.id}`;
+    const { data: sheet, error } = await supabase.from('kokiri_sheets').insert({ name: `${bizName} — ${customSection.name}`, slug, sort_order: 9000 }).select().single();
+    if (error) throw error;
+    await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: 'notes', name: 'Notes', sort_order: 1 });
+    await supabase.from('kokiri_business_custom_sections').update({ sheet_id: sheet.id }).eq('id', customSection.id);
+    customSection.sheet_id = sheet.id;
     return sheet.id;
   }
 
@@ -424,7 +437,10 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     const biz = businesses.find(b => b.id === activeBizId);
     if (!biz) { el.innerHTML = ''; return; }
 
-    const { data: docs } = await supabase.from('kokiri_documents').select('*').eq('business_id', biz.id).order('created_at', { ascending: false });
+    const [{ data: docs }, { data: customSections }] = await Promise.all([
+      supabase.from('kokiri_documents').select('*').eq('business_id', biz.id).order('created_at', { ascending: false }),
+      supabase.from('kokiri_business_custom_sections').select('*').eq('business_id', biz.id).order('sort_order'),
+    ]);
 
     const offerOpen = localStorage.getItem(bizCollapsedKey(biz.id, 'offer')) === 'open';
     const docsOpen = localStorage.getItem(bizCollapsedKey(biz.id, 'documents')) === 'open';
@@ -434,7 +450,10 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
         <div class="biz-head">
           <h2>${escapeHtml(biz.name)}</h2>
           <div class="desc">${escapeHtml(biz.description || '')}</div>
-          <button class="del-biz" id="btn-del-biz">Delete this business</button>
+          <div style="display:flex;gap:0.7rem;align-items:center;margin-top:0.5rem;">
+            <button id="btn-add-custom-section" style="background:var(--surface2);border:1px solid var(--border);color:var(--leaf-bright);border-radius:6px;padding:0.35rem 0.7rem;font-size:0.75rem;cursor:pointer;">+ Add Section</button>
+            <button class="del-biz" id="btn-del-biz">Delete this business</button>
+          </div>
         </div>
 
         <div class="op-section ${offerOpen ? 'open' : ''}" id="op-offer">
@@ -463,6 +482,22 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
           </div>`;
         }).join('')}
 
+        ${customSections.map((cs) => {
+          const csKey = `custom-${cs.id}`;
+          const isOpen = localStorage.getItem(bizCollapsedKey(biz.id, csKey)) === 'open';
+          return `
+          <div class="op-section ${isOpen ? 'open' : ''}" id="op-${csKey}">
+            <div class="op-head"><span class="op-icon">🗂</span><h2>${escapeHtml(cs.name)}</h2><span class="op-count" id="count-${csKey}"></span><button class="cs-del" data-id="${cs.id}" title="Remove section" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;">✕</button><span class="chevron">▸</span></div>
+            <div class="op-body">
+              <div class="op-toolbar">
+                <button data-action="add-row" data-section="${csKey}">+ Add Row</button>
+                <button data-action="add-col" data-section="${csKey}">+ Add Column</button>
+              </div>
+              <div class="op-grid-wrap" id="grid-wrap-${csKey}"><p class="empty-note">Loading…</p></div>
+            </div>
+          </div>`;
+        }).join('')}
+
         <div class="op-section ${docsOpen ? 'open' : ''}" id="op-documents">
           <div class="op-head"><span class="op-icon">📄</span><h2>6. Documents</h2><span class="op-count" id="count-documents"></span><span class="chevron">▸</span></div>
           <div class="op-body">
@@ -485,12 +520,31 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 
     document.getElementById('count-documents').textContent = `${(docs || []).length} file${(docs || []).length === 1 ? '' : 's'}`;
 
-    ['offer', ...BIZ_GRID_SECTIONS.map(s => s.key), 'documents'].forEach(key => {
+    const customKeys = customSections.map(cs => `custom-${cs.id}`);
+    ['offer', ...BIZ_GRID_SECTIONS.map(s => s.key), ...customKeys, 'documents'].forEach(key => {
       const sec = document.getElementById('op-' + key);
       sec.querySelector('.op-head').addEventListener('click', () => {
         const nowOpen = sec.classList.toggle('open');
         localStorage.setItem(bizCollapsedKey(biz.id, key), nowOpen ? 'open' : 'closed');
       });
+    });
+
+    el.querySelectorAll('.cs-del').forEach(btn => btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('Remove this section and its data? This cannot be undone.')) return;
+      const cs = customSections.find(c => c.id === btn.dataset.id);
+      if (cs?.sheet_id) await supabase.from('kokiri_sheets').delete().eq('id', cs.sheet_id);
+      await supabase.from('kokiri_business_custom_sections').delete().eq('id', btn.dataset.id);
+      await renderPanels();
+    }));
+
+    document.getElementById('btn-add-custom-section').addEventListener('click', async () => {
+      const name = prompt('New section name:');
+      if (!name || !name.trim()) return;
+      const maxOrder = customSections.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+      const { error } = await supabase.from('kokiri_business_custom_sections').insert({ business_id: biz.id, name: name.trim(), sort_order: maxOrder + 1 });
+      if (error) { alert('⚠ ' + error.message); return; }
+      await renderPanels();
     });
 
     document.getElementById('btn-save-offer').addEventListener('click', async () => {
@@ -544,13 +598,24 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       const sheetId = await ensureBizSheet(biz.id, s.key, s.title, biz.name);
       await mountBizGridSection(document.getElementById('op-' + s.key), sheetId, s.key);
     }
+    for (const cs of customSections) {
+      const csKey = `custom-${cs.id}`;
+      const sheetId = await ensureCustomSectionSheet(cs, biz.name);
+      await mountBizGridSection(document.getElementById('op-' + csKey), sheetId, csKey);
+    }
   }
 
-  document.getElementById('btn-new-biz').addEventListener('click', () => {
+  document.getElementById('btn-new-biz').addEventListener('click', async () => {
+    const sectionTemplates = await listSectionTemplates(supabase);
     openModal(`
       <h2>New Business</h2>
       <label>Name</label><input id="b-name" placeholder="e.g. Furin Fitness">
       <label>Description</label><textarea id="b-desc" placeholder="What is this business, and what's the current goal?"></textarea>
+      <label>Sections Template (optional — adds these as extra sections)</label>
+      <select id="b-section-template">
+        <option value="">None</option>
+        ${sectionTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
+      </select>
       <div class="modal-actions">
         <button class="btn-cancel" id="m-cancel">Cancel</button>
         <button class="btn-save" id="m-save">Create</button>
@@ -560,10 +625,21 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
     document.getElementById('m-save').addEventListener('click', async () => {
       const name = document.getElementById('b-name').value.trim();
       const description = document.getElementById('b-desc').value.trim();
+      const sectionTemplateId = document.getElementById('b-section-template').value;
       if (!name) { alert('Name is required.'); return; }
       const maxOrder = businesses.reduce((m, b) => Math.max(m, b.sort_order || 0), 0);
       const { data, error } = await supabase.from('kokiri_businesses').insert({ name, description, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert('⚠ ' + error.message); return; }
+      if (sectionTemplateId) {
+        const templateItems = await getSectionTemplateItems(supabase, sectionTemplateId);
+        const existingKeys = new Set(BIZ_GRID_SECTIONS.map(s => s.title.toLowerCase()).concat(['documents']));
+        let ord = 0;
+        for (const item of templateItems) {
+          if (existingKeys.has(item.name.toLowerCase())) continue; // already covered by the standard 6 + Documents
+          ord += 1;
+          await supabase.from('kokiri_business_custom_sections').insert({ business_id: data.id, name: item.name, sort_order: ord });
+        }
+      }
       closeModal();
       activeBizId = data.id;
       await loadBusinesses();
