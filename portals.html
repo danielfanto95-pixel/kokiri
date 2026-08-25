@@ -58,6 +58,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="journals"] .dot { background: #c5e686; }
 .portal-tab[data-portal="claude-tasks"] .dot { background: #e68686; }
 .portal-tab[data-portal="skills"] .dot { background: #86e6e2; }
+.portal-tab[data-portal="daniel"] .dot { background: #e6a8c5; }
 .portal-tab[data-portal="builder"] .dot { background: #e6a868; }
 
 .budget-track { height: 8px; border-radius: 100px; background: var(--surface2); overflow: hidden; margin-top: 0.4rem; }
@@ -295,6 +296,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
       <button class="portal-tab" data-portal="journals"><span class="dot"></span>📔 Journals</button>
       <button class="portal-tab" data-portal="skills"><span class="dot"></span>🎓 Skills</button>
+      <button class="portal-tab" data-portal="daniel"><span class="dot"></span>👤 Daniel</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -514,6 +516,17 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     <div class="portal-panel" id="panel-skills">
       <div data-lineage-page="portals.html" data-lineage-section="skills" data-lineage-label="Skills"></div>
       <p class="portal-note" style="margin-bottom:1rem;">Skills tracking — the same major section set used elsewhere in Kokiri.</p>
+    </div>
+
+    <div class="portal-panel" id="panel-daniel">
+      <div class="portal-stats" id="stats-daniel"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="daniel">+ Add Row</button>
+        <button data-action="add-col" data-slug="daniel">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-daniel"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="daniel" data-lineage-label="Daniel"></div>
+      <div class="portal-note">Personal space — open structure, define it via + Add Column.</div>
     </div>
   </main>
 
@@ -787,6 +800,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     'msgfunnels-journals': 'journals', 'todos-journals': 'journals',
     'questionnaires-skills': 'skills', 'requirements-skills': 'skills', 'content-skills': 'skills',
     'adfunnels-skills': 'skills', 'msgfunnels-skills': 'skills', 'todos-skills': 'skills',
+    'daniel': 'daniel',
   };
 
   async function logChange(gridSlug, description) {
@@ -820,6 +834,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'sales', panel: 'panel-sales', title: 'Sales' },
     { key: 'budgets', panel: 'panel-budgets', title: 'Budgets' },
     { key: 'builder', panel: 'panel-builder', title: 'Agent Builder' },
+    { key: 'daniel', panel: 'panel-daniel', title: 'Daniel' },
   ];
 
   function extraCollapsedKey(tabKey, kind) { return `kokiri_extra_collapsed_${tabKey}_${kind}`; }
@@ -1090,7 +1105,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', daniel: 'Daniel' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1110,6 +1125,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'journals', label: '📔 Journals', desc: 'Entries and Learnings, plus the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
     { key: 'claude-tasks', label: '🤖 Claude Code Tasks', desc: 'Non-trivial plans, logged with an inferred approach before execution — Approval gates whether I actually do it.' },
     { key: 'skills', label: '🎓 Skills', desc: 'Skills tracking, using the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
+    { key: 'daniel', label: '👤 Daniel', desc: 'Personal space — open structure, define it via + Add Column.' },
   ];
   function renderIndex() {
     document.getElementById('index-grid').innerHTML = INDEX_DATA.map(i => `
@@ -1638,6 +1654,13 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
         <div class="budget-track"><div class="budget-fill ${cls}" style="width:${pct}%"></div></div>
       `;
     }).join('') || '<p class="empty-note">No budget categories yet — add a row below.</p>';
+  });
+
+  mountGrid('daniel', (cols, rows) => {
+    portalData.daniel = { columns: cols, rows, sheetId: rows[0]?.sheet_id };
+    statsBoxes(document.getElementById('stats-daniel'), 'affiliate', [
+      { val: rows.length, label: 'Total Rows' },
+    ]);
   });
 
   initResumeUpload();
