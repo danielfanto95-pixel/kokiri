@@ -1,0 +1,111 @@
+name: Execute Change Request
+
+# Manual trigger only — a CR file existing in change-requests/ does NOT run anything
+# by itself. Daniel picks the file and fires this from the Actions tab. That click is
+# the actual approval gate, not the file, not the Approval column anywhere else.
+on:
+  workflow_dispatch:
+    inputs:
+      cr_file:
+        description: 'Change request filename in change-requests/ (e.g. CR-2026-08-25-example.md)'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  execute-cr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify CR file exists
+        run: |
+          if [ ! -f "change-requests/${{ github.event.inputs.cr_file }}" ]; then
+            echo "::error::change-requests/${{ github.event.inputs.cr_file }} not found"
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install Playwright (for live verification steps)
+        run: npx playwright install --with-deps chromium
+
+      - name: Create working branch
+        id: branch
+        run: |
+          BRANCH="cr/${{ github.event.inputs.cr_file }}"
+          BRANCH="${BRANCH%.md}"
+          git config user.email "danielfanto95@gmail.com"
+          git config user.name "Kokiri CR Bot"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      # NOTE: first real run of this workflow should be treated as a test of the
+      # workflow itself, not just the CR — verify --dangerously-skip-permissions and
+      # the -p flag behave as expected on whatever Claude Code CLI version installs
+      # here before trusting this unattended for anything with real side effects.
+      - name: Run Claude Code against the change request
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p "$(cat <<'PROMPT_EOF'
+          Read change-requests/${{ github.event.inputs.cr_file }} in full and execute it.
+
+          Hard rules, non-negotiable:
+          - Follow change-requests/README.md's standing guardrails exactly.
+          - Never run any Supabase migration/apply_migration-equivalent — if the CR
+            needs schema changes, write the SQL to a file under change-requests/sql/
+            for Daniel to review and apply manually. Do not attempt to apply it.
+          - Never touch auth.users or loosen any RLS policy.
+          - Syntax-check every .html/.js file you change (extract the <script> block,
+            node --check it) before considering the task done.
+          - If anything in the CR is ambiguous, stop and write the ambiguity into
+            CR_OUTCOME.md instead of guessing on a structural decision.
+          - Do not push to master. Commit your work on this branch only.
+
+          When finished, write a summary to CR_OUTCOME.md at the repo root: what you
+          changed, what you verified, anything you flagged as ambiguous or skipped,
+          and any SQL file(s) you left for manual review.
+          PROMPT_EOF
+          )" --dangerously-skip-permissions
+
+      - name: Commit outcome
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes produced — nothing to commit."
+            echo "has_changes=false" >> "$GITHUB_ENV"
+          else
+            git commit -m "CR: ${{ github.event.inputs.cr_file }}"
+            git push origin "${{ steps.branch.outputs.branch }}"
+            echo "has_changes=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Open pull request
+        if: env.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OUTCOME=""
+          if [ -f CR_OUTCOME.md ]; then OUTCOME="$(cat CR_OUTCOME.md)"; fi
+          gh pr create \
+            --title "CR: ${{ github.event.inputs.cr_file }}" \
+            --head "${{ steps.branch.outputs.branch }}" \
+            --base master \
+            --body "Automated change-request run for \`change-requests/${{ github.event.inputs.cr_file }}\`.
+
+          $OUTCOME
+
+          ---
+          This PR was opened by an unattended Claude Code run per change-requests/README.md's guardrails: no direct push to master, no migrations auto-applied, ambiguities flagged in CR_OUTCOME.md above rather than guessed. Review before merging."

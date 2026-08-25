@@ -57,6 +57,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="budgets"] .dot { background: #86e6c5; }
 .portal-tab[data-portal="journals"] .dot { background: #c5e686; }
 .portal-tab[data-portal="claude-tasks"] .dot { background: #e68686; }
+.portal-tab[data-portal="skills"] .dot { background: #86e6e2; }
 .portal-tab[data-portal="builder"] .dot { background: #e6a868; }
 
 .budget-track { height: 8px; border-radius: 100px; background: var(--surface2); overflow: hidden; margin-top: 0.4rem; }
@@ -293,6 +294,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="budgets"><span class="dot"></span>💰 Budgets</button>
       <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
       <button class="portal-tab" data-portal="journals"><span class="dot"></span>📔 Journals</button>
+      <button class="portal-tab" data-portal="skills"><span class="dot"></span>🎓 Skills</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -508,6 +510,11 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div data-lineage-page="portals.html" data-lineage-section="journals" data-lineage-label="Journals"></div>
       <p class="portal-note" style="margin-bottom:1rem;">Personal journal — Entries at the top, plus the same major section set used elsewhere in Kokiri.</p>
     </div>
+
+    <div class="portal-panel" id="panel-skills">
+      <div data-lineage-page="portals.html" data-lineage-section="skills" data-lineage-label="Skills"></div>
+      <p class="portal-note" style="margin-bottom:1rem;">Skills tracking — the same major section set used elsewhere in Kokiri.</p>
+    </div>
   </main>
 
   <nav class="nav-side">
@@ -533,6 +540,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <a class="nav-link" href="portals.html#msgfunnels">📧 Email/Nurture/ManyChat Funnels</a>
         <a class="nav-link" href="portals.html#journals">📔 Journals</a>
         <a class="nav-link" href="portals.html#claude-tasks">🤖 Claude Code Tasks</a>
+        <a class="nav-link" href="portals.html#skills">🎓 Skills</a>
         <a class="nav-link" href="affiliate-portal.html">🤝 Affiliate Portal</a>
         <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
         <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
@@ -773,10 +781,12 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     'tasks-dashboard': 'tasks', 'ads': 'ads', 'message-funnels': 'msgfunnels', 'landers': 'funnel',
     'impact-map': 'impact', 'job-applications': 'jobs', 'resumereviews-jobs': 'jobs', 'claude-tasks': 'claude-tasks', 'sales-objections': 'sales',
     'sales-best-practices': 'sales', 'budgets': 'budgets',
-    // Journals has no separate "primary" sheet — every one of its own sections logs into its own Change Log.
+    // Journals and Skills have no separate "primary" sheet — every one of their own sections logs into their own Change Log.
     'entries-journals': 'journals', 'learnings-journals': 'journals', 'questionnaires-journals': 'journals',
     'requirements-journals': 'journals', 'content-journals': 'journals', 'adfunnels-journals': 'journals',
     'msgfunnels-journals': 'journals', 'todos-journals': 'journals',
+    'questionnaires-skills': 'skills', 'requirements-skills': 'skills', 'content-skills': 'skills',
+    'adfunnels-skills': 'skills', 'msgfunnels-skills': 'skills', 'todos-skills': 'skills',
   };
 
   async function logChange(gridSlug, description) {
@@ -849,9 +859,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   // Journals isn't backed by one pre-existing sheet like the other 13 tabs — every one of its
   // sections is mounted the same lazy way Pre-Reqs/Change Log are elsewhere. Entries first (as
   // asked), then Learnings, then the same major section set used across the rest of Kokiri.
-  const JOURNALS_SECTIONS = [
-    { kind: 'entries', icon: '📔', label: 'Entries' },
-    { kind: 'learnings', icon: '💡', label: 'Learnings' },
+  const MAJOR_SECTION_SET = [
     { kind: 'questionnaires', icon: '🧾', label: 'Questionnaires' },
     { kind: 'requirements', icon: '✅', label: 'Requirements' },
     { kind: 'content', icon: '🎬', label: 'Content' },
@@ -861,6 +869,11 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { kind: 'changelog', icon: '📜', label: 'Change Log' },
     { kind: 'todos', icon: '✅', label: "To Do's" },
   ];
+  const JOURNALS_SECTIONS = [
+    { kind: 'entries', icon: '📔', label: 'Entries' },
+    { kind: 'learnings', icon: '💡', label: 'Learnings' },
+    ...MAJOR_SECTION_SET,
+  ];
 
   async function mountAllExtraSections() {
     for (const tab of EXTRA_SECTIONS_TABS) {
@@ -869,6 +882,9 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     }
     for (const sec of JOURNALS_SECTIONS) {
       await mountExtraSection('journals', 'panel-journals', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
+    }
+    for (const sec of MAJOR_SECTION_SET) {
+      await mountExtraSection('skills', 'panel-skills', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
     }
     await mountExtraSection('jobs', 'panel-jobs', 'resumereviews', '📝', 'Resume Reviews', [
       { key: 'resume_name', name: 'Resume Name' },
@@ -1074,7 +1090,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1093,6 +1109,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'builder', label: '🧩 Agent Builder', desc: 'Questionnaire → agent team template → website/ad brief.' },
     { key: 'journals', label: '📔 Journals', desc: 'Entries and Learnings, plus the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
     { key: 'claude-tasks', label: '🤖 Claude Code Tasks', desc: 'Non-trivial plans, logged with an inferred approach before execution — Approval gates whether I actually do it.' },
+    { key: 'skills', label: '🎓 Skills', desc: 'Skills tracking, using the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
   ];
   function renderIndex() {
     document.getElementById('index-grid').innerHTML = INDEX_DATA.map(i => `
