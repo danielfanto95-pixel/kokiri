@@ -327,6 +327,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <button class="portal-tab" data-portal="changelog"><span class="dot"></span>📜 Change Log</button>
       <button class="portal-tab" data-portal="reminders"><span class="dot"></span>🔑 Reminders/Shortcuts</button>
       <button class="portal-tab" data-portal="university"><span class="dot"></span>🎓 University Content</button>
+      <button class="portal-tab" data-portal="faqs"><span class="dot"></span>❓ FAQs</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -582,6 +583,17 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <div class="op-grid-wrap" id="grid-university-content"><p class="empty-note">Loading…</p></div>
       <div data-lineage-page="portals.html" data-lineage-section="university" data-lineage-label="University Content"></div>
       <div class="portal-note">Client Portal University framework as a spreadsheet — one row per topic (across What Is It / Core Concepts / How To / Examples / FAQs / Resource Formats) with its Answer, Recommended Content Styles, and Ad Ideas alongside it. Filter/sort by Category or Section like any grid.</div>
+    </div>
+
+    <div class="portal-panel" id="panel-faqs">
+      <div class="portal-stats" id="stats-faqs"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="faqs">+ Add Row</button>
+        <button data-action="add-col" data-slug="faqs">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-faqs"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="faqs" data-lineage-label="FAQs"></div>
+      <div class="portal-note">General FAQs across businesses/operations — Question, Answer, Category, Status. Separate from the Client Portal's client-facing FAQ tab and the University Content spreadsheet's own FAQ rows.</div>
     </div>
   </main>
 
@@ -1296,7 +1308,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts', university: 'University Content' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts', university: 'University Content', faqs: 'FAQs' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1858,6 +1870,15 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     statsBoxes(document.getElementById('stats-university'), 'affiliate', [
       { val: rows.length, label: 'Total Rows' },
       { val: cats.size, label: 'Categories Covered' },
+    ]);
+  });
+
+  mountGrid('faqs', (cols, rows) => {
+    const statusKey = cols.find(c => c.column_key === 'status')?.column_key;
+    const answered = statusKey ? rows.filter(r => /answered|done|published/i.test(r.data?.[statusKey] || '')).length : 0;
+    statsBoxes(document.getElementById('stats-faqs'), 'affiliate', [
+      { val: rows.length, label: 'Total FAQs' },
+      { val: answered, label: 'Answered/Published' },
     ]);
   });
 
