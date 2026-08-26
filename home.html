@@ -92,6 +92,39 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 }
 .task-card button.tlink:hover { border-color: var(--gold); color: var(--gold-bright, var(--gold)); }
 .task-card button.tlink:disabled { opacity: 0.5; cursor: not-allowed; }
+.task-card .tcard-controls { display: flex; gap: 0.4rem; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px dashed var(--border); }
+.task-card .tcard-controls button { background: transparent; border: 1px solid var(--border); color: var(--dim); border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; }
+.task-card .tcard-controls button:hover { color: var(--text); border-color: var(--border-bright); }
+.task-card .tcard-controls button.tdel:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); }
+.task-edit-form { display: flex; flex-direction: column; gap: 0.5rem; }
+.task-edit-form input, .task-edit-form textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.65rem; font-family: inherit; font-size: 0.8rem; }
+.task-edit-form textarea { resize: vertical; min-height: 50px; }
+.task-edit-form .tef-hint { font-size: 0.68rem; color: var(--dim); }
+.task-edit-form .tef-actions { display: flex; gap: 0.5rem; margin-top: 0.1rem; }
+.task-edit-form .tef-actions button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.4rem 0.8rem; font-weight: 700; font-size: 0.75rem; cursor: pointer; }
+.task-edit-form .tef-actions button.tef-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.add-task-card { border: 1px dashed var(--border-bright); border-radius: 12px; padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 0.6rem; justify-content: center; }
+.add-task-card > button#btn-show-add-task { background: transparent; border: none; color: var(--leaf); font-family: var(--heading); font-weight: 700; font-size: 0.9rem; cursor: pointer; }
+.add-task-card > button#btn-show-add-task:hover { color: var(--leaf-bright); }
+
+.sing-item-home .sdel { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 0.78rem; padding: 0 0.2rem; }
+.sing-item-home .sdel:hover { color: var(--danger); }
+
+.ql-chip .ql-label-edit { background: var(--surface2); border: 1px solid var(--border-bright); color: var(--text); border-radius: 4px; padding: 0.1rem 0.4rem; font-size: 0.82rem; font-family: inherit; width: 110px; }
+.ql-chip a { cursor: text; }
+
+.cct-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
+.cct-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; }
+.cct-card h2 a { font-family: var(--mono); font-size: 0.72rem; color: var(--leaf); text-decoration: none; font-weight: 400; }
+.cct-card .sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
+.cct-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-bottom: 1rem; }
+.cct-stats-row .bstat { background: var(--surface2); border-radius: 8px; padding: 0.7rem; text-align: center; }
+.cct-stats-row .bstat .num { font-family: var(--heading); font-size: 1.1rem; font-weight: 800; color: var(--leaf-bright); }
+.cct-stats-row .bstat .label { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); text-transform: uppercase; margin-top: 0.15rem; }
+.cct-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.7rem; background: var(--surface2); border-radius: 6px; margin-bottom: 0.4rem; }
+.cct-row .cct-title { flex: 1; font-size: 0.85rem; color: var(--text); font-weight: 600; }
+.cct-row .cct-badge { font-family: var(--mono); font-size: 0.6rem; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 100px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.cct-row select { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.4rem; font-size: 0.72rem; font-family: var(--mono); }
 
 .dispatch-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
 .dispatch-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
@@ -327,32 +360,8 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
       <div class="main-tasks">
         <h2>Agents — Main Tasks</h2>
-        <div class="task-grid">
-          <div class="task-card">
-            <div class="tnum">01</div>
-            <div class="ttitle">Apply to Jobs</div>
-            <div class="tdesc">The full pipeline — Personal Training, Operations, Sales/Marketing, plus side income.</div>
-            <div class="tlinks"><a class="tlink" href="portals.html#jobs">Open Jobs →</a></div>
-          </div>
-          <div class="task-card">
-            <div class="tnum">02</div>
-            <div class="ttitle">Scripts + AI VidGen</div>
-            <div class="tdesc">Content scripts and ad creative — draft, version, and track AI-generated cuts.</div>
-            <div class="tlinks">
-              <a class="tlink" href="portals.html#content">Content →</a>
-              <a class="tlink" href="portals.html#ads">Ads →</a>
-            </div>
-          </div>
-          <div class="task-card">
-            <div class="tnum">03</div>
-            <div class="ttitle">Convo Simulations</div>
-            <div class="tdesc">Rehearse sales/discovery conversations before they happen for real.</div>
-            <div class="tlinks"><a class="tlink" href="app.html#simulations">Open Simulations →</a></div>
-          </div>
-          <div class="task-card">
-            <div class="ttitle-row" style="display:flex;justify-content:space-between;align-items:baseline;">
-              <div class="tnum">04</div>
-            </div>
+        <div class="task-grid" id="main-tasks-grid">
+          <div class="task-card" id="task-card-story-sessions">
             <div class="ttitle">Story &amp; Sessions</div>
             <div class="tdesc">Fill out Story, and quick-start a new Session by type.</div>
             <div class="tlinks">
@@ -362,8 +371,29 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
               <button class="tlink" id="qs-simulations" type="button">+ Simulation Session</button>
               <button class="tlink" id="qs-situations" type="button">+ Situations Session</button>
             </div>
+            <div class="tcard-controls"><span style="font-size:0.65rem;color:var(--dim);font-family:var(--mono);">fixed — quick-start buttons run real actions</span></div>
+          </div>
+          <div class="task-card add-task-card" id="add-task-card">
+            <button id="btn-show-add-task" type="button">+ Add a Task Card</button>
+            <div class="task-edit-form" id="add-task-form" style="display:none;">
+              <input type="text" id="new-task-title" placeholder="Title">
+              <textarea id="new-task-desc" placeholder="Description"></textarea>
+              <input type="text" id="new-task-links" placeholder="Label|URL, Label2|URL2">
+              <span class="tef-hint">Links: Label|URL, comma-separated. Leave blank for none.</span>
+              <div class="tef-actions">
+                <button id="btn-save-new-task" type="button">Add Card</button>
+                <button class="tef-cancel" id="btn-cancel-new-task" type="button">Cancel</button>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div class="cct-card">
+        <h2>🤖 Claude Code Tasks <a href="portals.html#claude-tasks">Open in Portals →</a></h2>
+        <div class="sub">Plans I've proposed — flip Approval to Approved right here to greenlight one.</div>
+        <div class="cct-stats-row" id="cct-stats"><p class="empty" style="grid-column:1/-1;padding:0.5rem;">Loading…</p></div>
+        <div id="cct-list"><p class="empty" style="padding:0.5rem;">Loading…</p></div>
       </div>
 
       <div class="dispatch-card">
@@ -864,7 +894,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     if (!quickLinks.length) { el.innerHTML = '<p class="empty" style="padding:0.6rem;">No links yet — add one below.</p>'; return; }
     el.innerHTML = quickLinks.map(l => `
       <span class="ql-chip" data-id="${l.id}">
-        <a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>
+        <a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" title="Double-click to rename">${escapeHtml(l.label)}</a>
         <span class="ql-del">✕</span>
       </span>
     `).join('');
@@ -874,6 +904,30 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
         await supabase.from('kokiri_quick_links').delete().eq('id', id);
         quickLinks = quickLinks.filter(l => l.id !== id);
         renderQuickLinks();
+      });
+    });
+    el.querySelectorAll('.ql-chip a').forEach(a => {
+      a.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        const chip = a.closest('.ql-chip');
+        const id = chip.dataset.id;
+        const link = quickLinks.find(l => l.id === id);
+        const input = document.createElement('input');
+        input.className = 'ql-label-edit';
+        input.value = link.label;
+        chip.replaceChild(input, a);
+        input.focus();
+        input.select();
+        const commit = async () => {
+          const newLabel = input.value.trim() || link.label;
+          if (newLabel !== link.label) {
+            await supabase.from('kokiri_quick_links').update({ label: newLabel }).eq('id', id);
+            link.label = newLabel;
+          }
+          renderQuickLinks();
+        };
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') input.blur(); if (ev.key === 'Escape') { input.value = link.label; input.blur(); } });
       });
     });
   }
@@ -908,6 +962,133 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     if (error) { alert('⚠ ' + error.message); btn.disabled = false; return; }
     window.location.href = 'app.html#sessions';
   }
+  // ---------- Main Tasks — editable cards ----------
+  let mainTasks = [];
+  function parseLinksInput(str) {
+    return str.split(',').map(s => s.trim()).filter(Boolean).map(pair => {
+      const [label, href] = pair.split('|').map(x => x.trim());
+      return { label: label || href, href: href || '#' };
+    });
+  }
+  function linksToInput(links) { return (links || []).map(l => `${l.label}|${l.href}`).join(', '); }
+
+  async function loadMainTasks() {
+    const { data } = await supabase.from('kokiri_main_tasks').select('*').order('sort_order').order('created_at');
+    mainTasks = data || [];
+    renderMainTasks();
+  }
+
+  function renderMainTasks() {
+    document.querySelectorAll('.task-card[data-main-task]').forEach(el => el.remove());
+    const fixedCard = document.getElementById('task-card-story-sessions');
+    const html = mainTasks.map(t => `
+      <div class="task-card" data-main-task="${t.id}">
+        <div class="ttitle" data-view="title">${escapeHtml(t.title)}</div>
+        <div class="tdesc" data-view="desc">${escapeHtml(t.description || '')}</div>
+        <div class="tlinks" data-view="links">${(t.links || []).map(l => `<a class="tlink" href="${escapeHtml(l.href)}">${escapeHtml(l.label)}</a>`).join('')}</div>
+        <div class="tcard-controls" data-view="controls">
+          <button class="tedit" data-id="${t.id}">✎ Edit</button>
+          <button class="tdel" data-id="${t.id}">✕ Remove</button>
+        </div>
+        <div class="task-edit-form" data-edit="${t.id}" style="display:none;">
+          <input type="text" class="tef-title" value="${escapeHtml(t.title)}" placeholder="Title">
+          <textarea class="tef-desc" placeholder="Description">${escapeHtml(t.description || '')}</textarea>
+          <input type="text" class="tef-links" value="${escapeHtml(linksToInput(t.links))}" placeholder="Label|URL, Label2|URL2">
+          <span class="tef-hint">Links: Label|URL, comma-separated.</span>
+          <div class="tef-actions">
+            <button class="tef-save" data-id="${t.id}">Save</button>
+            <button class="tef-cancel" data-id="${t.id}">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    fixedCard.insertAdjacentHTML('beforebegin', html);
+
+    document.querySelectorAll('.task-card[data-main-task] .tedit').forEach(btn => btn.addEventListener('click', () => {
+      const card = btn.closest('.task-card');
+      card.querySelectorAll('[data-view]').forEach(v => v.style.display = 'none');
+      card.querySelector(`[data-edit="${btn.dataset.id}"]`).style.display = 'flex';
+    }));
+    document.querySelectorAll('.task-card[data-main-task] .tef-cancel').forEach(btn => btn.addEventListener('click', () => {
+      const card = btn.closest('.task-card');
+      card.querySelectorAll('[data-view]').forEach(v => v.style.display = '');
+      card.querySelector(`[data-edit="${btn.dataset.id}"]`).style.display = 'none';
+    }));
+    document.querySelectorAll('.task-card[data-main-task] .tdel').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Remove this task card?')) return;
+      await supabase.from('kokiri_main_tasks').delete().eq('id', btn.dataset.id);
+      await loadMainTasks();
+    }));
+    document.querySelectorAll('.task-card[data-main-task] .tef-save').forEach(btn => btn.addEventListener('click', async () => {
+      const card = btn.closest('.task-card');
+      const title = card.querySelector('.tef-title').value.trim();
+      const description = card.querySelector('.tef-desc').value.trim();
+      const links = parseLinksInput(card.querySelector('.tef-links').value);
+      if (!title) { alert('Title is required.'); return; }
+      await supabase.from('kokiri_main_tasks').update({ title, description, links }).eq('id', btn.dataset.id);
+      await loadMainTasks();
+    }));
+  }
+
+  document.getElementById('btn-show-add-task').addEventListener('click', () => {
+    document.getElementById('btn-show-add-task').style.display = 'none';
+    document.getElementById('add-task-form').style.display = 'flex';
+  });
+  document.getElementById('btn-cancel-new-task').addEventListener('click', () => {
+    document.getElementById('btn-show-add-task').style.display = '';
+    document.getElementById('add-task-form').style.display = 'none';
+  });
+  document.getElementById('btn-save-new-task').addEventListener('click', async () => {
+    const title = document.getElementById('new-task-title').value.trim();
+    const description = document.getElementById('new-task-desc').value.trim();
+    const links = parseLinksInput(document.getElementById('new-task-links').value);
+    if (!title) { alert('Title is required.'); return; }
+    const maxOrder = mainTasks.reduce((m, t) => Math.max(m, t.sort_order || 0), 0);
+    await supabase.from('kokiri_main_tasks').insert({ title, description, links, sort_order: maxOrder + 1 });
+    document.getElementById('new-task-title').value = '';
+    document.getElementById('new-task-desc').value = '';
+    document.getElementById('new-task-links').value = '';
+    document.getElementById('btn-show-add-task').style.display = '';
+    document.getElementById('add-task-form').style.display = 'none';
+    await loadMainTasks();
+  });
+
+  // ---------- Claude Code Tasks (home widget) ----------
+  async function loadClaudeTasksHome() {
+    const statsEl = document.getElementById('cct-stats');
+    const listEl = document.getElementById('cct-list');
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'claude-tasks').maybeSingle();
+    if (!sheet) { statsEl.innerHTML = ''; listEl.innerHTML = '<p class="empty" style="padding:0.5rem;">claude-tasks sheet not found.</p>'; return; }
+    const { data: rows } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
+    const active = (rows || []).filter(r => r.data?.type !== 'Life Objective');
+    const pending = active.filter(r => /pending/i.test(r.data?.approval || '') || !r.data?.approval).length;
+    const approved = active.filter(r => /^approved$/i.test((r.data?.approval || '').trim())).length;
+    statsEl.innerHTML = [
+      { val: active.length, label: 'Total Plans' },
+      { val: pending, label: 'Pending' },
+      { val: approved, label: 'Approved' },
+    ].map(b => `<div class="bstat"><div class="num">${b.val}</div><div class="label">${b.label}</div></div>`).join('');
+
+    if (!active.length) { listEl.innerHTML = '<p class="empty" style="padding:0.5rem;">No tasks yet.</p>'; return; }
+    listEl.innerHTML = active.slice(0, 8).map(r => {
+      const d = r.data || {};
+      return `
+        <div class="cct-row" data-id="${r.id}">
+          <span class="cct-title">${escapeHtml(d.title || '(untitled)')}</span>
+          ${d.status ? `<span class="cct-badge">${escapeHtml(d.status)}</span>` : ''}
+          <select class="cct-approval" data-id="${r.id}">
+            ${['Pending', 'Approved', 'Rejected', 'Needs Changes'].map(o => `<option ${o === (d.approval || 'Pending') ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+        </div>
+      `;
+    }).join('');
+    listEl.querySelectorAll('.cct-approval').forEach(sel => sel.addEventListener('change', async () => {
+      const row = active.find(r => r.id === sel.dataset.id);
+      if (!row) return;
+      await supabase.from('kokiri_rows').update({ data: { ...row.data, approval: sel.value }, updated_at: new Date().toISOString() }).eq('id', row.id);
+    }));
+  }
+
   document.getElementById('qs-events').addEventListener('click', (e) => quickAddSession('Description of Events', e.target));
   document.getElementById('qs-affirmations').addEventListener('click', (e) => quickAddSession('Affirmations', e.target));
   document.getElementById('qs-simulations').addEventListener('click', (e) => quickAddSession('Simulations', e.target));
@@ -1137,14 +1318,19 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   // ---------- Singularities — Real ----------
   async function loadSingularitiesHome() {
     const el = document.getElementById('sing-list-home');
-    const { data } = await supabase.from('kokiri_singularities').select('name, status').order('sort_order').order('created_at');
+    const { data } = await supabase.from('kokiri_singularities').select('id, name, status').order('sort_order').order('created_at');
     if (!data || !data.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No singularities yet — add one below.</p>'; return; }
     el.innerHTML = data.map(s => `
-      <div class="sing-item-home">
+      <div class="sing-item-home" data-id="${s.id}">
         <span class="sname">${escapeHtml(s.name)}</span>
         <span class="sstatus ${s.status}">${s.status}</span>
+        <button class="sdel" data-id="${s.id}" title="Remove">✕</button>
       </div>
     `).join('');
+    el.querySelectorAll('.sdel').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_singularities').delete().eq('id', btn.dataset.id);
+      await loadSingularitiesHome();
+    }));
   }
 
   document.getElementById('btn-add-sing').addEventListener('click', async () => {
@@ -1168,7 +1354,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
   const { agents } = await loadNav();
   initDispatch(agents);
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives(), loadSagaContext(), loadHotlistOptions().then(loadHotlist)]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives(), loadSagaContext(), loadHotlistOptions().then(loadHotlist), loadMainTasks(), loadClaudeTasksHome()]);
   initLineageBadges();
   meetingsSheetId = await getMeetingsSheetId();
 
