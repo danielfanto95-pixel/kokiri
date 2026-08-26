@@ -215,6 +215,16 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   border-radius: 10px; font-size: 0.78rem; color: var(--muted); line-height: 1.6;
 }
 
+.feed-list { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: 480px; overflow-y: auto; }
+.feed-row {
+  display: grid; grid-template-columns: minmax(110px, auto) minmax(120px, auto) 1fr;
+  gap: 0.9rem; align-items: baseline; padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.feed-row:last-child { border-bottom: none; }
+.feed-tab { font-family: var(--mono); font-size: 0.68rem; color: var(--leaf-bright); background: var(--surface2); border: 1px solid var(--border-bright); border-radius: 100px; padding: 0.12rem 0.55rem; white-space: nowrap; justify-self: start; }
+.feed-time { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); white-space: nowrap; }
+.feed-change { font-size: 0.82rem; color: var(--text); min-width: 0; }
+
 .nav-side {
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
   padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
@@ -297,6 +307,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="journals"><span class="dot"></span>📔 Journals</button>
       <button class="portal-tab" data-portal="skills"><span class="dot"></span>🎓 Skills</button>
       <button class="portal-tab" data-portal="poetry"><span class="dot"></span>🎭 Poetry &amp; Songs</button>
+      <button class="portal-tab" data-portal="changelog"><span class="dot"></span>📜 Change Log</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -521,6 +532,20 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     <div class="portal-panel" id="panel-poetry">
       <div data-lineage-page="portals.html" data-lineage-section="poetry" data-lineage-label="Poetry &amp; Songs"></div>
       <p class="portal-note" style="margin-bottom:1rem;">Poetry and Songs, kept separate — each piece gets its own row with the full text, not just notes.</p>
+    </div>
+
+    <div class="portal-panel" id="panel-changelog">
+      <div data-lineage-page="portals.html" data-lineage-section="changelog" data-lineage-label="Change Log"></div>
+      <p class="portal-note" style="margin-bottom:1rem;">Build &amp; feature changes — things shipped in a Claude Code session (new pages, schema changes, deploys), logged manually since they don't happen through an editable grid.</p>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="global-changelog">+ Add Row</button>
+        <button data-action="add-col" data-slug="global-changelog">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-global-changelog"><p class="empty-note">Loading…</p></div>
+
+      <h3 style="font-family:var(--heading);font-size:1rem;margin:1.6rem 0 0.8rem;color:var(--leaf-bright);">📋 Every Data Edit, All Portals</h3>
+      <p class="portal-note" style="margin-bottom:1rem;">Live rollup of every portal's own Change Log section — every grid edit, anywhere in Kokiri, in one feed.</p>
+      <div id="global-changelog-feed"><p class="empty-note">Loading…</p></div>
     </div>
   </main>
 
@@ -812,6 +837,31 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
       await supabase.from('kokiri_rows').insert({ sheet_id: sheetId, sort_order: nextOrder, data: { timestamp: new Date().toLocaleString(), change: description } });
     } catch { /* best-effort — never block the actual edit on logging */ }
+  }
+
+  async function loadGlobalChangeFeed() {
+    const feedEl = document.getElementById('global-changelog-feed');
+    if (!feedEl) return;
+    const { data: sheets } = await supabase.from('kokiri_sheets').select('id, slug, name').like('slug', 'changelog-%');
+    if (!sheets?.length) { feedEl.innerHTML = '<p class="empty-note">No portal edits logged yet.</p>'; return; }
+    const sheetById = Object.fromEntries(sheets.map(s => [s.id, s]));
+    const { data: rows } = await supabase.from('kokiri_rows')
+      .select('id, sheet_id, data, created_at')
+      .in('sheet_id', sheets.map(s => s.id))
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (!rows?.length) { feedEl.innerHTML = '<p class="empty-note">No portal edits logged yet.</p>'; return; }
+    feedEl.innerHTML = `<div class="feed-list">${rows.map(r => {
+      const tabKey = sheetById[r.sheet_id]?.slug.replace(/^changelog-/, '') || '?';
+      const label = TAB_LABELS[tabKey] || tabKey;
+      return `
+        <div class="feed-row">
+          <span class="feed-tab">${escapeHtml(label)}</span>
+          <span class="feed-time">${escapeHtml(r.data?.timestamp || (r.created_at ? new Date(r.created_at).toLocaleString() : ''))}</span>
+          <span class="feed-change">${escapeHtml(r.data?.change || '')}</span>
+        </div>
+      `;
+    }).join('')}</div>`;
   }
 
   const EXTRA_SECTIONS_TABS = [
@@ -1110,7 +1160,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', poetry: 'Poetry & Songs' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', poetry: 'Poetry & Songs', changelog: 'Change Log' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1660,6 +1710,9 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
       `;
     }).join('') || '<p class="empty-note">No budget categories yet — add a row below.</p>';
   });
+
+  mountGrid('global-changelog', null);
+  loadGlobalChangeFeed();
 
   initResumeUpload();
   loadResumes();
