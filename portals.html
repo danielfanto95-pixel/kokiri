@@ -58,6 +58,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
 .portal-tab[data-portal="journals"] .dot { background: #c5e686; }
 .portal-tab[data-portal="claude-tasks"] .dot { background: #e68686; }
 .portal-tab[data-portal="skills"] .dot { background: #86e6e2; }
+.portal-tab[data-portal="poetry"] .dot { background: #c586e6; }
 .portal-tab[data-portal="builder"] .dot { background: #e6a868; }
 
 .budget-track { height: 8px; border-radius: 100px; background: var(--surface2); overflow: hidden; margin-top: 0.4rem; }
@@ -295,6 +296,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <button class="portal-tab" data-portal="builder"><span class="dot"></span>🧩 Agent Builder</button>
       <button class="portal-tab" data-portal="journals"><span class="dot"></span>📔 Journals</button>
       <button class="portal-tab" data-portal="skills"><span class="dot"></span>🎓 Skills</button>
+      <button class="portal-tab" data-portal="poetry"><span class="dot"></span>🎭 Poetry &amp; Songs</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -515,6 +517,11 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
       <div data-lineage-page="portals.html" data-lineage-section="skills" data-lineage-label="Skills"></div>
       <p class="portal-note" style="margin-bottom:1rem;">Skills tracking — the same major section set used elsewhere in Kokiri.</p>
     </div>
+
+    <div class="portal-panel" id="panel-poetry">
+      <div data-lineage-page="portals.html" data-lineage-section="poetry" data-lineage-label="Poetry &amp; Songs"></div>
+      <p class="portal-note" style="margin-bottom:1rem;">Poetry and Songs, kept separate — each piece gets its own row with the full text, not just notes.</p>
+    </div>
   </main>
 
   <nav class="nav-side">
@@ -541,6 +548,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
         <a class="nav-link" href="portals.html#journals">📔 Journals</a>
         <a class="nav-link" href="portals.html#claude-tasks">🤖 Claude Code Tasks</a>
         <a class="nav-link" href="portals.html#skills">🎓 Skills</a>
+        <a class="nav-link" href="portals.html#poetry">🎭 Poetry &amp; Songs</a>
         <a class="nav-link" href="affiliate-portal.html">🤝 Affiliate Portal</a>
         <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
         <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
@@ -787,6 +795,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     'msgfunnels-journals': 'journals', 'todos-journals': 'journals',
     'questionnaires-skills': 'skills', 'requirements-skills': 'skills', 'content-skills': 'skills',
     'adfunnels-skills': 'skills', 'msgfunnels-skills': 'skills', 'todos-skills': 'skills',
+    'poems-poetry': 'poetry', 'songs-poetry': 'poetry',
   };
 
   async function logChange(gridSlug, description) {
@@ -886,6 +895,17 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     for (const sec of MAJOR_SECTION_SET) {
       await mountExtraSection('skills', 'panel-skills', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
     }
+    const PIECE_COLS = [
+      { key: 'title', name: 'Title' },
+      { key: 'content', name: 'Content' },
+      { key: 'date', name: 'Date' },
+      { key: 'status', name: 'Status' },
+      { key: 'notes', name: 'Notes' },
+    ];
+    await mountExtraSection('poetry', 'panel-poetry', 'poems', '🖋️', 'Poetry', PIECE_COLS);
+    await mountExtraSection('poetry', 'panel-poetry', 'songs', '🎵', 'Songs', PIECE_COLS);
+    await mountExtraSection('poetry', 'panel-poetry', 'prereqs', '📋', 'Pre-Reqs', NOTES_COL);
+    await mountExtraSection('poetry', 'panel-poetry', 'changelog', '📜', 'Change Log', CHANGELOG_COLS);
     await mountExtraSection('jobs', 'panel-jobs', 'resumereviews', '📝', 'Resume Reviews', [
       { key: 'resume_name', name: 'Resume Name' },
       { key: 'changes', name: 'Suggested Changes' },
@@ -1090,7 +1110,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', poetry: 'Poetry & Songs' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1110,6 +1130,7 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     { key: 'journals', label: '📔 Journals', desc: 'Entries and Learnings, plus the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
     { key: 'claude-tasks', label: '🤖 Claude Code Tasks', desc: 'Non-trivial plans, logged with an inferred approach before execution — Approval gates whether I actually do it.' },
     { key: 'skills', label: '🎓 Skills', desc: 'Skills tracking, using the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
+    { key: 'poetry', label: '🎭 Poetry & Songs', desc: 'Original poetry and songs — each piece as its own row with the full text, plus Pre-Reqs and Change Log.' },
   ];
   function renderIndex() {
     document.getElementById('index-grid').innerHTML = INDEX_DATA.map(i => `
