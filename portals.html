@@ -582,7 +582,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       </div>
       <div class="op-grid-wrap" id="grid-university-content"><p class="empty-note">Loading…</p></div>
       <div data-lineage-page="portals.html" data-lineage-section="university" data-lineage-label="University Content"></div>
-      <div class="portal-note">Client Portal University framework as a spreadsheet — one row per topic (across What Is It / Core Concepts / How To / Examples / FAQs / Resource Formats) with its Answer, Recommended Content Styles, and Ad Ideas alongside it. Filter/sort by Category or Section like any grid.</div>
+      <div class="portal-note">Client Portal University framework as a spreadsheet — one row per topic, with category/section names appearing as their own divider rows in the Topic column. Each real topic row carries Answer, Ad Version, Content Version, Ebook/Quiz/Video Course ideas, that category's full Macro Category Resources list, and an Answer ID (category number + sequential letter, e.g. 1A, 1B…).</div>
     </div>
 
     <div class="portal-panel" id="panel-faqs">
@@ -1865,11 +1865,8 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
   mountExtraSection('reminders', 'panel-reminders', 'notes', '📝', 'My Reminders', NOTES_COL);
 
   mountGrid('university-content', (cols, rows) => {
-    const catKey = cols.find(c => c.column_key === 'category')?.column_key;
-    const cats = catKey ? new Set(rows.map(r => r.data?.[catKey]).filter(Boolean)) : new Set();
     statsBoxes(document.getElementById('stats-university'), 'affiliate', [
       { val: rows.length, label: 'Total Rows' },
-      { val: cats.size, label: 'Categories Covered' },
     ]);
   });
 
