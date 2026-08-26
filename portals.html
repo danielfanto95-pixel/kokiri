@@ -208,6 +208,16 @@ td { background: var(--surface); color: var(--text); min-width: 140px; }
 td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
 .row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 26px; }
 .row-del:hover { color: #f87171; }
+.row-handle { color: var(--dim); cursor: grab; text-align: center; width: 20px; min-width: 20px; padding: 0.55rem 0.3rem; font-size: 0.75rem; }
+.row-handle:active { cursor: grabbing; }
+.row-toggle { color: var(--dim); cursor: pointer; text-align: center; width: 20px; min-width: 20px; padding: 0.55rem 0.3rem; font-size: 0.7rem; }
+.row-toggle:hover { color: var(--leaf-bright); }
+tr[draggable="true"] { transition: opacity 0.1s; }
+th.grid-th { cursor: grab; }
+th.grid-th:active { cursor: grabbing; }
+th.col-collapsed { width: 28px; min-width: 28px; max-width: 28px; text-align: center; color: var(--dim); cursor: pointer; }
+td.col-collapsed { width: 28px; min-width: 28px; max-width: 28px; background: var(--surface2); }
+tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
 .empty-note { color: var(--muted); font-size: 0.85rem; padding: 1.5rem; text-align: center; }
 
 .portal-note {
@@ -966,6 +976,14 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
   }
 
   // ---------- Generic editable-grid mount (same pattern as Operations Dashboard) ----------
+  function gridPrefKey(slug, kind) { return `kokiri_grid_${kind}_${slug}`; }
+  function getGridPrefSet(slug, kind) {
+    try { return new Set(JSON.parse(localStorage.getItem(gridPrefKey(slug, kind)) || '[]')); } catch { return new Set(); }
+  }
+  function setGridPrefSet(slug, kind, set) {
+    localStorage.setItem(gridPrefKey(slug, kind), JSON.stringify([...set]));
+  }
+
   async function mountGrid(slug, computeStats, deployConfig) {
     const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
     const wrap = document.getElementById('grid-' + slug);
@@ -986,20 +1004,93 @@ td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offse
     async function renderGrid() {
       if (!columns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>'; return; }
       const checklistCounts = deployConfig?.checklist ? await getChecklistCounts(supabase, rows.map(r => r.id)) : {};
-      let html = '<table><thead><tr><th class="row-del">×</th>';
-      for (const c of columns) html += `<th>${escapeHtml(c.name)}</th>`;
+      const collapsedCols = getGridPrefSet(slug, 'cols');
+      const collapsedRows = getGridPrefSet(slug, 'rows');
+      let html = '<table><thead><tr><th class="row-handle"></th><th class="row-del">×</th><th class="row-toggle"></th>';
+      columns.forEach(c => {
+        const isCollapsed = collapsedCols.has(c.column_key);
+        html += `<th class="grid-th${isCollapsed ? ' col-collapsed' : ''}" draggable="true" data-col-key="${c.column_key}" title="Drag to reorder columns · Click to ${isCollapsed ? 'expand' : 'collapse'}">${isCollapsed ? '⋯' : escapeHtml(c.name)}</th>`;
+      });
       if (deployConfig?.kind) html += '<th>Deploy</th>';
       if (deployConfig?.checklist) html += '<th>Checklist</th>';
       html += '</tr></thead><tbody>';
       for (const r of rows) {
-        html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
-        for (const c of columns) html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+        const rowCollapsed = collapsedRows.has(r.id);
+        html += `<tr data-row-id="${r.id}" draggable="true" class="${rowCollapsed ? 'row-collapsed' : ''}">`;
+        html += `<td class="row-handle" title="Drag to reorder">⠿</td>`;
+        html += `<td class="row-del" data-action="del-row">×</td>`;
+        html += `<td class="row-toggle" data-action="toggle-row" title="${rowCollapsed ? 'Expand' : 'Collapse'} row">${rowCollapsed ? '▸' : '▾'}</td>`;
+        columns.forEach((c, i) => {
+          const colCollapsed = collapsedCols.has(c.column_key);
+          const raw = r.data?.[c.column_key] ?? '';
+          const showEmpty = rowCollapsed ? i !== 0 : colCollapsed;
+          const editable = !rowCollapsed && !colCollapsed;
+          html += `<td ${editable ? 'contenteditable="true"' : ''} data-col-key="${c.column_key}" class="${colCollapsed ? 'col-collapsed' : ''}">${showEmpty ? '' : escapeHtml(raw)}</td>`;
+        });
         if (deployConfig?.kind) html += `<td style="min-width:110px;"><button class="deploy-btn" data-row-id="${r.id}" style="background:var(--leaf);color:#0c120d;border:none;border-radius:6px;padding:0.3rem 0.7rem;font-family:var(--heading);font-weight:700;font-size:0.72rem;cursor:pointer;">🚀 Deploy</button><div class="deploy-status" data-row-id="${r.id}" style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);margin-top:0.3rem;word-break:break-word;"></div></td>`;
         if (deployConfig?.checklist) html += `<td><button class="kc-open-btn" data-row-id="${r.id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--leaf-bright);border-radius:6px;padding:0.3rem 0.6rem;font-family:var(--mono);font-size:0.7rem;cursor:pointer;white-space:nowrap;">${checklistBadgeHtml(checklistCounts, r.id)}</button></td>`;
         html += '</tr>';
       }
       html += '</tbody></table>';
       wrap.innerHTML = html;
+
+      // ---- Column drag-to-reorder + collapse ----
+      let dragColKey = null;
+      wrap.querySelectorAll('th[data-col-key]').forEach(th => {
+        th.addEventListener('dragstart', (e) => { dragColKey = th.dataset.colKey; e.dataTransfer.effectAllowed = 'move'; });
+        th.addEventListener('dragover', (e) => e.preventDefault());
+        th.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const targetKey = th.dataset.colKey;
+          if (!dragColKey || dragColKey === targetKey) return;
+          const fromIdx = columns.findIndex(c => c.column_key === dragColKey);
+          const toIdx = columns.findIndex(c => c.column_key === targetKey);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const [moved] = columns.splice(fromIdx, 1);
+          columns.splice(toIdx, 0, moved);
+          renderGrid();
+          await Promise.all(columns.map((c, i) => supabase.from('kokiri_columns').update({ sort_order: i + 1 }).eq('id', c.id)));
+          logChange(slug, 'Reordered columns');
+        });
+        th.addEventListener('click', () => {
+          const set = getGridPrefSet(slug, 'cols');
+          if (set.has(th.dataset.colKey)) set.delete(th.dataset.colKey); else set.add(th.dataset.colKey);
+          setGridPrefSet(slug, 'cols', set);
+          renderGrid();
+        });
+      });
+
+      // ---- Row drag-to-reorder + collapse ----
+      let dragRowId = null;
+      wrap.querySelectorAll('tr[draggable="true"]').forEach(tr => {
+        tr.addEventListener('dragstart', (e) => {
+          if (e.target.closest('[contenteditable="true"]')) { e.preventDefault(); return; }
+          dragRowId = tr.dataset.rowId; e.dataTransfer.effectAllowed = 'move';
+        });
+        tr.addEventListener('dragover', (e) => e.preventDefault());
+        tr.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const targetId = tr.dataset.rowId;
+          if (!dragRowId || dragRowId === targetId) return;
+          const fromIdx = rows.findIndex(r => r.id === dragRowId);
+          const toIdx = rows.findIndex(r => r.id === targetId);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const [moved] = rows.splice(fromIdx, 1);
+          rows.splice(toIdx, 0, moved);
+          renderGrid();
+          await Promise.all(rows.map((r, i) => supabase.from('kokiri_rows').update({ sort_order: i + 1 }).eq('id', r.id)));
+          logChange(slug, 'Reordered rows');
+        });
+      });
+      wrap.querySelectorAll('[data-action="toggle-row"]').forEach(td => {
+        td.addEventListener('click', () => {
+          const rowId = td.closest('tr').dataset.rowId;
+          const set = getGridPrefSet(slug, 'rows');
+          if (set.has(rowId)) set.delete(rowId); else set.add(rowId);
+          setGridPrefSet(slug, 'rows', set);
+          renderGrid();
+        });
+      });
       if (deployConfig?.kind) {
         wrap.querySelectorAll('.deploy-btn').forEach(btn => btn.addEventListener('click', async () => {
           const rowId = btn.dataset.rowId;
