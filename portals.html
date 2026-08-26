@@ -235,6 +235,13 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
 .feed-time { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); white-space: nowrap; }
 .feed-change { font-size: 0.82rem; color: var(--text); min-width: 0; }
 
+.reminders-grid { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.6rem; }
+.reminder-row { display: flex; align-items: baseline; gap: 0.9rem; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+.reminder-row:last-child { border-bottom: none; }
+.reminder-row .rwhat { font-size: 0.84rem; color: var(--text); flex: 1; min-width: 0; }
+.reminder-row .rhow { font-size: 0.78rem; color: var(--muted); text-align: right; }
+.reminder-row .rkbd { font-family: var(--mono); font-size: 0.72rem; color: var(--leaf-bright); background: var(--surface2); border: 1px solid var(--border-bright); border-radius: 5px; padding: 0.1rem 0.45rem; }
+
 .nav-side {
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
   padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
@@ -318,6 +325,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <button class="portal-tab" data-portal="skills"><span class="dot"></span>🎓 Skills</button>
       <button class="portal-tab" data-portal="poetry"><span class="dot"></span>🎭 Poetry &amp; Songs</button>
       <button class="portal-tab" data-portal="changelog"><span class="dot"></span>📜 Change Log</button>
+      <button class="portal-tab" data-portal="reminders"><span class="dot"></span>🔑 Reminders/Shortcuts</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -556,6 +564,12 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <h3 style="font-family:var(--heading);font-size:1rem;margin:1.6rem 0 0.8rem;color:var(--leaf-bright);">📋 Every Data Edit, All Portals</h3>
       <p class="portal-note" style="margin-bottom:1rem;">Live rollup of every portal's own Change Log section — every grid edit, anywhere in Kokiri, in one feed.</p>
       <div id="global-changelog-feed"><p class="empty-note">Loading…</p></div>
+    </div>
+
+    <div class="portal-panel" id="panel-reminders">
+      <div data-lineage-page="portals.html" data-lineage-section="reminders" data-lineage-label="Reminders/Shortcuts"></div>
+      <p class="portal-note" style="margin-bottom:1rem;">Quick-reference shortcuts for navigating Kokiri, plus a place for your own reminders.</p>
+      <div id="reminders-builtin" class="reminders-grid"></div>
     </div>
   </main>
 
@@ -872,6 +886,25 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
         </div>
       `;
     }).join('')}</div>`;
+  }
+
+  const BUILTIN_REMINDERS = [
+    { what: 'Jump straight to a sheet tab in Kokiri OS', how: 'app.html#&lt;slug&gt; e.g. app.html#daniel' },
+    { what: 'Jump straight to a Portals tab', how: 'portals.html#&lt;tab&gt; e.g. portals.html#budgets' },
+    { what: 'Open one agent directly', how: 'agents.html#&lt;id&gt;' },
+    { what: 'Open one custom dashboard directly', how: 'dashboards.html#&lt;id&gt;' },
+    { what: 'Pre-fill the Connect MCP form with a known preset', how: 'agents.html?open=mcp&amp;preset=Buffer' },
+    { what: 'Add a new column to any sheet — no backend deploy, ever', how: 'just click + Add Column' },
+    { what: 'Reorder rows or columns in any grid', how: 'drag the ⠿ handle (row) or a column header' },
+    { what: 'Collapse a row or column to save space', how: 'click ▾ (row) or a column header' },
+    { what: "Send a chat message (agents, portals, home, client-portal, replicas)", how: 'Enter' },
+    { what: 'Forgot your password', how: 'login.html → Forgot password?' },
+    { what: 'Public homepage', how: 'danielfanto95-pixel.github.io/kokiri' },
+  ];
+  function renderRemindersBuiltin() {
+    document.getElementById('reminders-builtin').innerHTML = BUILTIN_REMINDERS.map(r => `
+      <div class="reminder-row"><span class="rwhat">${r.what}</span><span class="rhow"><span class="rkbd">${r.how}</span></span></div>
+    `).join('');
   }
 
   const EXTRA_SECTIONS_TABS = [
@@ -1251,7 +1284,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', poetry: 'Poetry & Songs', changelog: 'Change Log' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1804,6 +1837,8 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
 
   mountGrid('global-changelog', null);
   loadGlobalChangeFeed();
+  renderRemindersBuiltin();
+  mountExtraSection('reminders', 'panel-reminders', 'notes', '📝', 'My Reminders', NOTES_COL);
 
   initResumeUpload();
   loadResumes();

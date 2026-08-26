@@ -472,6 +472,12 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
         <div id="notable-list"><p class="empty">Loading…</p></div>
       </div>
 
+      <div class="cct-card">
+        <h2>🔑 Reminders/Shortcuts <a href="portals.html#reminders">Open full list →</a></h2>
+        <div class="sub">Quick-reference for navigating Kokiri.</div>
+        <div id="reminders-preview"></div>
+      </div>
+
       <div class="section">
         <h2>📝 Global Instructions & Context</h2>
         <div id="context-preview"><p class="empty">Loading…</p></div>
@@ -1346,6 +1352,23 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     nameEl.value = ''; descEl.value = '';
     await loadSingularitiesHome();
   });
+
+  // ---------- Reminders/Shortcuts (compact preview, full list lives in Portals) ----------
+  function loadRemindersPreview() {
+    const picks = [
+      { what: 'Jump to a sheet tab', how: 'app.html#&lt;slug&gt;' },
+      { what: 'Jump to a Portals tab', how: 'portals.html#&lt;tab&gt;' },
+      { what: 'Reorder rows/columns in any grid', how: 'drag the ⠿ handle or a header' },
+      { what: 'Forgot your password', how: 'login.html → Forgot password?' },
+    ];
+    document.getElementById('reminders-preview').innerHTML = picks.map(p => `
+      <div class="item-row" style="align-items:center;">
+        <div class="content"><div class="title" style="font-size:0.82rem;">${p.what}</div></div>
+        <span class="badge timeline" style="font-family:var(--mono);">${p.how}</span>
+      </div>
+    `).join('');
+  }
+  loadRemindersPreview();
 
   document.getElementById('btn-read-brief').addEventListener('click', () => {
     const text = document.getElementById('brief-text').textContent;
