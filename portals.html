@@ -329,6 +329,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <button class="portal-tab" data-portal="university"><span class="dot"></span>🎓 University Content</button>
       <button class="portal-tab" data-portal="faqs"><span class="dot"></span>❓ FAQs</button>
       <button class="portal-tab" data-portal="education"><span class="dot"></span>🎓 Education</button>
+      <button class="portal-tab" data-portal="recruiting"><span class="dot"></span>🧲 Recruiting</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -612,6 +613,25 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <div class="op-grid-wrap" id="grid-education"><p class="empty-note">Loading…</p></div>
       <div data-lineage-page="portals.html" data-lineage-section="education" data-lineage-label="Education"></div>
       <div class="portal-note">Personal education tracking — courses, certifications, books, and learning resources: Topic/Course, Type, Resource/Link, Notes, Status.</div>
+
+      <h3 style="font-family:var(--heading);font-size:1rem;margin:1.6rem 0 0.8rem;color:var(--leaf-bright);">🌍 Foundational Knowledge</h3>
+      <p class="portal-note" style="margin-bottom:1rem;">World/life literacy, timeless principles, and things every kid should get to learn and experience — across Education, Wisdom/Principles, and Things Every Kid Should Learn. "How Educated I Am On This" is left for Daniel to self-rate.</p>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="knowledge-education">+ Add Row</button>
+        <button data-action="add-col" data-slug="knowledge-education">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-knowledge-education"><p class="empty-note">Loading…</p></div>
+    </div>
+
+    <div class="portal-panel" id="panel-recruiting">
+      <div class="portal-stats" id="stats-recruiting"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="recruiting">+ Add Row</button>
+        <button data-action="add-col" data-slug="recruiting">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-recruiting"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="recruiting" data-lineage-label="Recruiting"></div>
+      <div class="portal-note">Recruiting pipeline for jobs and businesses — Name, Type (Job Candidate / Business Partner / Affiliate / etc.), Role or Position, Contact Info, Status, Pitch Deck &amp; Script (what you'd present them), Service Agreement (the contract/terms), Notes.</div>
     </div>
   </main>
 
@@ -1343,7 +1363,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills + Situations', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts', university: 'University Content', faqs: 'FAQs', education: 'Education' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills + Situations', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts', university: 'University Content', faqs: 'FAQs', education: 'Education', recruiting: 'Recruiting' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1920,6 +1940,17 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     statsBoxes(document.getElementById('stats-education'), 'affiliate', [
       { val: rows.length, label: 'Total Items' },
       { val: done, label: 'Completed' },
+    ]);
+  });
+
+  mountGrid('knowledge-education', null);
+
+  mountGrid('recruiting', (cols, rows) => {
+    const statusKey = cols.find(c => c.column_key === 'status')?.column_key;
+    const signed = statusKey ? rows.filter(r => /signed|closed|hired/i.test(r.data?.[statusKey] || '')).length : 0;
+    statsBoxes(document.getElementById('stats-recruiting'), 'affiliate', [
+      { val: rows.length, label: 'Total Prospects' },
+      { val: signed, label: 'Signed/Hired' },
     ]);
   });
 
