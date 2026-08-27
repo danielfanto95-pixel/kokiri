@@ -328,6 +328,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <button class="portal-tab" data-portal="reminders"><span class="dot"></span>🔑 Reminders/Shortcuts</button>
       <button class="portal-tab" data-portal="university"><span class="dot"></span>🎓 University Content</button>
       <button class="portal-tab" data-portal="faqs"><span class="dot"></span>❓ FAQs</button>
+      <button class="portal-tab" data-portal="education"><span class="dot"></span>🎓 Education</button>
     </div>
 
     <div class="portal-panel active" id="panel-affiliate">
@@ -594,6 +595,17 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <div class="op-grid-wrap" id="grid-faqs"><p class="empty-note">Loading…</p></div>
       <div data-lineage-page="portals.html" data-lineage-section="faqs" data-lineage-label="FAQs"></div>
       <div class="portal-note">General FAQs across businesses/operations — Question, Answer, Category, Status. Separate from the Client Portal's client-facing FAQ tab and the University Content spreadsheet's own FAQ rows.</div>
+    </div>
+
+    <div class="portal-panel" id="panel-education">
+      <div class="portal-stats" id="stats-education"></div>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="education">+ Add Row</button>
+        <button data-action="add-col" data-slug="education">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-education"><p class="empty-note">Loading…</p></div>
+      <div data-lineage-page="portals.html" data-lineage-section="education" data-lineage-label="Education"></div>
+      <div class="portal-note">Personal education tracking — courses, certifications, books, and learning resources: Topic/Course, Type, Resource/Link, Notes, Status.</div>
     </div>
   </main>
 
@@ -1325,7 +1337,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills + Situations', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts', university: 'University Content', faqs: 'FAQs' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills + Situations', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts', university: 'University Content', faqs: 'FAQs', education: 'Education' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1893,6 +1905,15 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
     statsBoxes(document.getElementById('stats-faqs'), 'affiliate', [
       { val: rows.length, label: 'Total FAQs' },
       { val: answered, label: 'Answered/Published' },
+    ]);
+  });
+
+  mountGrid('education', (cols, rows) => {
+    const statusKey = cols.find(c => c.column_key === 'status')?.column_key;
+    const done = statusKey ? rows.filter(r => /done|complete|finished/i.test(r.data?.[statusKey] || '')).length : 0;
+    statsBoxes(document.getElementById('stats-education'), 'affiliate', [
+      { val: rows.length, label: 'Total Items' },
+      { val: done, label: 'Completed' },
     ]);
   });
 
