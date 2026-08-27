@@ -474,7 +474,13 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       </div>
       <div class="op-grid-wrap" id="grid-claude-tasks"><p class="empty-note">Loading…</p></div>
       <div data-lineage-page="portals.html" data-lineage-section="claude-tasks" data-lineage-label="Claude Code Tasks"></div>
-      <div class="portal-note">Non-trivial plans get logged here before I execute — Approval starts Pending; flip it to Approved (editing the plan first if needed) to greenlight it.</div>
+      <div class="portal-note">
+        <b style="color:var(--leaf-bright);">How this works:</b><br>
+        • Non-trivial plans (anything risky, structural, or large) get logged here before I execute — <b>Approval</b> starts <i>Pending</i>. Flip it to <i>Approved</i> (editing the Plan column first if you want changes) to greenlight it; anything already <i>Active</i>/<i>Done</i> without your explicit request was small enough to just do.<br>
+        • <b>Status</b> tracks real-world progress: Not Started → Active → Blocked (with a reason) → Done. <b>Needs Scoping</b> means I genuinely don't know what you want yet — tell me and I'll turn it into a real plan.<br>
+        • <b>Type</b> is Feature / Content / Research / Personal / Recurring Operation / Life Objective (Life Objective rows mirror the Arc Objectives on Saga/Home — same table, shown here for visibility).<br>
+        • Once a task hits <i>Done</i>, I log it — including source files/docs touched — to the local Kokiri Task Log folder (<code style="font-family:var(--mono);">C:\Users\danie\Kokiri Task Log\</code>, outside this repo, not deployed) and to the <a href="portals.html#changelog" style="color:var(--leaf);">Change Log</a> tab.
+      </div>
     </div>
 
     <div class="portal-panel" id="panel-sales">
