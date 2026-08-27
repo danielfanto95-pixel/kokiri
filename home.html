@@ -337,6 +337,17 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
         </div>
       </div>
 
+      <div class="arc-card">
+        <h2>🎯 Outcomes</h2>
+        <div data-lineage-page="home.html" data-lineage-section="outcomes" data-lineage-label="Outcomes" style="margin-bottom:0.6rem;"></div>
+        <div class="arc-list" id="outcomes-list"><p class="empty" style="padding:0.5rem;">Loading…</p></div>
+        <div class="arc-add-form">
+          <input type="date" id="outcome-date" style="max-width:150px;">
+          <input type="text" id="outcome-text" placeholder="Outcome">
+          <button id="btn-add-outcome">+ Add Outcome</button>
+        </div>
+      </div>
+
       <div class="where-to">
         <h2>Where would you like to go?</h2>
         <div class="card-row">
@@ -1321,6 +1332,48 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     await loadArcObjectives();
   });
 
+  // ---------- Outcomes (below Objectives, same format, each with a target date) ----------
+  function formatOutcomeDate(d) {
+    if (!d) return 'No date set';
+    const dt = new Date(d + 'T00:00:00');
+    return 'By ' + dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  async function loadOutcomes() {
+    const el = document.getElementById('outcomes-list');
+    const { data } = await supabase.from('kokiri_outcomes').select('*').order('sort_order').order('created_at');
+    if (!data || !data.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No outcomes yet — add one below.</p>'; return; }
+    el.innerHTML = data.map(o => `
+      <div class="arc-item ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
+        <span class="alabel">${escapeHtml(formatOutcomeDate(o.target_date))}</span>
+        <span class="aobjective">${escapeHtml(o.outcome)}</span>
+        <button class="adone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
+        <button class="adel" data-id="${o.id}">✕</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.adone').forEach(btn => btn.addEventListener('click', async () => {
+      const newStatus = btn.dataset.status === 'done' ? 'active' : 'done';
+      await supabase.from('kokiri_outcomes').update({ status: newStatus }).eq('id', btn.dataset.id);
+      await loadOutcomes();
+    }));
+    el.querySelectorAll('.adel').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_outcomes').delete().eq('id', btn.dataset.id);
+      await loadOutcomes();
+    }));
+  }
+  document.getElementById('btn-add-outcome').addEventListener('click', async () => {
+    const dateEl = document.getElementById('outcome-date');
+    const textEl = document.getElementById('outcome-text');
+    const target_date = dateEl.value || null;
+    const outcome = textEl.value.trim();
+    if (!outcome) { alert('Outcome text is required.'); return; }
+    const { data: existing } = await supabase.from('kokiri_outcomes').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+    const nextOrder = (Number(existing?.[0]?.sort_order) || 0) + 1;
+    const { error } = await supabase.from('kokiri_outcomes').insert({ outcome, target_date, sort_order: nextOrder });
+    if (error) { alert('⚠ ' + error.message); return; }
+    dateEl.value = ''; textEl.value = '';
+    await loadOutcomes();
+  });
+
   // ---------- Singularities — Real ----------
   async function loadSingularitiesHome() {
     const el = document.getElementById('sing-list-home');
@@ -1377,7 +1430,7 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
   const { agents } = await loadNav();
   initDispatch(agents);
-  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives(), loadSagaContext(), loadHotlistOptions().then(loadHotlist), loadMainTasks(), loadClaudeTasksHome()]);
+  await Promise.all([loadTodos(agents), loadNotable(agents), loadContextPreview(), loadStats(), loadVoiceSettings(), loadQuickLinks(), loadBudgetSummary(), loadDispatchLog(), loadSingularitiesHome(), loadArcObjectives(), loadSagaContext(), loadHotlistOptions().then(loadHotlist), loadMainTasks(), loadClaudeTasksHome(), loadOutcomes()]);
   initLineageBadges();
   meetingsSheetId = await getMeetingsSheetId();
 
