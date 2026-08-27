@@ -325,7 +325,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       <button class="portal-tab" data-portal="skills"><span class="dot"></span>🎓 Skills + Situations</button>
       <button class="portal-tab" data-portal="poetry"><span class="dot"></span>🎭 Poetry &amp; Songs</button>
       <button class="portal-tab" data-portal="changelog"><span class="dot"></span>📜 Change Log</button>
-      <button class="portal-tab" data-portal="reminders"><span class="dot"></span>🔑 Reminders/Shortcuts</button>
+      <button class="portal-tab" data-portal="reminders"><span class="dot"></span>🧠 Wisdom & Mental Tricks</button>
       <button class="portal-tab" data-portal="university"><span class="dot"></span>🎓 University Content</button>
       <button class="portal-tab" data-portal="faqs"><span class="dot"></span>❓ FAQs</button>
       <button class="portal-tab" data-portal="education"><span class="dot"></span>🎓 Education</button>
@@ -577,8 +577,16 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
     </div>
 
     <div class="portal-panel" id="panel-reminders">
-      <div data-lineage-page="portals.html" data-lineage-section="reminders" data-lineage-label="Reminders/Shortcuts"></div>
-      <p class="portal-note" style="margin-bottom:1rem;">Quick-reference shortcuts for navigating Kokiri, plus a place for your own reminders.</p>
+      <div data-lineage-page="portals.html" data-lineage-section="reminders" data-lineage-label="Wisdom & Mental Tricks"></div>
+      <p class="portal-note" style="margin-bottom:1rem;">Wisdom principles and little mental tricks — starting with PPPPPPPP, the client &amp; offer journey framework. Each step: what it is, what to do, how it works, where to get help.</p>
+      <div class="op-toolbar">
+        <button data-action="add-row" data-slug="wisdom-principles">+ Add Row</button>
+        <button data-action="add-col" data-slug="wisdom-principles">+ Add Column</button>
+      </div>
+      <div class="op-grid-wrap" id="grid-wisdom-principles"><p class="empty-note">Loading…</p></div>
+
+      <h3 style="font-family:var(--heading);font-size:1rem;margin:1.6rem 0 0.8rem;color:var(--leaf-bright);">🔑 Kokiri Navigation Shortcuts</h3>
+      <p class="portal-note" style="margin-bottom:1rem;">Quick-reference shortcuts for navigating Kokiri.</p>
       <div id="reminders-builtin" class="reminders-grid"></div>
     </div>
 
@@ -1363,7 +1371,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
   }
 
   // ---------- Floating portal chatbot (read-only Q&A, grounded on the active tab's data) ----------
-  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills + Situations', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Reminders/Shortcuts', university: 'University Content', faqs: 'FAQs', education: 'Education', recruiting: 'Recruiting' };
+  const TAB_LABELS = { affiliate: 'Affiliate Portal', client: 'Client Portal', crm: 'CRM', content: 'Content', tasks: 'Tasks', ads: 'Ad Funnels', msgfunnels: 'Email/Nurture/ManyChat Funnels', funnel: 'Funnel', impact: 'Impact Map', jobs: 'Jobs', sales: 'Sales Conversations & Learning', budgets: 'Budgets', builder: 'Agent Builder', journals: 'Journals', 'claude-tasks': 'Claude Code Tasks', skills: 'Skills + Situations', poetry: 'Poetry & Songs', changelog: 'Change Log', reminders: 'Wisdom & Mental Tricks', university: 'University Content', faqs: 'FAQs', education: 'Education', recruiting: 'Recruiting' };
 
   // ---------- Index (table of contents for the whole page) ----------
   const INDEX_DATA = [
@@ -1917,6 +1925,7 @@ Answer questions about this data plainly. You are read-only — you cannot edit 
   mountGrid('global-changelog', null);
   loadGlobalChangeFeed();
   renderRemindersBuiltin();
+  mountGrid('wisdom-principles', null);
   mountExtraSection('reminders', 'panel-reminders', 'notes', '📝', 'My Reminders', NOTES_COL);
 
   mountGrid('university-content', (cols, rows) => {

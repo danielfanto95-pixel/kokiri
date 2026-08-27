@@ -484,8 +484,8 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       </div>
 
       <div class="cct-card">
-        <h2>🔑 Reminders/Shortcuts <a href="portals.html#reminders">Open full list →</a></h2>
-        <div class="sub">Quick-reference for navigating Kokiri.</div>
+        <h2>🧠 Wisdom & Mental Tricks <a href="portals.html#reminders">Open full list →</a></h2>
+        <div class="sub">PPPPPPPP — the client &amp; offer journey framework, plus nav shortcuts.</div>
         <div id="reminders-preview"></div>
       </div>
 
@@ -1406,13 +1406,13 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
     await loadSingularitiesHome();
   });
 
-  // ---------- Reminders/Shortcuts (compact preview, full list lives in Portals) ----------
+  // ---------- Wisdom & Mental Tricks (compact preview, full list lives in Portals) ----------
   function loadRemindersPreview() {
     const picks = [
-      { what: 'Jump to a sheet tab', how: 'app.html#&lt;slug&gt;' },
-      { what: 'Jump to a Portals tab', how: 'portals.html#&lt;tab&gt;' },
-      { what: 'Reorder rows/columns in any grid', how: 'drag the ⠿ handle or a header' },
-      { what: 'Forgot your password', how: 'login.html → Forgot password?' },
+      { what: '1. Problem Solving', how: 'name it in their words' },
+      { what: '2. Proof', how: 'evidence lowers risk' },
+      { what: '3. Petition', how: 'let them ask you' },
+      { what: '4. Page', how: 'one goal, one CTA' },
     ];
     document.getElementById('reminders-preview').innerHTML = picks.map(p => `
       <div class="item-row" style="align-items:center;">
