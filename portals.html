@@ -867,7 +867,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
     'requirements-journals': 'journals', 'content-journals': 'journals', 'adfunnels-journals': 'journals',
     'msgfunnels-journals': 'journals', 'todos-journals': 'journals',
     'questionnaires-skills': 'skills', 'requirements-skills': 'skills', 'content-skills': 'skills',
-    'adfunnels-skills': 'skills', 'msgfunnels-skills': 'skills', 'todos-skills': 'skills',
+    'adfunnels-skills': 'skills', 'msgfunnels-skills': 'skills', 'todos-skills': 'skills', 'samples-skills': 'skills',
     'poems-poetry': 'poetry', 'songs-poetry': 'poetry',
   };
 
@@ -1012,6 +1012,16 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
     for (const sec of MAJOR_SECTION_SET) {
       await mountExtraSection('skills', 'panel-skills', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
     }
+    await mountExtraSection('skills', 'panel-skills', 'samples', '🎯', 'Samples', [
+      { key: 'sample_of_skills', name: 'Sample of Skills' },
+      { key: 'skill', name: 'Skill' },
+      { key: 'link', name: 'Link' },
+      { key: 'description', name: 'Description' },
+      { key: 'process', name: 'Process of How the Skill Was Applied' },
+      { key: 'learnings', name: 'Learnings from the Sample' },
+      { key: 'mental_shortcuts', name: 'Mental Shortcuts to Apply in This Skill + Situation' },
+      { key: 'faq', name: 'FAQ' },
+    ]);
     const PIECE_COLS = [
       { key: 'title', name: 'Title' },
       { key: 'content', name: 'Content' },
