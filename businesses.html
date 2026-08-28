@@ -160,6 +160,17 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       <button id="btn-new-biz">+ New Business</button>
     </div>
 
+    <div class="op-section" id="op-overview">
+      <div class="op-head"><span class="op-icon">📊</span><h2>Business Overview</h2><span class="op-count" id="count-overview"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-section="overview">+ Add Row</button>
+          <button data-action="add-col" data-section="overview">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-wrap-overview"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+
     <div class="biz-tabs" id="biz-tabs"></div>
     <div id="biz-panels"><p class="empty-note">Loading…</p></div>
   </main>
@@ -307,6 +318,50 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       renderTabs();
       await renderPanels();
     }));
+  }
+
+  // ---------- Top-of-page Business Overview (single shared sheet, one row per business) ----------
+  const OVERVIEW_COLUMNS = [
+    { key: 'business_name', name: 'Business Name' },
+    { key: 'problem', name: 'Problem' },
+    { key: 'solve', name: 'Solve' },
+    { key: 'practice', name: 'Practice' },
+    { key: 'proof', name: 'Proof' },
+    { key: 'preach', name: 'Preach' },
+    { key: 'personalize', name: 'Personalize' },
+    { key: 'pitch', name: 'Pitch' },
+    { key: 'persist', name: 'Persist' },
+    { key: 'procure', name: 'Procure' },
+    { key: 'page', name: 'Page' },
+    { key: 'payment', name: 'Payment' },
+    { key: 'partner', name: 'Partner' },
+    { key: 'profile', name: 'Profile' },
+    { key: 'portal', name: 'Portal' },
+    { key: 'plan', name: 'Plan' },
+    { key: 'practicality', name: 'Practicality' },
+    { key: 'provision', name: 'Provision' },
+  ];
+
+  async function ensureOverviewSheet() {
+    const slug = 'biz-overview';
+    let { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    if (!sheet) {
+      const { data: created, error } = await supabase.from('kokiri_sheets').insert({ name: 'Businesses — Overview', slug, sort_order: 900 }).select().single();
+      if (error) throw error;
+      sheet = created;
+      await supabase.from('kokiri_columns').insert(OVERVIEW_COLUMNS.map((c, i) => ({ sheet_id: sheet.id, column_key: c.key, name: c.name, sort_order: i + 1 })));
+    }
+    return sheet.id;
+  }
+
+  function initOverviewSection() {
+    const sec = document.getElementById('op-overview');
+    const isOpen = localStorage.getItem('kokiri_biz_overview_open') === 'open';
+    if (isOpen) sec.classList.add('open');
+    sec.querySelector('.op-head').addEventListener('click', () => {
+      const nowOpen = sec.classList.toggle('open');
+      localStorage.setItem('kokiri_biz_overview_open', nowOpen ? 'open' : 'closed');
+    });
   }
 
   // ---------- Per-business spreadsheet sections ----------
@@ -657,7 +712,10 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
   });
 
   initNavCollapse();
+  initOverviewSection();
   await loadNav();
+  const overviewSheetId = await ensureOverviewSheet();
+  await mountBizGridSection(document.getElementById('op-overview'), overviewSheetId, 'overview');
   await loadBusinesses();
 </script>
 

@@ -554,7 +554,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
 
     <div class="portal-panel" id="panel-skills">
       <div data-lineage-page="portals.html" data-lineage-section="skills" data-lineage-label="Skills + Situations"></div>
-      <p class="portal-note" style="margin-bottom:1rem;">Skills tracking — the same major section set used elsewhere in Kokiri, plus Samples (skills studied from others) and Situations (scenarios worked through).</p>
+      <p class="portal-note" style="margin-bottom:1rem;">Skills tracking — the same major section set used elsewhere in Kokiri. Below that, each skill (Sales, Negotiation, Confrontation, Casual Conversation/Social Skills) has its own SOPs, Samples (skills studied from others), and Simulations/Reps, plus Situations (scenarios worked through).</p>
     </div>
 
     <div class="portal-panel" id="panel-poetry">
@@ -1058,7 +1058,19 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
     for (const sec of MAJOR_SECTION_SET) {
       await mountExtraSection('skills', 'panel-skills', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
     }
-    await mountExtraSection('skills', 'panel-skills', 'samples', '🎯', 'Samples', [
+    const SKILLS_LIST = [
+      { key: 'sales', icon: '🎯', label: 'Sales' },
+      { key: 'negotiation', icon: '🤝', label: 'Negotiation' },
+      { key: 'confrontation', icon: '🥊', label: 'Confrontation' },
+      { key: 'casual-conversation', icon: '💬', label: 'Casual Conversation / Social Skills' },
+    ];
+    const SOP_COLS = [
+      { key: 'title', name: 'Title' },
+      { key: 'steps', name: 'Steps' },
+      { key: 'when_to_use', name: 'When to Use This' },
+      { key: 'notes', name: 'Notes' },
+    ];
+    const SKILL_SAMPLE_COLS = [
       { key: 'sample_of_skills', name: 'Sample of Skills' },
       { key: 'skill', name: 'Skill' },
       { key: 'link', name: 'Link' },
@@ -1067,7 +1079,23 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       { key: 'learnings', name: 'Learnings from the Sample' },
       { key: 'mental_shortcuts', name: 'Mental Shortcuts to Apply in This Skill + Situation' },
       { key: 'faq', name: 'FAQ' },
-    ]);
+    ];
+    const SIM_COLS = [
+      { key: 'scenario', name: 'Scenario' },
+      { key: 'instructions', name: 'Instructions' },
+      { key: 'technique_to_practice', name: 'Technique to Practice' },
+      { key: 'notes', name: 'Notes' },
+    ];
+    for (const sk of SKILLS_LIST) {
+      const panel = document.getElementById('panel-skills');
+      const header = document.createElement('h3');
+      header.style.cssText = 'font-family:var(--heading);font-size:1.05rem;margin:1.8rem 0 0.6rem;color:var(--gold);border-top:1px solid var(--border);padding-top:1.2rem;';
+      header.textContent = `${sk.icon} ${sk.label}`;
+      panel.appendChild(header);
+      await mountExtraSection(sk.key, 'panel-skills', 'sops', '📋', 'SOPs', SOP_COLS);
+      await mountExtraSection(sk.key, 'panel-skills', 'samples', '🎯', 'Samples', SKILL_SAMPLE_COLS);
+      await mountExtraSection(sk.key, 'panel-skills', 'simulations', '🎮', 'Simulations/Reps', SIM_COLS);
+    }
     await mountExtraSection('skills', 'panel-skills', 'situations', '🧩', 'Situations', [
       { key: 'situation_description', name: 'Situation - Description' },
       { key: 'what_happened', name: 'What Happened' },
@@ -1390,7 +1418,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
     { key: 'builder', label: '🧩 Agent Builder', desc: 'Questionnaire → agent team template → website/ad brief.' },
     { key: 'journals', label: '📔 Journals', desc: 'Entries and Learnings, plus the same major section set (Questionnaires, Requirements, Content, Ad Funnels, Msg Funnels, Pre-Reqs, Change Log, To Do\'s).' },
     { key: 'claude-tasks', label: '🤖 Claude Code Tasks', desc: 'Non-trivial plans, logged with an inferred approach before execution — Approval gates whether I actually do it.' },
-    { key: 'skills', label: '🎓 Skills + Situations', desc: 'Skills tracking (major section set + Samples), plus Situations — scenarios worked through with strategy notes.' },
+    { key: 'skills', label: '🎓 Skills + Situations', desc: 'Skills tracking (major section set), plus per-skill SOPs/Samples/Simulations for Sales, Negotiation, Confrontation, and Casual Conversation, plus Situations — scenarios worked through with strategy notes.' },
     { key: 'poetry', label: '🎭 Poetry & Songs', desc: 'Original poetry and songs — each piece as its own row with the full text, plus Pre-Reqs and Change Log.' },
   ];
   function renderIndex() {
