@@ -1052,6 +1052,19 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       await mountExtraSection(tab.key, tab.panel, 'prereqs', '📋', 'Pre-Reqs', NOTES_COL);
       await mountExtraSection(tab.key, tab.panel, 'changelog', '📜', 'Change Log', CHANGELOG_COLS);
     }
+    await mountExtraSection('claude-tasks', 'panel-claude-tasks', 'recurring', '🔁', 'Recurring Claude Tasks', [
+      { key: 'title', name: 'Task' },
+      { key: 'type', name: 'Type' },
+      { key: 'cadence', name: 'Time Cadence' },
+      { key: 'plan', name: 'Proposed Plan' },
+      { key: 'scope', name: 'Files/Scope Affected' },
+      { key: 'status', name: 'Status' },
+      { key: 'approval', name: 'Approval' },
+      { key: 'history_log', name: 'History / Log of Completed Runs' },
+      { key: 'notes', name: 'Notes/Outcome' },
+      { key: 'est_token_cost', name: 'Est. Token Cost' },
+      { key: 'best_model', name: 'Best Model to Use' },
+    ]);
     for (const sec of JOURNALS_SECTIONS) {
       await mountExtraSection('journals', 'panel-journals', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
     }

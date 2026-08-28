@@ -407,6 +407,12 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
         <div id="cct-list"><p class="empty" style="padding:0.5rem;">Loading…</p></div>
       </div>
 
+      <div class="cct-card">
+        <h2>🔁 Recurring Claude Tasks <a href="portals.html#claude-tasks">Open in Portals →</a></h2>
+        <div class="sub">Standing, repeating operations I run for you (LinkedIn quick-apply, content/ad creation, outreach, CRM population, etc.).</div>
+        <div id="rct-list"><p class="empty" style="padding:0.5rem;">Loading…</p></div>
+      </div>
+
       <div class="dispatch-card">
         <h2>📡 Dispatch</h2>
         <div class="sub">Fire off a task to any agent without leaving Home.</div>
@@ -1104,6 +1110,25 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       if (!row) return;
       await supabase.from('kokiri_rows').update({ data: { ...row.data, approval: sel.value }, updated_at: new Date().toISOString() }).eq('id', row.id);
     }));
+  }
+
+  // ---------- Recurring Claude Tasks (home widget) ----------
+  async function loadRecurringTasksHome() {
+    const listEl = document.getElementById('rct-list');
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', 'recurring-claude-tasks').maybeSingle();
+    if (!sheet) { listEl.innerHTML = '<p class="empty" style="padding:0.5rem;">No recurring tasks yet — add them in Portals → Claude Code Tasks.</p>'; return; }
+    const { data: rows } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
+    if (!rows || !rows.length) { listEl.innerHTML = '<p class="empty" style="padding:0.5rem;">No recurring tasks yet — add them in Portals → Claude Code Tasks.</p>'; return; }
+    listEl.innerHTML = rows.map(r => {
+      const d = r.data || {};
+      return `
+        <div class="cct-row" data-id="${r.id}">
+          <span class="cct-title">${escapeHtml(d.title || '(untitled)')}</span>
+          ${d.cadence ? `<span class="cct-badge">${escapeHtml(d.cadence)}</span>` : ''}
+          ${d.status ? `<span class="cct-badge">${escapeHtml(d.status)}</span>` : ''}
+        </div>
+      `;
+    }).join('');
   }
 
   document.getElementById('qs-events').addEventListener('click', (e) => quickAddSession('Description of Events', e.target));
