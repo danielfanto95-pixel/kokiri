@@ -323,6 +323,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
   // ---------- Top-of-page Business Overview (single shared sheet, one row per business) ----------
   const OVERVIEW_COLUMNS = [
     { key: 'business_name', name: 'Business Name' },
+    { key: 'progress', name: 'Progress' },
     { key: 'problem', name: 'Problem' },
     { key: 'solve', name: 'Solve' },
     { key: 'practice', name: 'Practice' },
@@ -350,6 +351,19 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; }
       if (error) throw error;
       sheet = created;
       await supabase.from('kokiri_columns').insert(OVERVIEW_COLUMNS.map((c, i) => ({ sheet_id: sheet.id, column_key: c.key, name: c.name, sort_order: i + 1 })));
+    } else {
+      const { data: existingCols } = await supabase.from('kokiri_columns').select('id, column_key, sort_order').eq('sheet_id', sheet.id);
+      const byKey = new Map((existingCols || []).map(c => [c.column_key, c]));
+      for (let i = 0; i < OVERVIEW_COLUMNS.length; i++) {
+        const c = OVERVIEW_COLUMNS[i];
+        const desiredOrder = i + 1;
+        const existing = byKey.get(c.key);
+        if (!existing) {
+          await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: c.key, name: c.name, sort_order: desiredOrder });
+        } else if (existing.sort_order !== desiredOrder) {
+          await supabase.from('kokiri_columns').update({ sort_order: desiredOrder }).eq('id', existing.id);
+        }
+      }
     }
     return sheet.id;
   }
