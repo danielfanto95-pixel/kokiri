@@ -1064,6 +1064,12 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       { key: 'notes', name: 'Notes/Outcome' },
       { key: 'est_token_cost', name: 'Est. Token Cost' },
       { key: 'best_model', name: 'Best Model to Use' },
+      { key: 'agent_instructions', name: 'Agent Instructions' },
+      { key: 'available_mcps', name: 'Available MCPs' },
+      { key: 'samples', name: 'Samples' },
+      { key: 'how_to', name: 'How To' },
+      { key: 'timelines', name: 'Timelines' },
+      { key: 'deliverables', name: 'Deliverables' },
     ]);
     for (const sec of JOURNALS_SECTIONS) {
       await mountExtraSection('journals', 'panel-journals', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
