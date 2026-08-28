@@ -166,13 +166,25 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 .arc-card { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
 .arc-card h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; }
 .arc-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.9rem; }
+.arc-unit { transition: opacity 0.1s; }
+.arc-unit.drag-over { outline: 2px dashed var(--leaf); outline-offset: 2px; border-radius: 8px; }
 .arc-item { display: flex; align-items: center; gap: 0.7rem; font-size: 0.86rem; padding: 0.55rem 0.7rem; background: var(--surface2); border-radius: 6px; }
+.arc-item .adrag { cursor: grab; color: var(--dim); font-size: 0.85rem; user-select: none; }
 .arc-item .alabel { font-family: var(--mono); font-size: 0.72rem; color: var(--gold); background: var(--surface); border-radius: 100px; padding: 0.15rem 0.6rem; white-space: nowrap; min-width: 1.8rem; text-align: center; }
 .arc-item .aobjective { flex: 1; color: var(--text); }
 .arc-item.done .aobjective { color: var(--dim); text-decoration: line-through; }
 .arc-item .adone { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
+.arc-item .aedit { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
 .arc-item .adel { color: var(--dim); cursor: pointer; font-size: 0.85rem; background: none; border: none; padding: 0 0.2rem; }
 .arc-item .atoggle { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.68rem; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
+.arc-edit-form { display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0.55rem 0.7rem; background: var(--surface2); border-radius: 6px; margin-bottom: 0; }
+.arc-edit-form input[type="text"] { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.82rem; }
+.arc-edit-form input.aef-label { width: 4.5rem; }
+.arc-edit-form input.aef-objective { flex: 1; min-width: 160px; }
+.arc-edit-form input[type="date"] { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.8rem; }
+.arc-edit-form .aef-actions { display: flex; gap: 0.4rem; }
+.arc-edit-form .aef-actions button { background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.35rem 0.7rem; font-weight: 700; font-size: 0.72rem; cursor: pointer; }
+.arc-edit-form .aef-actions button.aef-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); }
 .arc-subtasks { margin: -0.15rem 0 0.4rem 2.3rem; padding: 0.5rem 0.7rem; background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; }
 .sub-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.1rem; font-size: 0.82rem; }
 .sub-row .sub-text { flex: 1; }
@@ -1271,36 +1283,51 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
   // ---------- Objectives — This Arc ----------
   const arcExpanded = new Set();
+  let arcObjectives = [];
+  let dragArcId = null;
   async function loadArcObjectives() {
     const el = document.getElementById('arc-list');
     const { data } = await supabase.from('kokiri_arc_objectives').select('*').order('sort_order').order('created_at');
-    if (!data || !data.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No objectives yet — add one below.</p>'; return; }
+    arcObjectives = data || [];
+    if (!arcObjectives.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No objectives yet — add one below.</p>'; return; }
     const { data: subtasks } = await supabase.from('kokiri_arc_objective_subtasks').select('*').order('sort_order').order('created_at');
     const subsByObjective = {};
     (subtasks || []).forEach(s => { (subsByObjective[s.objective_id] ||= []).push(s); });
 
-    el.innerHTML = data.map(o => {
+    el.innerHTML = arcObjectives.map(o => {
       const subs = subsByObjective[o.id] || [];
       const expanded = arcExpanded.has(o.id);
       return `
-      <div class="arc-item ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
-        <span class="alabel">${escapeHtml(o.order_label)}</span>
-        <span class="aobjective">${escapeHtml(o.objective)}</span>
-        <button class="atoggle" data-id="${o.id}">${expanded ? '▾' : '▸'} Sub-tasks (${subs.length})</button>
-        <button class="adone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
-        <button class="adel" data-id="${o.id}">✕</button>
-      </div>
-      <div class="arc-subtasks" data-parent="${o.id}" style="${expanded ? '' : 'display:none;'}">
-        ${subs.length ? subs.map(s => `
-          <div class="sub-row ${s.status === 'done' ? 'done' : ''}" data-id="${s.id}">
-            <input type="checkbox" class="sub-check" data-id="${s.id}" data-status="${s.status}" ${s.status === 'done' ? 'checked' : ''}>
-            <span class="sub-text">${escapeHtml(s.subtask)}</span>
-            <button class="sub-del" data-id="${s.id}">✕</button>
+      <div class="arc-unit" draggable="true" data-id="${o.id}">
+        <div class="arc-item ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
+          <span class="adrag" title="Drag to reorder">⠿</span>
+          <span class="alabel">${escapeHtml(o.order_label)}</span>
+          <span class="aobjective">${escapeHtml(o.objective)}</span>
+          <button class="atoggle" data-id="${o.id}">${expanded ? '▾' : '▸'} Sub-tasks (${subs.length})</button>
+          <button class="aedit" data-id="${o.id}">✎ Edit</button>
+          <button class="adone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
+          <button class="adel" data-id="${o.id}">✕</button>
+        </div>
+        <div class="arc-edit-form" data-edit="${o.id}" style="display:none;">
+          <input type="text" class="aef-label" value="${escapeHtml(o.order_label)}" placeholder="Label">
+          <input type="text" class="aef-objective" value="${escapeHtml(o.objective)}" placeholder="Objective">
+          <div class="aef-actions">
+            <button class="aef-save" data-id="${o.id}">Save</button>
+            <button class="aef-cancel" data-id="${o.id}">Cancel</button>
           </div>
-        `).join('') : '<p class="empty" style="padding:0.3rem 0.5rem;font-size:0.78rem;">No sub-tasks yet.</p>'}
-        <div class="sub-add-row">
-          <input type="text" class="sub-input" data-objective="${o.id}" placeholder="Add a sub-task…">
-          <button class="sub-add-btn" data-objective="${o.id}">+ Add</button>
+        </div>
+        <div class="arc-subtasks" data-parent="${o.id}" style="${expanded ? '' : 'display:none;'}">
+          ${subs.length ? subs.map(s => `
+            <div class="sub-row ${s.status === 'done' ? 'done' : ''}" data-id="${s.id}">
+              <input type="checkbox" class="sub-check" data-id="${s.id}" data-status="${s.status}" ${s.status === 'done' ? 'checked' : ''}>
+              <span class="sub-text">${escapeHtml(s.subtask)}</span>
+              <button class="sub-del" data-id="${s.id}">✕</button>
+            </div>
+          `).join('') : '<p class="empty" style="padding:0.3rem 0.5rem;font-size:0.78rem;">No sub-tasks yet.</p>'}
+          <div class="sub-add-row">
+            <input type="text" class="sub-input" data-objective="${o.id}" placeholder="Add a sub-task…">
+            <button class="sub-add-btn" data-objective="${o.id}">+ Add</button>
+          </div>
         </div>
       </div>
     `;
@@ -1308,6 +1335,24 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
 
     el.querySelectorAll('.atoggle').forEach(btn => btn.addEventListener('click', async () => {
       if (arcExpanded.has(btn.dataset.id)) arcExpanded.delete(btn.dataset.id); else arcExpanded.add(btn.dataset.id);
+      await loadArcObjectives();
+    }));
+    el.querySelectorAll('.aedit').forEach(btn => btn.addEventListener('click', () => {
+      const unit = btn.closest('.arc-unit');
+      unit.querySelector('.arc-item').style.display = 'none';
+      unit.querySelector(`.arc-edit-form[data-edit="${btn.dataset.id}"]`).style.display = 'flex';
+    }));
+    el.querySelectorAll('.aef-cancel').forEach(btn => btn.addEventListener('click', () => {
+      const unit = btn.closest('.arc-unit');
+      unit.querySelector('.arc-item').style.display = '';
+      unit.querySelector(`.arc-edit-form[data-edit="${btn.dataset.id}"]`).style.display = 'none';
+    }));
+    el.querySelectorAll('.aef-save').forEach(btn => btn.addEventListener('click', async () => {
+      const unit = btn.closest('.arc-unit');
+      const order_label = unit.querySelector('.aef-label').value.trim();
+      const objective = unit.querySelector('.aef-objective').value.trim();
+      if (!order_label || !objective) { alert('Both a label and an objective are required.'); return; }
+      await supabase.from('kokiri_arc_objectives').update({ order_label, objective }).eq('id', btn.dataset.id);
       await loadArcObjectives();
     }));
     el.querySelectorAll('.adone').forEach(btn => btn.addEventListener('click', async () => {
@@ -1319,6 +1364,27 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       await supabase.from('kokiri_arc_objectives').delete().eq('id', btn.dataset.id);
       await loadArcObjectives();
     }));
+    el.querySelectorAll('.arc-unit').forEach(unit => {
+      unit.addEventListener('dragstart', (e) => {
+        if (e.target.closest('input, button, .arc-subtasks')) { e.preventDefault(); return; }
+        dragArcId = unit.dataset.id; e.dataTransfer.effectAllowed = 'move';
+      });
+      unit.addEventListener('dragover', (e) => { e.preventDefault(); unit.classList.add('drag-over'); });
+      unit.addEventListener('dragleave', () => unit.classList.remove('drag-over'));
+      unit.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        unit.classList.remove('drag-over');
+        const targetId = unit.dataset.id;
+        if (!dragArcId || dragArcId === targetId) return;
+        const fromIdx = arcObjectives.findIndex(o => o.id === dragArcId);
+        const toIdx = arcObjectives.findIndex(o => o.id === targetId);
+        if (fromIdx < 0 || toIdx < 0) return;
+        const [moved] = arcObjectives.splice(fromIdx, 1);
+        arcObjectives.splice(toIdx, 0, moved);
+        await Promise.all(arcObjectives.map((o, i) => supabase.from('kokiri_arc_objectives').update({ sort_order: i + 1 }).eq('id', o.id)));
+        await loadArcObjectives();
+      });
+    });
     el.querySelectorAll('.sub-check').forEach(chk => chk.addEventListener('change', async () => {
       const newStatus = chk.dataset.status === 'done' ? 'todo' : 'done';
       await supabase.from('kokiri_arc_objective_subtasks').update({ status: newStatus }).eq('id', chk.dataset.id);
@@ -1358,6 +1424,8 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   });
 
   // ---------- Outcomes (below Objectives, same format, each with a target date) ----------
+  let outcomesList = [];
+  let dragOutcomeId = null;
   function formatOutcomeDate(d) {
     if (!d) return 'No date set';
     const dt = new Date(d + 'T00:00:00');
@@ -1366,15 +1434,46 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
   async function loadOutcomes() {
     const el = document.getElementById('outcomes-list');
     const { data } = await supabase.from('kokiri_outcomes').select('*').order('sort_order').order('created_at');
-    if (!data || !data.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No outcomes yet — add one below.</p>'; return; }
-    el.innerHTML = data.map(o => `
-      <div class="arc-item ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
-        <span class="alabel">${escapeHtml(formatOutcomeDate(o.target_date))}</span>
-        <span class="aobjective">${escapeHtml(o.outcome)}</span>
-        <button class="adone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
-        <button class="adel" data-id="${o.id}">✕</button>
+    outcomesList = data || [];
+    if (!outcomesList.length) { el.innerHTML = '<p class="empty" style="padding:0.5rem;">No outcomes yet — add one below.</p>'; return; }
+    el.innerHTML = outcomesList.map(o => `
+      <div class="arc-unit" draggable="true" data-id="${o.id}">
+        <div class="arc-item ${o.status === 'done' ? 'done' : ''}" data-id="${o.id}">
+          <span class="adrag" title="Drag to reorder">⠿</span>
+          <span class="alabel">${escapeHtml(formatOutcomeDate(o.target_date))}</span>
+          <span class="aobjective">${escapeHtml(o.outcome)}</span>
+          <button class="aedit" data-id="${o.id}">✎ Edit</button>
+          <button class="adone" data-id="${o.id}" data-status="${o.status}">${o.status === 'done' ? 'Reopen' : 'Mark Done'}</button>
+          <button class="adel" data-id="${o.id}">✕</button>
+        </div>
+        <div class="arc-edit-form" data-edit="${o.id}" style="display:none;">
+          <input type="date" class="oef-date" value="${escapeHtml(o.target_date || '')}">
+          <input type="text" class="aef-objective" value="${escapeHtml(o.outcome)}" placeholder="Outcome">
+          <div class="aef-actions">
+            <button class="oef-save" data-id="${o.id}">Save</button>
+            <button class="aef-cancel" data-id="${o.id}">Cancel</button>
+          </div>
+        </div>
       </div>
     `).join('');
+    el.querySelectorAll('.aedit').forEach(btn => btn.addEventListener('click', () => {
+      const unit = btn.closest('.arc-unit');
+      unit.querySelector('.arc-item').style.display = 'none';
+      unit.querySelector(`.arc-edit-form[data-edit="${btn.dataset.id}"]`).style.display = 'flex';
+    }));
+    el.querySelectorAll('.aef-cancel').forEach(btn => btn.addEventListener('click', () => {
+      const unit = btn.closest('.arc-unit');
+      unit.querySelector('.arc-item').style.display = '';
+      unit.querySelector(`.arc-edit-form[data-edit="${btn.dataset.id}"]`).style.display = 'none';
+    }));
+    el.querySelectorAll('.oef-save').forEach(btn => btn.addEventListener('click', async () => {
+      const unit = btn.closest('.arc-unit');
+      const outcome = unit.querySelector('.aef-objective').value.trim();
+      const target_date = unit.querySelector('.oef-date').value || null;
+      if (!outcome) { alert('Outcome text is required.'); return; }
+      await supabase.from('kokiri_outcomes').update({ outcome, target_date }).eq('id', btn.dataset.id);
+      await loadOutcomes();
+    }));
     el.querySelectorAll('.adone').forEach(btn => btn.addEventListener('click', async () => {
       const newStatus = btn.dataset.status === 'done' ? 'active' : 'done';
       await supabase.from('kokiri_outcomes').update({ status: newStatus }).eq('id', btn.dataset.id);
@@ -1384,6 +1483,27 @@ main { flex: 1; padding: 2rem; min-width: 0; display: flex; justify-content: cen
       await supabase.from('kokiri_outcomes').delete().eq('id', btn.dataset.id);
       await loadOutcomes();
     }));
+    el.querySelectorAll('.arc-unit').forEach(unit => {
+      unit.addEventListener('dragstart', (e) => {
+        if (e.target.closest('input, button')) { e.preventDefault(); return; }
+        dragOutcomeId = unit.dataset.id; e.dataTransfer.effectAllowed = 'move';
+      });
+      unit.addEventListener('dragover', (e) => { e.preventDefault(); unit.classList.add('drag-over'); });
+      unit.addEventListener('dragleave', () => unit.classList.remove('drag-over'));
+      unit.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        unit.classList.remove('drag-over');
+        const targetId = unit.dataset.id;
+        if (!dragOutcomeId || dragOutcomeId === targetId) return;
+        const fromIdx = outcomesList.findIndex(o => o.id === dragOutcomeId);
+        const toIdx = outcomesList.findIndex(o => o.id === targetId);
+        if (fromIdx < 0 || toIdx < 0) return;
+        const [moved] = outcomesList.splice(fromIdx, 1);
+        outcomesList.splice(toIdx, 0, moved);
+        await Promise.all(outcomesList.map((o, i) => supabase.from('kokiri_outcomes').update({ sort_order: i + 1 }).eq('id', o.id)));
+        await loadOutcomes();
+      });
+    });
   }
   document.getElementById('btn-add-outcome').addEventListener('click', async () => {
     const dateEl = document.getElementById('outcome-date');

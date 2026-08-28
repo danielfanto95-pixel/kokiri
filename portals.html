@@ -1070,6 +1070,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
       { key: 'how_to', name: 'How To' },
       { key: 'timelines', name: 'Timelines' },
       { key: 'deliverables', name: 'Deliverables' },
+      { key: 'model_intelligence_structure', name: 'Model/Intelligence Structure' },
     ]);
     for (const sec of JOURNALS_SECTIONS) {
       await mountExtraSection('journals', 'panel-journals', sec.kind, sec.icon, sec.label, sec.kind === 'changelog' ? CHANGELOG_COLS : NOTES_COL);
