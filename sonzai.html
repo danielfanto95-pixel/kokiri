@@ -31,31 +31,35 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 #btn-logout:hover { border-color: var(--leaf); color: var(--text); }
 
 .layout { display: flex; min-height: calc(100vh - 57px); }
-main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
-.page-head { margin-bottom: 1.4rem; }
+main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; display: flex; flex-direction: column; }
+.page-head { margin-bottom: 1.4rem; flex-shrink: 0; }
 .page-head h1 { font-family: var(--heading); font-size: 1.4rem; color: var(--leaf-bright); }
 .page-head p { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; max-width: 640px; }
 .page-head .quest-link { font-family: var(--mono); font-size: 0.75rem; color: var(--leaf); text-decoration: none; margin-top: 0.4rem; display: inline-block; }
 
-.section-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+.section-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; flex-shrink: 0; }
 .section-block h2 { font-family: var(--heading); font-size: 1.05rem; color: var(--leaf-bright); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.8rem; }
 .section-block .desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
 .mini-btn { font-family: var(--mono); font-size: 0.7rem; background: var(--surface2); border: 1px solid var(--border-bright); color: var(--leaf-bright); border-radius: 6px; padding: 0.3rem 0.7rem; cursor: pointer; }
 .mini-btn:hover { border-color: var(--leaf); }
-.tab-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.7rem; }
-.tab-row.sub { margin-top: -0.2rem; }
-.tab-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 100px; padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; font-family: var(--body); font-weight: 600; }
-.tab-btn.active { border-color: var(--leaf-bright); color: var(--leaf-bright); background: var(--bg); }
-.tab-row.sub .tab-btn { font-size: 0.74rem; padding: 0.3rem 0.7rem; }
-.sz-grid-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.7rem; }
-.sz-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+
+/* Grid browser block grows to fill remaining viewport height */
+.grid-block { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.grid-block-head { flex-shrink: 0; }
+.subsection-title { font-family: var(--heading); font-size: 0.95rem; color: var(--leaf-bright); margin: 0.2rem 0 0.6rem; display: flex; align-items: center; gap: 0.6rem; }
+.subsection-title .sgroup { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.sz-grid-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.7rem; flex-shrink: 0; }
+.sz-grid-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 10px; flex: 1; min-height: 200px; }
 .sz-grid-wrap table { border-collapse: collapse; width: 100%; min-width: max-content; }
 .sz-grid-wrap th, .sz-grid-wrap td { border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; font-size: 0.8rem; vertical-align: top; max-width: 300px; }
-.sz-grid-wrap th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; }
+.sz-grid-wrap th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
 .sz-grid-wrap td { background: var(--bg); color: var(--text); min-width: 140px; }
 .sz-grid-wrap td[contenteditable="true"]:focus { outline: 2px solid var(--leaf); outline-offset: -2px; background: var(--surface2); }
 .sz-grid-wrap .row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 28px; }
 .sz-grid-wrap .row-del:hover { color: var(--danger); }
+.sz-grid-wrap .row-drag { cursor: grab; color: var(--dim); text-align: center; width: 24px; user-select: none; }
+.sz-grid-wrap tr[draggable="true"] { transition: opacity 0.1s; }
+.sz-grid-wrap tr.drag-over td { outline: 2px dashed var(--leaf); outline-offset: -2px; }
 .section-block textarea { width: 100%; min-height: 160px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.85rem; line-height: 1.55; resize: vertical; }
 .btn-save-inline { margin-top: 0.9rem; background: var(--leaf-bright); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 1rem; font-weight: 700; font-size: 0.8rem; cursor: pointer; }
 .save-note { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); margin-left: 0.8rem; }
@@ -91,6 +95,38 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
 .nav-link:hover { background: var(--surface2); color: var(--text); }
 .nav-link.active { background: var(--surface2); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
 @media (max-width: 900px) { .nav-side { display: none; } }
+
+/* Sections browser: vertical sidebar to the LEFT of the grid, sections stacked, click to expand + pick a subsection */
+.section-nav {
+  width: 250px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.section-nav-head {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--border);
+}
+.section-nav-head h2 { font-family: var(--heading); font-size: 0.95rem; color: var(--leaf-bright); }
+.sec-group { margin-bottom: 0.2rem; }
+.sec-group-label {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.55rem 0.6rem;
+  border-radius: 7px; cursor: pointer; user-select: none; font-size: 0.84rem; font-weight: 600; color: var(--muted);
+}
+.sec-group-label:hover { background: var(--surface2); }
+.sec-group-label.active { background: var(--surface2); color: var(--leaf-bright); }
+.sec-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; flex-shrink: 0; }
+.sec-group-label.open .chevron { transform: rotate(90deg); }
+.sec-group-content { display: none; padding: 0.2rem 0 0.5rem 0.6rem; }
+.sec-group-content.open { display: block; }
+.sec-sub-link {
+  display: block; padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.78rem; color: var(--dim);
+  margin-bottom: 0.1rem; border: 1px solid transparent;
+}
+.sec-sub-link:hover { background: var(--surface2); color: var(--text); }
+.sec-sub-link.active { background: var(--bg); border-color: var(--border-bright); color: var(--leaf-bright); font-weight: 600; }
+.sec-sub-cluster-label {
+  font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim);
+  margin: 0.5rem 0 0.15rem 0.6rem;
+}
+@media (max-width: 1100px) { .section-nav { display: none; } }
 </style>
 </head>
 <body>
@@ -101,6 +137,11 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
 </div>
 
 <div class="layout">
+  <nav class="section-nav" id="section-nav">
+    <div class="section-nav-head"><h2>🗂 Sections</h2><button class="mini-btn" id="btn-new-section">+ New</button></div>
+    <div id="section-nav-tree"><p class="empty-note">Loading…</p></div>
+  </nav>
+
   <main>
     <div class="page-head">
       <h1>🌀 Sonzai</h1>
@@ -108,15 +149,14 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
       <a class="quest-link" href="app.html#sonzai">Open the Sonzai sheet →</a>
     </div>
 
-    <div class="section-block">
-      <h2>🗂 Sections <button class="mini-btn" id="btn-new-section">+ New Section</button></h2>
-      <div class="desc">Each subsection is its own spreadsheet — add/edit columns and rows freely. Also a real Kokiri data source, same as any other sheet.</div>
-      <div class="tab-row" id="section-tabs"></div>
-      <div class="tab-row sub" id="subsection-tabs"></div>
-      <button class="mini-btn" id="btn-new-subsection" style="display:none;margin-bottom:0.8rem;">+ New Subsection</button>
-      <div class="sz-grid-toolbar" id="sz-grid-toolbar" style="display:none;">
-        <button class="mini-btn" id="btn-sz-add-row">+ Add Row</button>
-        <button class="mini-btn" id="btn-sz-add-col">+ Add Column</button>
+    <div class="grid-block">
+      <div class="grid-block-head">
+        <div class="subsection-title" id="subsection-title"></div>
+        <button class="mini-btn" id="btn-new-subsection" style="display:none;margin-bottom:0.8rem;">+ New Subsection</button>
+        <div class="sz-grid-toolbar" id="sz-grid-toolbar" style="display:none;">
+          <button class="mini-btn" id="btn-sz-add-row">+ Add Row</button>
+          <button class="mini-btn" id="btn-sz-add-col">+ Add Column</button>
+        </div>
       </div>
       <div class="sz-grid-wrap" id="sz-grid-wrap"></div>
     </div>
@@ -210,62 +250,126 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
   let activeSheetId = null;
   let gridColumns = [];
   let gridRows = [];
+  let dragGridRowId = null;
+  const subsectionsCache = {};
+
+  function openSet() { return new Set(JSON.parse(localStorage.getItem('kokiri_sonzai_nav_open') || '[]')); }
+  function saveOpenSet(set) { localStorage.setItem('kokiri_sonzai_nav_open', JSON.stringify([...set])); }
 
   async function loadSections() {
     const { data } = await supabase.from('kokiri_sonzai_sections').select('*').order('sort_order');
     sections = data || [];
     if (!activeSectionId && sections.length) activeSectionId = sections[0].id;
-    renderSectionTabs();
-    await selectSection(activeSectionId);
+    for (const s of sections) {
+      if (!s.sheet_id) {
+        const { data: subs } = await supabase.from('kokiri_sonzai_subsections').select('*').eq('section_id', s.id).order('sort_order');
+        subsectionsCache[s.id] = subs || [];
+      }
+    }
+    if (activeSectionId) {
+      const activeSection = sections.find(s => s.id === activeSectionId);
+      if (activeSection && !activeSection.sheet_id) {
+        activeSubsections = subsectionsCache[activeSectionId] || [];
+        if (!activeSubsectionId || !activeSubsections.some(s => s.id === activeSubsectionId)) {
+          activeSubsectionId = activeSubsections[0]?.id || null;
+        }
+        const open = openSet(); open.add(activeSectionId); saveOpenSet(open);
+      }
+    }
+    renderSectionTree();
+    await selectSection(activeSectionId, { skipTreeRender: true });
   }
 
-  function renderSectionTabs() {
-    const el = document.getElementById('section-tabs');
-    el.innerHTML = sections.map(s => `<button class="tab-btn ${s.id === activeSectionId ? 'active' : ''}" data-id="${s.id}">${escapeHtml(s.name)}</button>`).join('');
-    el.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => selectSection(btn.dataset.id)));
+  function renderSectionTree() {
+    const el = document.getElementById('section-nav-tree');
+    const open = openSet();
+    el.innerHTML = sections.map(s => {
+      if (s.sheet_id) {
+        const isActive = s.id === activeSectionId;
+        return `<div class="sec-group"><div class="sec-group-label direct ${isActive ? 'active' : ''}" data-id="${s.id}" data-direct="1">${escapeHtml(s.name)}</div></div>`;
+      }
+      const isOpen = open.has(s.id);
+      const subs = subsectionsCache[s.id] || [];
+      const isActiveGroup = s.id === activeSectionId;
+      let clusterHtml = '';
+      let lastGroup = undefined;
+      for (const sub of subs) {
+        const grp = sub.group_label || null;
+        if (grp !== lastGroup) {
+          if (grp) clusterHtml += `<div class="sec-sub-cluster-label">${escapeHtml(grp)}</div>`;
+          lastGroup = grp;
+        }
+        const subActive = sub.id === activeSubsectionId && s.id === activeSectionId;
+        clusterHtml += `<div class="sec-sub-link ${subActive ? 'active' : ''}" data-section="${s.id}" data-id="${sub.id}">${escapeHtml(sub.name)}</div>`;
+      }
+      return `
+        <div class="sec-group">
+          <div class="sec-group-label ${isOpen ? 'open' : ''} ${isActiveGroup ? 'active' : ''}" data-id="${s.id}"><span>${escapeHtml(s.name)}</span><span class="chevron">▸</span></div>
+          <div class="sec-group-content ${isOpen ? 'open' : ''}" data-content="${s.id}">
+            ${subs.length ? clusterHtml : '<p class="empty-note" style="padding:0.3rem 0.6rem;">No subsections yet.</p>'}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('.sec-group-label[data-direct]').forEach(label => {
+      label.addEventListener('click', () => selectSection(label.dataset.id));
+    });
+    el.querySelectorAll('.sec-group-label:not([data-direct])').forEach(label => {
+      label.addEventListener('click', () => {
+        const id = label.dataset.id;
+        const open = openSet();
+        if (open.has(id)) open.delete(id); else open.add(id);
+        saveOpenSet(open);
+        selectSection(id);
+      });
+    });
+    el.querySelectorAll('.sec-sub-link').forEach(link => {
+      link.addEventListener('click', async () => {
+        activeSectionId = link.dataset.section;
+        activeSubsections = subsectionsCache[activeSectionId] || [];
+        await selectSubsection(link.dataset.id);
+      });
+    });
   }
 
-  async function selectSection(id) {
+  async function selectSection(id, opts = {}) {
     activeSectionId = id;
-    renderSectionTabs();
     const section = sections.find(s => s.id === id);
     if (!section) return;
 
     if (section.sheet_id) {
-      // Direct mode: section IS a single spreadsheet, no subsections.
       activeSubsections = [];
       activeSubsectionId = null;
-      document.getElementById('subsection-tabs').innerHTML = '';
       document.getElementById('btn-new-subsection').style.display = 'none';
+      document.getElementById('subsection-title').innerHTML = `${escapeHtml(section.name)}`;
+      if (!opts.skipTreeRender) renderSectionTree();
       await loadGrid(section.sheet_id);
       return;
     }
 
-    const { data } = await supabase.from('kokiri_sonzai_subsections').select('*').eq('section_id', id).order('sort_order');
-    activeSubsections = data || [];
+    activeSubsections = subsectionsCache[id] || [];
     document.getElementById('btn-new-subsection').style.display = '';
+    if (!opts.skipTreeRender) renderSectionTree();
     if (!activeSubsections.length) {
-      document.getElementById('subsection-tabs').innerHTML = '<p class="empty-note">No subsections yet — add one.</p>';
+      document.getElementById('subsection-title').textContent = section.name;
       document.getElementById('sz-grid-toolbar').style.display = 'none';
-      document.getElementById('sz-grid-wrap').innerHTML = '';
+      document.getElementById('sz-grid-wrap').innerHTML = '<p class="empty-note">No subsections yet — add one from the sidebar.</p>';
       return;
     }
     if (!activeSubsectionId || !activeSubsections.some(s => s.id === activeSubsectionId)) activeSubsectionId = activeSubsections[0].id;
-    renderSubsectionTabs();
-    await selectSubsection(activeSubsectionId);
+    await selectSubsection(activeSubsectionId, { skipTreeRender: !!opts.skipTreeRender });
   }
 
-  function renderSubsectionTabs() {
-    const el = document.getElementById('subsection-tabs');
-    el.innerHTML = activeSubsections.map(s => `<button class="tab-btn ${s.id === activeSubsectionId ? 'active' : ''}" data-id="${s.id}">${escapeHtml(s.name)}</button>`).join('');
-    el.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => selectSubsection(btn.dataset.id)));
-  }
-
-  async function selectSubsection(id) {
+  async function selectSubsection(id, opts = {}) {
     activeSubsectionId = id;
-    renderSubsectionTabs();
     const sub = activeSubsections.find(s => s.id === id);
     if (!sub) return;
+    const section = sections.find(s => s.id === activeSectionId);
+    document.getElementById('subsection-title').innerHTML = sub.group_label
+      ? `<span class="sgroup">${escapeHtml(sub.group_label)} /</span> ${escapeHtml(sub.name)}`
+      : `${escapeHtml(section?.name || '')} <span class="sgroup">/</span> ${escapeHtml(sub.name)}`;
+    if (!opts.skipTreeRender) renderSectionTree();
     await loadGrid(sub.sheet_id);
   }
 
@@ -284,11 +388,11 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
   function renderGrid() {
     const wrap = document.getElementById('sz-grid-wrap');
     if (!gridColumns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column".</p>'; return; }
-    let html = '<thead><tr><th class="row-del">×</th>';
+    let html = '<thead><tr><th class="row-drag"></th><th class="row-del">×</th>';
     for (const c of gridColumns) html += `<th>${escapeHtml(c.name)}</th>`;
     html += '</tr></thead><tbody>';
     for (const r of gridRows) {
-      html += `<tr data-row-id="${r.id}"><td class="row-del" data-action="del-row">×</td>`;
+      html += `<tr data-row-id="${r.id}" draggable="true"><td class="row-drag" title="Drag to reorder">⠿</td><td class="row-del" data-action="del-row">×</td>`;
       for (const c of gridColumns) {
         const val = r.data?.[c.column_key] ?? '';
         html += `<td contenteditable="true" data-col-key="${c.column_key}">${escapeHtml(val)}</td>`;
@@ -314,6 +418,27 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
         await supabase.from('kokiri_rows').delete().eq('id', rowId);
         gridRows = gridRows.filter(r => r.id !== rowId);
         renderGrid();
+      });
+    });
+    wrap.querySelectorAll('tr[draggable="true"]').forEach(tr => {
+      tr.addEventListener('dragstart', (e) => {
+        if (e.target.closest('[contenteditable="true"]')) { e.preventDefault(); return; }
+        dragGridRowId = tr.dataset.rowId; e.dataTransfer.effectAllowed = 'move';
+      });
+      tr.addEventListener('dragover', (e) => { e.preventDefault(); tr.classList.add('drag-over'); });
+      tr.addEventListener('dragleave', () => tr.classList.remove('drag-over'));
+      tr.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        tr.classList.remove('drag-over');
+        const targetId = tr.dataset.rowId;
+        if (!dragGridRowId || dragGridRowId === targetId) return;
+        const fromIdx = gridRows.findIndex(r => r.id === dragGridRowId);
+        const toIdx = gridRows.findIndex(r => r.id === targetId);
+        if (fromIdx < 0 || toIdx < 0) return;
+        const [moved] = gridRows.splice(fromIdx, 1);
+        gridRows.splice(toIdx, 0, moved);
+        renderGrid();
+        await Promise.all(gridRows.map((r, i) => supabase.from('kokiri_rows').update({ sort_order: i + 1 }).eq('id', r.id)));
       });
     });
   }
@@ -371,6 +496,9 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
     const { data, error } = await supabase.from('kokiri_sonzai_subsections').insert({ section_id: activeSectionId, name, sheet_id: sheet.id, sort_order: maxOrder + 1 }).select().single();
     if (error) { alert('⚠ ' + error.message); return; }
     activeSubsectionId = data.id;
+    const { data: refreshedSubs } = await supabase.from('kokiri_sonzai_subsections').select('*').eq('section_id', activeSectionId).order('sort_order');
+    subsectionsCache[activeSectionId] = refreshedSubs || [];
+    const open = openSet(); open.add(activeSectionId); saveOpenSet(open);
     await selectSection(activeSectionId);
   });
 
