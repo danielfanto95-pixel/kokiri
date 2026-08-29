@@ -1052,7 +1052,7 @@ th.grid-th:active { cursor: grabbing; }
           }
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
           logChange(slug, `Set ${SELECT_LABELS[sel.dataset.colKey] || sel.dataset.colKey} on a task`);
-          if (sel.dataset.colKey === 'status' && sel.value === 'Complete') render();
+          if (sel.dataset.colKey === 'recurring' || (sel.dataset.colKey === 'status' && sel.value === 'Complete')) render();
         });
       });
       wrap.querySelectorAll('.tdel').forEach(el => {
