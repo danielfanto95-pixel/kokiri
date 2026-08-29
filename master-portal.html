@@ -134,13 +134,57 @@ th.grid-th:active { cursor: grabbing; }
 [contenteditable="true"].rtask:focus, [contenteditable="true"].rnotes:focus, [contenteditable="true"].routine-time:focus { outline: 1px solid var(--gold); background: var(--surface2); }
 @media (max-width: 620px) { .routine-row { grid-template-columns: 1fr; } .routine-time { justify-self: start; } }
 
+.hotlink-list { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.hotlink-chip {
+  display: flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 100px; padding: 0.4rem 0.5rem 0.4rem 0.9rem; font-size: 0.8rem;
+}
+.hotlink-chip:hover { border-color: var(--border-bright); }
+.hotlink-chip a { color: var(--leaf-bright); text-decoration: none; }
+.hotlink-chip a:hover { color: var(--gold-bright); }
+.hotlink-chip .hldel { color: var(--dim); cursor: pointer; padding: 0 0.2rem; }
+.hotlink-chip .hldel:hover { color: #ff5c7a; }
+.add-hotlink-form { display: none; gap: 0.5rem; margin-top: 0.7rem; flex-wrap: wrap; }
+.add-hotlink-form.open { display: flex; }
+.add-hotlink-form input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.8rem; }
+.add-hotlink-form input[data-role="hl-label"] { width: 220px; }
+.add-hotlink-form input[data-role="hl-url"] { flex: 1; min-width: 180px; }
+.add-hotlink-form button { background: var(--gold); color: var(--bg); border: none; border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+
+.doc-dropzone {
+  border: 1px dashed var(--border-bright); border-radius: 10px; padding: 1rem; text-align: center;
+  font-size: 0.82rem; color: var(--muted); cursor: pointer; margin-bottom: 0.9rem;
+}
+.doc-dropzone:hover, .doc-dropzone.dragover { border-color: var(--leaf); color: var(--text); }
+.doc-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.doc-row { display: flex; align-items: center; gap: 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.8rem; font-size: 0.82rem; }
+.doc-row .dname { flex: 1; color: var(--leaf-bright); cursor: pointer; text-decoration: none; }
+.doc-row .dname:hover { color: var(--gold-bright); }
+.doc-row .dmeta { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); white-space: nowrap; }
+.doc-row .ddel { color: var(--dim); cursor: pointer; }
+.doc-row .ddel:hover { color: #ff5c7a; }
+
 .task-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .task-card {
-  display: grid; grid-template-columns: 1fr 140px 200px 24px; gap: 0.7rem; align-items: center;
+  display: flex; flex-direction: column; gap: 0.4rem;
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem;
 }
 .task-card:hover { border-color: var(--border-bright); }
+.task-card .trow { display: grid; grid-template-columns: 1fr 130px 190px 150px 24px; gap: 0.7rem; align-items: center; }
+.task-card select[data-col-key="status"] { font-weight: 600; }
+.task-card select[data-col-key="status"][data-status="Complete"] { color: var(--gold-bright); border-color: var(--border-bright); }
+.task-card select[data-col-key="status"][data-status="Needs Your Review"] { color: #ffd166; border-color: rgba(255,209,102,0.4); }
 .task-card .ttask { font-size: 0.85rem; }
+.task-card .tnotes { font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
+.task-card .tnotes:empty::before { content: 'Add details…'; color: var(--dim); }
+.task-card .thistory {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); line-height: 1.6; white-space: pre-wrap;
+  border-top: 1px dashed var(--border); padding-top: 0.35rem; margin-top: 0.1rem;
+}
+[contenteditable="true"].tnotes:focus, [contenteditable="true"].thistory:focus { outline: 1px solid var(--gold); background: var(--surface2); }
+.task-group-label { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.9rem 0 0.4rem; }
+.task-group-label:first-child { margin-top: 0; }
+.task-group-label span { color: var(--dim); }
 .task-card select {
   background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px;
   padding: 0.35rem 0.5rem; font-family: var(--mono); font-size: 0.72rem; cursor: pointer;
@@ -148,7 +192,7 @@ th.grid-th:active { cursor: grabbing; }
 .task-card select:focus { outline: 1px solid var(--gold); }
 .task-card .tdel { color: var(--dim); cursor: pointer; text-align: center; font-size: 0.9rem; }
 .task-card .tdel:hover { color: #ff5c7a; }
-@media (max-width: 720px) { .task-card { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .task-card .trow { grid-template-columns: 1fr; } }
 
 .portal-note {
   margin-top: 1rem; padding: 0.8rem 1rem; background: rgba(34,195,255,0.06); border: 1px dashed var(--border-bright);
@@ -193,6 +237,25 @@ th.grid-th:active { cursor: grabbing; }
       <p>The command center — schedule, the loops that run it, and every business the schedule serves. Every grid here is the same live data as its home portal: edit it here or there, it's one source of truth. Everything collapses, every row is editable and draggable, and every edit is logged below.</p>
     </div>
 
+    <!-- ================= HOT LINKS ================= -->
+    <div class="op-section open" data-key="sec-hotlinks">
+      <div class="op-head"><span class="op-icon">🔗</span><h3>Hot Links</h3><span class="op-count" id="count-hot-links"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-hotlink">+ Add Link</button></div>
+        <div class="hotlink-list" id="hotlink-list"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+
+    <!-- ================= IMPORTANT DOCUMENTS ================= -->
+    <div class="op-section" data-key="sec-docs">
+      <div class="op-head"><span class="op-icon">📁</span><h3>Important Documents</h3><span class="op-count" id="count-docs"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="doc-dropzone" id="doc-dropzone">Click or drop a file here to upload</div>
+        <input type="file" id="doc-file-input" style="display:none;" multiple>
+        <div class="doc-list" id="doc-list"></div>
+      </div>
+    </div>
+
     <!-- ================= SECTION 0: SCHEDULE ================= -->
     <div class="macro-section" data-macro="schedule">
     <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span><span class="macro-chevron">▾</span></div>
@@ -217,6 +280,18 @@ th.grid-th:active { cursor: grabbing; }
           <button data-action="add-task">+ Add Task</button>
         </div>
         <div class="task-list" id="task-list"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-objectives">
+      <div class="op-head"><span class="op-icon">🎯</span><h3>Objectives</h3><span class="op-count" id="count-sonzai-state-goals-objectives"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="sonzai-state-goals-objectives">+ Add Objective</button>
+          <button data-action="add-col" data-slug="sonzai-state-goals-objectives">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives.</div>
       </div>
     </div>
 
@@ -334,6 +409,20 @@ th.grid-th:active { cursor: grabbing; }
     </div>
 
     </div>
+    </div>
+
+    <!-- ================= CLAUDE CODE TASKS (this session's own work, tracked) ================= -->
+    <div class="macro-head" style="cursor:default;"><span class="macro-num">·</span><h2>🤖 Claude Code Tasks</h2><span class="macro-sub">every build request in this session, logged &amp; tracked</span></div>
+    <div class="op-section open" data-key="sec-claude-tasks">
+      <div class="op-head"><span class="op-icon">🤖</span><h3>Claude Code Tasks</h3><span class="op-count" id="count-claude-tasks"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="claude-tasks">+ Add Row</button>
+          <button data-action="add-col" data-slug="claude-tasks">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-claude-tasks"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Same live rows as Portals → Claude Code Tasks — every non-trivial thing asked for gets logged here as it's built.</div>
+      </div>
     </div>
 
   </main>
@@ -480,7 +569,8 @@ th.grid-th:active { cursor: grabbing; }
   const SLUG_TO_TAB = {
     'master-routine': 'masterportal', 'master-tasks': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
     'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
-    'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal',
+    'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal', 'hot-links': 'masterportal',
+    'sonzai-state-goals-objectives': 'masterportal', 'claude-tasks': 'claude-tasks',
   };
   const changeLogSheetIds = {};
   async function ensureExtraSheet(slug, name, columns) {
@@ -667,6 +757,122 @@ th.grid-th:active { cursor: grabbing; }
     await loadData();
   }
 
+  // ---------- Hot Links — quick-access chip list ----------
+  async function mountHotLinks() {
+    const slug = 'hot-links';
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    const wrap = document.getElementById('hotlink-list');
+    if (!sheet) { wrap.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
+    let rows = [];
+    async function loadData() {
+      const { data } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
+      rows = data || [];
+      render();
+      document.getElementById('count-hot-links').textContent = rows.length + ' link' + (rows.length === 1 ? '' : 's');
+    }
+    function render() {
+      wrap.innerHTML = (rows.length ? rows.map(r => `
+        <span class="hotlink-chip" data-row-id="${r.id}">
+          <a href="${escapeHtml(r.data?.url ?? '#')}" target="_blank" rel="noopener">${escapeHtml(r.data?.label ?? 'Untitled')}</a>
+          <span class="hldel" title="Remove">✕</span>
+        </span>
+      `).join('') : '<p class="empty-note">No hot links yet.</p>') + `
+        <div class="add-hotlink-form" id="add-hotlink-form">
+          <input type="text" data-role="hl-label" placeholder="Label, e.g. 🏋️ Furin Fitness">
+          <input type="text" data-role="hl-url" placeholder="https:// or a page like portals.html#jobs">
+          <button id="btn-save-hotlink">+ Save</button>
+        </div>
+      `;
+      wrap.querySelectorAll('.hldel').forEach(el => {
+        el.addEventListener('click', async () => {
+          const rowId = el.closest('.hotlink-chip').dataset.rowId;
+          if (!confirm('Remove this link?')) return;
+          await supabase.from('kokiri_rows').delete().eq('id', rowId);
+          rows = rows.filter(r => r.id !== rowId);
+          render();
+          document.getElementById('count-hot-links').textContent = rows.length + ' link' + (rows.length === 1 ? '' : 's');
+          logChange(slug, 'Removed a hot link');
+        });
+      });
+      document.getElementById('btn-save-hotlink').addEventListener('click', async () => {
+        const labelEl = document.querySelector('#add-hotlink-form [data-role="hl-label"]');
+        const urlEl = document.querySelector('#add-hotlink-form [data-role="hl-url"]');
+        const url = urlEl.value.trim();
+        if (!url) return;
+        const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+        const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { label: labelEl.value.trim() || url, url }, sort_order: maxOrder + 1 }).select().single();
+        if (error) { alert(error.message); return; }
+        rows.push(data);
+        render();
+        document.getElementById('count-hot-links').textContent = rows.length + ' link' + (rows.length === 1 ? '' : 's');
+        logChange(slug, 'Added a hot link');
+      });
+    }
+    document.querySelector('[data-action="add-hotlink"]').addEventListener('click', () => {
+      document.getElementById('add-hotlink-form')?.classList.toggle('open');
+    });
+    await loadData();
+  }
+
+  // ---------- Important Documents — reuses the same private bucket/table as the Repository ----------
+  const REPO_BUCKET = 'kokiri-repository';
+  const DOCS_CATEGORY = 'Master Portal';
+
+  async function loadDocs() {
+    const { data } = await supabase.from('kokiri_documents').select('*').eq('category', DOCS_CATEGORY).order('created_at', { ascending: false });
+    const list = document.getElementById('doc-list');
+    document.getElementById('count-docs').textContent = (data?.length || 0) + ' file' + (data?.length === 1 ? '' : 's');
+    if (!data || !data.length) { list.innerHTML = '<p class="empty-note">No documents uploaded yet.</p>'; return; }
+    list.innerHTML = data.map(d => `
+      <div class="doc-row" data-id="${d.id}" data-path="${escapeHtml(d.storage_path)}">
+        <a class="dname" data-action="dl">📄 ${escapeHtml(d.name)}</a>
+        <span class="dmeta">${d.size_bytes ? Math.round(d.size_bytes / 1024) + ' KB' : ''}</span>
+        <span class="ddel" data-action="del" title="Delete">✕</span>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-action="dl"]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const path = el.closest('.doc-row').dataset.path;
+        const { data: signed } = await supabase.storage.from(REPO_BUCKET).createSignedUrl(path, 60);
+        if (signed) window.open(signed.signedUrl, '_blank');
+      });
+    });
+    list.querySelectorAll('[data-action="del"]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const row = el.closest('.doc-row');
+        if (!confirm('Delete this document?')) return;
+        await supabase.storage.from(REPO_BUCKET).remove([row.dataset.path]);
+        await supabase.from('kokiri_documents').delete().eq('id', row.dataset.id);
+        logChange('hot-links', 'Deleted an Important Document'); // reuse masterportal changelog tab
+        await loadDocs();
+      });
+    });
+  }
+
+  async function uploadDocs(fileList) {
+    for (const file of Array.from(fileList)) {
+      const storagePath = `master-portal-docs/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const { error } = await supabase.storage.from(REPO_BUCKET).upload(storagePath, file);
+      if (error) { alert(`⚠ Failed to upload ${file.name}: ${error.message}`); continue; }
+      await supabase.from('kokiri_documents').insert({
+        name: file.name, category: DOCS_CATEGORY, description: 'Master Portal upload', mime_type: file.type || null, size_bytes: file.size, storage_path: storagePath,
+      });
+      logChange('hot-links', `Uploaded document "${file.name}"`);
+    }
+    await loadDocs();
+  }
+
+  function mountDocs() {
+    const dropzone = document.getElementById('doc-dropzone');
+    const fileInput = document.getElementById('doc-file-input');
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => { uploadDocs(fileInput.files); fileInput.value = ''; });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); uploadDocs(e.dataTransfer.files); });
+    return loadDocs();
+  }
+
   // ---------- Daily Routine — its own compact card list (time block + task + notes), still edit/drag/log ----------
   async function mountRoutine() {
     const slug = 'master-routine';
@@ -739,7 +945,8 @@ th.grid-th:active { cursor: grabbing; }
   }
 
   // ---------- Tasks — Recurring + Assigned To (Me or an agent) ----------
-  const RECURRING_OPTIONS = ['None', 'Daily', 'Weekdays', 'Weekly'];
+  const RECURRING_OPTIONS = ['None', 'Every 8 Hours', 'Daily', 'Weekdays', 'Weekly'];
+  const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Needs Your Review', 'Complete'];
 
   async function mountTasks() {
     const slug = 'master-tasks';
@@ -762,38 +969,62 @@ th.grid-th:active { cursor: grabbing; }
       return list.map(o => `<option value="${escapeHtml(o)}" ${o === selected ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
     }
 
-    function render() {
-      if (!rows.length) { wrap.innerHTML = '<p class="empty-note">No tasks yet — click "+ Add Task" to start.</p>'; return; }
-      wrap.innerHTML = rows.map(r => {
+    function cardHtml(r) {
         const recurring = r.data?.recurring || 'None';
         const assignedTo = r.data?.assigned_to || assigneeOptions[0];
+        const status = r.data?.status || STATUS_OPTIONS[0];
         return `
         <div class="task-card" data-row-id="${r.id}" draggable="true">
-          <div class="ttask" contenteditable="true" data-col-key="task">${escapeHtml(r.data?.task ?? '')}</div>
-          <select data-col-key="recurring">${optionsHtml(RECURRING_OPTIONS, recurring)}</select>
-          <select data-col-key="assigned_to">${optionsHtml(assigneeOptions.includes(assignedTo) ? assigneeOptions : [assignedTo, ...assigneeOptions], assignedTo)}</select>
-          <span class="tdel" title="Delete">✕</span>
+          <div class="trow">
+            <div class="ttask" contenteditable="true" data-col-key="task">${escapeHtml(r.data?.task ?? '')}</div>
+            <select data-col-key="recurring">${optionsHtml(RECURRING_OPTIONS, recurring)}</select>
+            <select data-col-key="assigned_to">${optionsHtml(assigneeOptions.includes(assignedTo) ? assigneeOptions : [assignedTo, ...assigneeOptions], assignedTo)}</select>
+            <select data-col-key="status" data-status="${escapeHtml(status)}">${optionsHtml(STATUS_OPTIONS, status)}</select>
+            <span class="tdel" title="Delete">✕</span>
+          </div>
+          <div class="tnotes" contenteditable="true" data-col-key="notes">${escapeHtml(r.data?.notes ?? '')}</div>
+          ${r.data?.history_log ? `<div class="thistory" contenteditable="true" data-col-key="history_log">${escapeHtml(r.data.history_log)}</div>` : ''}
         </div>`;
-      }).join('');
+    }
 
-      wrap.querySelectorAll('.ttask[contenteditable="true"]').forEach(el => {
+    function render() {
+      if (!rows.length) { wrap.innerHTML = '<p class="empty-note">No tasks yet — click "+ Add Task" to start.</p>'; return; }
+      const recurring = rows.filter(r => (r.data?.recurring || 'None') !== 'None');
+      const oneTime = rows.filter(r => (r.data?.recurring || 'None') === 'None');
+      wrap.innerHTML = `
+        <div class="task-group-label">🔁 Recurring <span>(${recurring.length})</span></div>
+        ${recurring.length ? recurring.map(cardHtml).join('') : '<p class="empty-note">No recurring tasks yet.</p>'}
+        <div class="task-group-label">📌 One-Time <span>(${oneTime.length})</span></div>
+        ${oneTime.length ? oneTime.map(cardHtml).join('') : '<p class="empty-note">No one-time tasks yet.</p>'}
+      `;
+
+      wrap.querySelectorAll('.ttask[contenteditable="true"], .tnotes[contenteditable="true"], .thistory[contenteditable="true"]').forEach(el => {
         el.addEventListener('blur', async () => {
           const rowId = el.closest('.task-card').dataset.rowId;
           const row = rows.find(r => r.id === rowId);
           if (!row) return;
-          row.data = { ...row.data, task: el.textContent };
+          row.data = { ...row.data, [el.dataset.colKey]: el.textContent };
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
-          logChange(slug, 'Edited a task');
+          logChange(slug, el.classList.contains('tnotes') ? 'Edited a task\'s details' : 'Edited a task');
         });
       });
+      const SELECT_LABELS = { recurring: 'Recurring', assigned_to: 'Assigned To', status: 'Status' };
       wrap.querySelectorAll('select[data-col-key]').forEach(sel => {
         sel.addEventListener('change', async () => {
           const rowId = sel.closest('.task-card').dataset.rowId;
           const row = rows.find(r => r.id === rowId);
           if (!row) return;
           row.data = { ...row.data, [sel.dataset.colKey]: sel.value };
+          if (sel.dataset.colKey === 'status') {
+            sel.dataset.status = sel.value;
+            if (sel.value === 'Complete') {
+              const entry = `${new Date().toLocaleString()} — Completed${(row.data.recurring && row.data.recurring !== 'None') ? ` (recurring: ${row.data.recurring})` : ''}`;
+              row.data.history_log = row.data.history_log ? `${row.data.history_log}\n${entry}` : entry;
+            }
+          }
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
-          logChange(slug, `Set ${sel.dataset.colKey === 'recurring' ? 'Recurring' : 'Assigned To'} on a task`);
+          logChange(slug, `Set ${SELECT_LABELS[sel.dataset.colKey] || sel.dataset.colKey} on a task`);
+          if (sel.dataset.colKey === 'status' && sel.value === 'Complete') render();
         });
       });
       wrap.querySelectorAll('.tdel').forEach(el => {
@@ -833,7 +1064,7 @@ th.grid-th:active { cursor: grabbing; }
 
     document.querySelector('[data-action="add-task"]').addEventListener('click', async () => {
       const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
-      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', recurring: 'None', assigned_to: assigneeOptions[0] }, sort_order: maxOrder + 1 }).select().single();
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', recurring: 'None', assigned_to: assigneeOptions[0], status: STATUS_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert(error.message); return; }
       rows.push(data);
       render();
@@ -865,8 +1096,11 @@ th.grid-th:active { cursor: grabbing; }
 
   initNavCollapse();
   await loadNav();
+  await mountHotLinks();
+  await mountDocs();
   await mountRoutine();
   await mountTasks();
+  await mountGrid('sonzai-state-goals-objectives');
   await mountGrid('loops-agents');
   let sagaCount = 0, statsCount = 0;
   await mountGrid('sagas', (c, r) => { sagaCount = r.length; updateSagaStatsCount(sagaCount, statsCount); });
@@ -878,6 +1112,7 @@ th.grid-th:active { cursor: grabbing; }
   await mountGrid('ads');
   await mountGrid('stocks-bets');
   await mountGrid('fb-marketplace');
+  await mountGrid('claude-tasks');
 </script>
 
 <script type="module" src="widget.js"></script>
