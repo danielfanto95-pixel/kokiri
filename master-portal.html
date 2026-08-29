@@ -646,6 +646,8 @@ th.grid-th:active { cursor: grabbing; }
 
   const GRID_SELECT_FIELDS = {
     'job-applications': { approval: ['Not Approved', 'Approved'] },
+    'ads': { test_status: ['Not Started', 'Running', 'Complete'], test_winner: ['TBD', 'Yes', 'No', 'Inconclusive'] },
+    'content': { test_status: ['Not Started', 'Running', 'Complete'], test_winner: ['TBD', 'Yes', 'No', 'Inconclusive'] },
   };
 
   async function mountGrid(slug, onData) {
