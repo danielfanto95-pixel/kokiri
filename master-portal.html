@@ -7,26 +7,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #07040f; --surface: #130b26; --surface2: #1c1038;
-  --border: rgba(0,229,255,0.14); --border-bright: rgba(255,45,149,0.4);
-  --text: #eae6ff; --muted: #a79bd1; --dim: #6f6296;
-  --leaf: #00e5ff; --leaf-bright: #6cf3ff; --gold: #ff2d95; --gold-bright: #ff6ec7;
+  --bg: #030c0f; --surface: #0b1f22; --surface2: #102b26;
+  --border: rgba(34,195,255,0.16); --border-bright: rgba(46,232,143,0.4);
+  --text: #e2f7ee; --muted: #8fc3b4; --dim: #5c8b7c;
+  --leaf: #22c3ff; --leaf-bright: #7df3ff; --gold: #2ee88f; --gold-bright: #7dffc0;
   --heading: 'Orbitron', sans-serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh;
   background-image:
-    radial-gradient(circle at 15% 8%, rgba(255,45,149,0.12), transparent 42%),
-    radial-gradient(circle at 88% 90%, rgba(0,229,255,0.14), transparent 48%),
-    repeating-linear-gradient(0deg, rgba(0,229,255,0.035) 0px, rgba(0,229,255,0.035) 1px, transparent 1px, transparent 42px),
-    repeating-linear-gradient(90deg, rgba(255,45,149,0.03) 0px, rgba(255,45,149,0.03) 1px, transparent 1px, transparent 42px);
+    radial-gradient(circle at 15% 8%, rgba(46,232,143,0.12), transparent 42%),
+    radial-gradient(circle at 88% 90%, rgba(34,195,255,0.16), transparent 48%),
+    repeating-linear-gradient(0deg, rgba(34,195,255,0.035) 0px, rgba(34,195,255,0.035) 1px, transparent 1px, transparent 42px),
+    repeating-linear-gradient(90deg, rgba(46,232,143,0.03) 0px, rgba(46,232,143,0.03) 1px, transparent 1px, transparent 42px);
   background-attachment: fixed;
 }
 .topbar {
   display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
   border-bottom: 1px solid var(--border-bright); background: var(--surface); position: sticky; top: 0; z-index: 10;
-  box-shadow: 0 1px 24px rgba(255,45,149,0.1);
+  box-shadow: 0 1px 24px rgba(34,195,255,0.12);
 }
 .brand {
   font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
@@ -46,13 +46,13 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
 .page-head::after {
   content: ''; position: absolute; left: 0; bottom: -1px; height: 2px; width: 140px;
   background: linear-gradient(90deg, var(--leaf-bright), transparent);
-  box-shadow: 0 0 12px 1px rgba(0,229,255,0.6);
+  box-shadow: 0 0 12px 1px rgba(34,195,255,0.65);
   animation: sheikah-scan 4s ease-in-out infinite;
 }
 @keyframes sheikah-scan { 0%,100% { opacity: 0.35; width: 90px; } 50% { opacity: 1; width: 260px; } }
 .page-head h1 {
   font-family: var(--heading); font-weight: 900; font-size: 1.7rem; color: var(--gold-bright); letter-spacing: 0.04em;
-  text-shadow: 0 0 8px rgba(255,45,149,0.7), 0 0 26px rgba(255,45,149,0.35);
+  text-shadow: 0 0 8px rgba(46,232,143,0.7), 0 0 26px rgba(46,232,143,0.35);
 }
 .page-head p { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; max-width: 700px; line-height: 1.65; }
 
@@ -62,11 +62,11 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
 .macro-head:hover h2 { text-shadow: 0 0 14px rgba(108,243,255,0.6); }
 .macro-head .macro-num {
   font-family: var(--mono); font-size: 0.72rem; color: var(--bg); background: var(--gold-bright);
-  border-radius: 5px; padding: 0.15rem 0.5rem; font-weight: 700; box-shadow: 0 0 10px -1px rgba(255,45,149,0.7);
+  border-radius: 5px; padding: 0.15rem 0.5rem; font-weight: 700; box-shadow: 0 0 10px -1px rgba(46,232,143,0.7);
 }
 .macro-head h2 {
   font-family: var(--heading); font-weight: 800; font-size: 1.2rem; color: var(--leaf-bright); letter-spacing: 0.03em;
-  text-shadow: 0 0 10px rgba(0,229,255,0.4);
+  text-shadow: 0 0 10px rgba(34,195,255,0.45);
 }
 .macro-head .macro-sub { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
 .macro-head .macro-chevron { margin-left: auto; font-size: 0.75rem; color: var(--muted); transition: transform 0.15s; }
@@ -78,10 +78,10 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0.9rem; overflow: hidden;
   transition: border-color 0.2s;
 }
-.op-section.open { border-color: var(--border-bright); box-shadow: 0 0 26px -10px rgba(0,229,255,0.3); }
+.op-section.open { border-color: var(--border-bright); box-shadow: 0 0 26px -10px rgba(34,195,255,0.35); }
 .op-section.nested { background: var(--surface2); margin-bottom: 0.6rem; }
 .op-head { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; }
-.op-head:hover { background: rgba(0,229,255,0.06); }
+.op-head:hover { background: rgba(34,195,255,0.07); }
 .op-section.open .op-head { border-bottom-color: var(--border); }
 .op-head .op-icon { font-size: 1.15rem; }
 .op-head h3 { font-family: var(--heading); font-size: 0.98rem; color: var(--leaf-bright); flex: 1; }
@@ -97,7 +97,7 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
   font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface);
   border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer;
 }
-.op-toolbar button:hover { border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 10px -2px rgba(255,45,149,0.55); }
+.op-toolbar button:hover { border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 10px -2px rgba(46,232,143,0.55); }
 
 .op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
 table { border-collapse: collapse; width: 100%; min-width: max-content; }
@@ -126,8 +126,8 @@ th.grid-th:active { cursor: grabbing; }
 }
 .routine-row:hover { border-color: var(--border-bright); }
 .routine-time {
-  font-family: var(--mono); font-size: 0.68rem; color: var(--gold-bright); background: rgba(255,45,149,0.1);
-  border: 1px solid rgba(255,45,149,0.3); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center; align-self: center;
+  font-family: var(--mono); font-size: 0.68rem; color: var(--gold-bright); background: rgba(46,232,143,0.12);
+  border: 1px solid rgba(46,232,143,0.35); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center; align-self: center;
 }
 .routine-body .rtask { font-family: var(--heading); font-size: 0.92rem; color: var(--text); }
 .routine-body .rnotes { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.5; }
@@ -151,7 +151,7 @@ th.grid-th:active { cursor: grabbing; }
 @media (max-width: 720px) { .task-card { grid-template-columns: 1fr; } }
 
 .portal-note {
-  margin-top: 1rem; padding: 0.8rem 1rem; background: rgba(0,229,255,0.05); border: 1px dashed var(--border-bright);
+  margin-top: 1rem; padding: 0.8rem 1rem; background: rgba(34,195,255,0.06); border: 1px dashed var(--border-bright);
   border-radius: 10px; font-size: 0.76rem; color: var(--muted); line-height: 1.6;
 }
 .link-out { color: var(--leaf-bright); text-decoration: none; border-bottom: 1px dotted var(--leaf-bright); }
@@ -175,7 +175,7 @@ th.grid-th:active { cursor: grabbing; }
   cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
 }
 .nav-link:hover { background: var(--surface2); color: var(--text); }
-.nav-link.active { background: var(--surface2); border-color: var(--gold); color: var(--gold-bright); font-weight: 600; box-shadow: 0 0 14px -4px rgba(255,45,149,0.5); }
+.nav-link.active { background: var(--surface2); border-color: var(--gold); color: var(--gold-bright); font-weight: 600; box-shadow: 0 0 14px -4px rgba(46,232,143,0.55); }
 @media (max-width: 900px) { .nav-side { display: none; } main { padding: 1.2rem 1rem 3rem; } }
 </style>
 </head>
@@ -515,6 +515,10 @@ th.grid-th:active { cursor: grabbing; }
   }
   function setGridPrefSet(slug, kind, set) { localStorage.setItem(gridPrefKey(slug, kind), JSON.stringify([...set])); }
 
+  const GRID_SELECT_FIELDS = {
+    'job-applications': { approval: ['Not Approved', 'Approved'] },
+  };
+
   async function mountGrid(slug, onData) {
     const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
     const wrap = document.getElementById('grid-' + slug);
@@ -546,9 +550,17 @@ th.grid-th:active { cursor: grabbing; }
       html += '</tr></thead><tbody>';
       for (const r of rows) {
         html += `<tr data-row-id="${r.id}" draggable="true"><td class="row-handle" title="Drag to reorder">⠿</td><td class="row-del" data-action="del-row">×</td>`;
+        const selectFields = GRID_SELECT_FIELDS[slug] || {};
         for (const c of columns) {
           const colCollapsed = collapsedCols.has(c.column_key);
-          html += `<td ${colCollapsed ? '' : 'contenteditable="true"'} data-col-key="${c.column_key}">${colCollapsed ? '' : escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+          const options = selectFields[c.column_key];
+          if (options && !colCollapsed) {
+            const current = r.data?.[c.column_key] || options[0];
+            const opts = options.includes(current) ? options : [current, ...options];
+            html += `<td data-col-key="${c.column_key}"><select data-col-key="${c.column_key}" class="grid-select">${opts.map(o => `<option value="${escapeHtml(o)}" ${o === current ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select></td>`;
+          } else {
+            html += `<td ${colCollapsed ? '' : 'contenteditable="true"'} data-col-key="${c.column_key}">${colCollapsed ? '' : escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+          }
         }
         html += '</tr>';
       }
