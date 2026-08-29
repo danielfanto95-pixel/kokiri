@@ -134,6 +134,22 @@ th.grid-th:active { cursor: grabbing; }
 [contenteditable="true"].rtask:focus, [contenteditable="true"].rnotes:focus, [contenteditable="true"].routine-time:focus { outline: 1px solid var(--gold); background: var(--surface2); }
 @media (max-width: 620px) { .routine-row { grid-template-columns: 1fr; } .routine-time { justify-self: start; } }
 
+.task-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.task-card {
+  display: grid; grid-template-columns: 1fr 140px 200px 24px; gap: 0.7rem; align-items: center;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem;
+}
+.task-card:hover { border-color: var(--border-bright); }
+.task-card .ttask { font-size: 0.85rem; }
+.task-card select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px;
+  padding: 0.35rem 0.5rem; font-family: var(--mono); font-size: 0.72rem; cursor: pointer;
+}
+.task-card select:focus { outline: 1px solid var(--gold); }
+.task-card .tdel { color: var(--dim); cursor: pointer; text-align: center; font-size: 0.9rem; }
+.task-card .tdel:hover { color: #ff5c7a; }
+@media (max-width: 720px) { .task-card { grid-template-columns: 1fr; } }
+
 .portal-note {
   margin-top: 1rem; padding: 0.8rem 1rem; background: rgba(0,229,255,0.05); border: 1px dashed var(--border-bright);
   border-radius: 10px; font-size: 0.76rem; color: var(--muted); line-height: 1.6;
@@ -191,6 +207,16 @@ th.grid-th:active { cursor: grabbing; }
         </div>
         <div class="routine-list" id="routine-list"><p class="empty-note">Loading…</p></div>
         <div class="portal-note">Live schedule/event log is still on <a class="link-out" href="schedule.html">the Schedule page</a> — this is the fixed daily template.</div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-tasks">
+      <div class="op-head"><span class="op-icon">✅</span><h3>Tasks</h3><span class="op-count" id="count-master-tasks"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-task">+ Add Task</button>
+        </div>
+        <div class="task-list" id="task-list"><p class="empty-note">Loading…</p></div>
       </div>
     </div>
 
@@ -452,7 +478,7 @@ th.grid-th:active { cursor: grabbing; }
 
   // ---------- Change log (same convention as every other portal — feeds the global changelog feed) ----------
   const SLUG_TO_TAB = {
-    'master-routine': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
+    'master-routine': 'masterportal', 'master-tasks': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
     'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
     'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal',
   };
@@ -700,6 +726,112 @@ th.grid-th:active { cursor: grabbing; }
     await loadData();
   }
 
+  // ---------- Tasks — Recurring + Assigned To (Me or an agent) ----------
+  const RECURRING_OPTIONS = ['None', 'Daily', 'Weekdays', 'Weekly'];
+
+  async function mountTasks() {
+    const slug = 'master-tasks';
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    const wrap = document.getElementById('task-list');
+    if (!sheet) { wrap.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
+
+    const { data: agentRows } = await supabase.from('kokiri_rows').select('data').eq('sheet_id', (await supabase.from('kokiri_sheets').select('id').eq('slug', 'loops-agents').maybeSingle()).data?.id);
+    const assigneeOptions = ['🧑 Me (Daniel)', ...((agentRows || []).map(r => r.data?.agent).filter(Boolean))];
+
+    let rows = [];
+    async function loadData() {
+      const { data } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
+      rows = data || [];
+      render();
+      document.getElementById('count-master-tasks').textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
+    }
+
+    function optionsHtml(list, selected) {
+      return list.map(o => `<option value="${escapeHtml(o)}" ${o === selected ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+    }
+
+    function render() {
+      if (!rows.length) { wrap.innerHTML = '<p class="empty-note">No tasks yet — click "+ Add Task" to start.</p>'; return; }
+      wrap.innerHTML = rows.map(r => {
+        const recurring = r.data?.recurring || 'None';
+        const assignedTo = r.data?.assigned_to || assigneeOptions[0];
+        return `
+        <div class="task-card" data-row-id="${r.id}" draggable="true">
+          <div class="ttask" contenteditable="true" data-col-key="task">${escapeHtml(r.data?.task ?? '')}</div>
+          <select data-col-key="recurring">${optionsHtml(RECURRING_OPTIONS, recurring)}</select>
+          <select data-col-key="assigned_to">${optionsHtml(assigneeOptions.includes(assignedTo) ? assigneeOptions : [assignedTo, ...assigneeOptions], assignedTo)}</select>
+          <span class="tdel" title="Delete">✕</span>
+        </div>`;
+      }).join('');
+
+      wrap.querySelectorAll('.ttask[contenteditable="true"]').forEach(el => {
+        el.addEventListener('blur', async () => {
+          const rowId = el.closest('.task-card').dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          if (!row) return;
+          row.data = { ...row.data, task: el.textContent };
+          await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+          logChange(slug, 'Edited a task');
+        });
+      });
+      wrap.querySelectorAll('select[data-col-key]').forEach(sel => {
+        sel.addEventListener('change', async () => {
+          const rowId = sel.closest('.task-card').dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          if (!row) return;
+          row.data = { ...row.data, [sel.dataset.colKey]: sel.value };
+          await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+          logChange(slug, `Set ${sel.dataset.colKey === 'recurring' ? 'Recurring' : 'Assigned To'} on a task`);
+        });
+      });
+      wrap.querySelectorAll('.tdel').forEach(el => {
+        el.addEventListener('click', async () => {
+          const rowId = el.closest('.task-card').dataset.rowId;
+          if (!confirm('Delete this task?')) return;
+          await supabase.from('kokiri_rows').delete().eq('id', rowId);
+          rows = rows.filter(r => r.id !== rowId);
+          render();
+          document.getElementById('count-master-tasks').textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
+          logChange(slug, 'Deleted a task');
+        });
+      });
+
+      let dragId = null;
+      wrap.querySelectorAll('.task-card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          if (e.target.closest('[contenteditable="true"], select')) { e.preventDefault(); return; }
+          dragId = card.dataset.rowId; e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragover', (e) => e.preventDefault());
+        card.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const targetId = card.dataset.rowId;
+          if (!dragId || dragId === targetId) return;
+          const fromIdx = rows.findIndex(r => r.id === dragId);
+          const toIdx = rows.findIndex(r => r.id === targetId);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const [moved] = rows.splice(fromIdx, 1);
+          rows.splice(toIdx, 0, moved);
+          render();
+          await Promise.all(rows.map((r, i) => supabase.from('kokiri_rows').update({ sort_order: i + 1 }).eq('id', r.id)));
+          logChange(slug, 'Reordered tasks');
+        });
+      });
+    }
+
+    document.querySelector('[data-action="add-task"]').addEventListener('click', async () => {
+      const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', recurring: 'None', assigned_to: assigneeOptions[0] }, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      rows.push(data);
+      render();
+      document.getElementById('count-master-tasks').textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
+      logChange(slug, 'Added a task');
+    });
+
+    await loadData();
+  }
+
   // ---------- Jobs stats ----------
   function updateJobStats(cols, rows) {
     const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
@@ -722,6 +854,7 @@ th.grid-th:active { cursor: grabbing; }
   initNavCollapse();
   await loadNav();
   await mountRoutine();
+  await mountTasks();
   await mountGrid('loops-agents');
   let sagaCount = 0, statsCount = 0;
   await mountGrid('sagas', (c, r) => { sagaCount = r.length; updateSagaStatsCount(sagaCount, statsCount); });
