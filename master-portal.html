@@ -170,10 +170,14 @@ th.grid-th:active { cursor: grabbing; }
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem;
 }
 .task-card:hover { border-color: var(--border-bright); }
-.task-card .trow { display: grid; grid-template-columns: 1fr 110px 120px 180px 150px 24px; gap: 0.6rem; align-items: center; }
+.task-card .trow { display: grid; grid-template-columns: 1fr 105px 115px 170px 140px 90px 24px; gap: 0.5rem; align-items: center; }
 .task-card select[data-col-key="status"] { font-weight: 600; }
 .task-card select[data-col-key="status"][data-status="Complete"] { color: var(--gold-bright); border-color: var(--border-bright); }
 .task-card select[data-col-key="status"][data-status="Needs Your Review"] { color: #ffd166; border-color: rgba(255,209,102,0.4); }
+.task-card select[data-col-key="status"][data-status="Paused"] { color: #ff7a7a; border-color: rgba(255,122,122,0.4); }
+.task-card select[data-col-key="live_status"] { font-weight: 600; }
+.task-card select[data-col-key="live_status"][data-live="Paused"] { color: #ff7a7a; border-color: rgba(255,122,122,0.4); }
+.task-card select[data-col-key="live_status"][data-live="Live"] { color: var(--leaf-bright); }
 .task-card .ttask { font-size: 0.85rem; }
 .task-card .tnotes { font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
 .task-card .tnotes:empty::before { content: 'Add details…'; color: var(--dim); }
@@ -646,9 +650,10 @@ th.grid-th:active { cursor: grabbing; }
 
   const GRID_SELECT_FIELDS = {
     'job-applications': { approval: ['Not Approved', 'Approved'] },
-    'ads': { test_status: ['Not Started', 'Running', 'Complete'], test_winner: ['TBD', 'Yes', 'No', 'Inconclusive'] },
-    'content': { test_status: ['Not Started', 'Running', 'Complete'], test_winner: ['TBD', 'Yes', 'No', 'Inconclusive'] },
+    'ads': { test_status: ['Not Started', 'Running', 'Complete'], test_winner: ['TBD', 'Yes', 'No', 'Inconclusive'], live_status: ['Live', 'Paused'] },
+    'content': { test_status: ['Not Started', 'Running', 'Complete'], test_winner: ['TBD', 'Yes', 'No', 'Inconclusive'], live_status: ['Live', 'Paused'] },
   };
+  const AUTO_PAUSE_STATUS_KEY = { ads: 'status', content: 'status' };
 
   async function mountGrid(slug, onData) {
     const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
@@ -754,6 +759,24 @@ th.grid-th:active { cursor: grabbing; }
           row.data = { ...row.data, [td.dataset.colKey]: td.textContent };
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
           logChange(slug, `Edited "${col?.name || td.dataset.colKey}" on a row`);
+          if (onData) onData(columns, rows);
+        });
+      });
+      wrap.querySelectorAll('select.grid-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+          const rowId = sel.closest('tr').dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          if (!row) return;
+          const col = columns.find(c => c.column_key === sel.dataset.colKey);
+          row.data = { ...row.data, [sel.dataset.colKey]: sel.value };
+          let note = `Set "${col?.name || sel.dataset.colKey}" on a row`;
+          if (sel.dataset.colKey === 'live_status' && sel.value === 'Paused' && AUTO_PAUSE_STATUS_KEY[slug]) {
+            row.data[AUTO_PAUSE_STATUS_KEY[slug]] = 'Paused';
+            note = 'Toggled Live? to Paused — auto-paused Status too';
+          }
+          await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+          logChange(slug, note);
+          renderGrid();
           if (onData) onData(columns, rows);
         });
       });
@@ -987,8 +1010,9 @@ th.grid-th:active { cursor: grabbing; }
 
   // ---------- Tasks — Recurring + Assigned To (Me or an agent) ----------
   const RECURRING_OPTIONS = ['None', 'Every 8 Hours', 'Daily', 'Weekdays', 'Weekly'];
-  const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Needs Your Review', 'Complete'];
+  const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Needs Your Review', 'Complete', 'Paused'];
   const TASK_TYPE_OPTIONS = ['General', 'Media Task', 'Job Search', 'Review', 'Maintenance', 'Research'];
+  const LIVE_OPTIONS = ['Live', 'Paused'];
 
   async function mountTasks() {
     const slug = 'master-tasks';
@@ -1017,6 +1041,7 @@ th.grid-th:active { cursor: grabbing; }
         const assignedTo = r.data?.assigned_to || assigneeOptions[0];
         const status = r.data?.status || STATUS_OPTIONS[0];
         const taskType = r.data?.task_type || TASK_TYPE_OPTIONS[0];
+        const liveStatus = r.data?.live_status || LIVE_OPTIONS[0];
         return `
         <div class="task-card" data-row-id="${r.id}" draggable="true">
           <div class="trow">
@@ -1025,6 +1050,7 @@ th.grid-th:active { cursor: grabbing; }
             <select data-col-key="recurring">${optionsHtml(RECURRING_OPTIONS, recurring)}</select>
             <select data-col-key="assigned_to">${optionsHtml(assigneeOptions.includes(assignedTo) ? assigneeOptions : [assignedTo, ...assigneeOptions], assignedTo)}</select>
             <select data-col-key="status" data-status="${escapeHtml(status)}">${optionsHtml(STATUS_OPTIONS, status)}</select>
+            <select data-col-key="live_status" data-live="${escapeHtml(liveStatus)}">${optionsHtml(LIVE_OPTIONS, liveStatus)}</select>
             <span class="tdel" title="Delete">✕</span>
           </div>
           <div class="tnotes" contenteditable="true" data-col-key="notes">${escapeHtml(r.data?.notes ?? '')}</div>
@@ -1057,13 +1083,14 @@ th.grid-th:active { cursor: grabbing; }
           logChange(slug, el.classList.contains('tnotes') ? 'Edited a task\'s details' : 'Edited a task');
         });
       });
-      const SELECT_LABELS = { task_type: 'Type', recurring: 'Recurring', assigned_to: 'Assigned To', status: 'Status' };
+      const SELECT_LABELS = { task_type: 'Type', recurring: 'Recurring', assigned_to: 'Assigned To', status: 'Status', live_status: 'Live?' };
       wrap.querySelectorAll('select[data-col-key]').forEach(sel => {
         sel.addEventListener('change', async () => {
           const rowId = sel.closest('.task-card').dataset.rowId;
           const row = rows.find(r => r.id === rowId);
           if (!row) return;
           row.data = { ...row.data, [sel.dataset.colKey]: sel.value };
+          let logNote = `Set ${SELECT_LABELS[sel.dataset.colKey] || sel.dataset.colKey} on a task`;
           if (sel.dataset.colKey === 'status') {
             sel.dataset.status = sel.value;
             if (sel.value === 'Complete') {
@@ -1071,9 +1098,13 @@ th.grid-th:active { cursor: grabbing; }
               row.data.history_log = row.data.history_log ? `${row.data.history_log}\n${entry}` : entry;
             }
           }
+          if (sel.dataset.colKey === 'live_status') {
+            sel.dataset.live = sel.value;
+            if (sel.value === 'Paused') { row.data.status = 'Paused'; logNote = 'Toggled Live? to Paused — auto-paused Status too'; }
+          }
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
-          logChange(slug, `Set ${SELECT_LABELS[sel.dataset.colKey] || sel.dataset.colKey} on a task`);
-          if (sel.dataset.colKey === 'recurring' || sel.dataset.colKey === 'status') render();
+          logChange(slug, logNote);
+          if (sel.dataset.colKey === 'recurring' || sel.dataset.colKey === 'status' || sel.dataset.colKey === 'live_status') render();
         });
       });
       wrap.querySelectorAll('.tdel').forEach(el => {
@@ -1113,7 +1144,7 @@ th.grid-th:active { cursor: grabbing; }
 
     document.querySelector('[data-action="add-task"]').addEventListener('click', async () => {
       const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
-      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', task_type: TASK_TYPE_OPTIONS[0], recurring: 'None', assigned_to: defaultAutomatedAssignee, status: STATUS_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', task_type: TASK_TYPE_OPTIONS[0], recurring: 'None', assigned_to: defaultAutomatedAssignee, status: STATUS_OPTIONS[0], live_status: LIVE_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert(error.message); return; }
       rows.push(data);
       render();
