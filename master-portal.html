@@ -984,6 +984,7 @@ th.grid-th:active { cursor: grabbing; }
 
     const { data: agentRows } = await supabase.from('kokiri_rows').select('data').eq('sheet_id', (await supabase.from('kokiri_sheets').select('id').eq('slug', 'loops-agents').maybeSingle()).data?.id);
     const assigneeOptions = ['🧑 Me (Daniel)', ...((agentRows || []).map(r => r.data?.agent).filter(Boolean))];
+    const defaultAutomatedAssignee = assigneeOptions.find(a => a.includes('Master Agent')) || assigneeOptions[0];
 
     let rows = [];
     async function loadData() {
@@ -1092,7 +1093,7 @@ th.grid-th:active { cursor: grabbing; }
 
     document.querySelector('[data-action="add-task"]').addEventListener('click', async () => {
       const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
-      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', recurring: 'None', assigned_to: assigneeOptions[0], status: STATUS_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', recurring: 'None', assigned_to: defaultAutomatedAssignee, status: STATUS_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert(error.message); return; }
       rows.push(data);
       render();
