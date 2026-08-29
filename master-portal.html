@@ -203,8 +203,19 @@ th.grid-th:active { cursor: grabbing; }
 
 .nav-side {
   width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
-  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+  padding: 1.2rem 0.9rem; overflow-y: auto; overflow-x: hidden; position: sticky; top: 57px; height: calc(100vh - 57px);
+  transition: width 0.22s ease, padding 0.22s ease, opacity 0.15s ease; white-space: nowrap;
 }
+.nav-side.collapsed { width: 0; padding: 1.2rem 0; border-left-color: transparent; opacity: 0; pointer-events: none; }
+#nav-toggle {
+  position: fixed; top: 78px; right: 0; z-index: 20;
+  background: var(--surface2); border: 1px solid var(--border-bright); border-right: none;
+  border-radius: 8px 0 0 8px; color: var(--leaf-bright); cursor: pointer;
+  padding: 0.55rem 0.4rem; font-size: 0.75rem; line-height: 1; transition: right 0.22s ease, box-shadow 0.2s;
+  box-shadow: 0 0 12px -4px rgba(34,195,255,0.4);
+}
+#nav-toggle:hover { color: var(--gold-bright); box-shadow: 0 0 16px -2px rgba(46,232,143,0.5); }
+@media (max-width: 900px) { #nav-toggle { display: none; } }
 .nav-group { margin-bottom: 0.3rem; }
 .nav-group-label {
   font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
@@ -427,7 +438,8 @@ th.grid-th:active { cursor: grabbing; }
 
   </main>
 
-  <nav class="nav-side">
+  <button id="nav-toggle" title="Collapse/expand sidebar">◂</button>
+  <nav class="nav-side" id="nav-side">
     <a class="nav-link" href="app.html#repository" style="margin-bottom:0.8rem;padding-bottom:0.8rem;border-bottom:1px solid var(--border);">📁 Repository</a>
     <div class="nav-group">
       <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
@@ -525,6 +537,22 @@ th.grid-th:active { cursor: grabbing; }
     document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
     document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
       + `<a class="nav-link" href="backups.html">🗄️ Versions/Backups</a><a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="users.html">👤 Users</a>`;
+  }
+
+  function initSidebarToggle() {
+    const navSide = document.getElementById('nav-side');
+    const toggle = document.getElementById('nav-toggle');
+    const KEY = 'master_portal_sidebar_collapsed';
+    function apply(collapsed) {
+      navSide.classList.toggle('collapsed', collapsed);
+      toggle.textContent = collapsed ? '▸' : '◂';
+    }
+    apply(localStorage.getItem(KEY) === '1');
+    toggle.addEventListener('click', () => {
+      const collapsed = !navSide.classList.contains('collapsed');
+      apply(collapsed);
+      localStorage.setItem(KEY, collapsed ? '1' : '0');
+    });
   }
 
   function initNavCollapse() {
@@ -1094,6 +1122,7 @@ th.grid-th:active { cursor: grabbing; }
     document.getElementById('count-sagastats').textContent = total + ' row' + (total === 1 ? '' : 's');
   }
 
+  initSidebarToggle();
   initNavCollapse();
   await loadNav();
   await mountHotLinks();
