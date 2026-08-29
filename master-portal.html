@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokiri — Master Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0f0b; --surface: #121a13; --surface2: #17201a;
+  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
+  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
+  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068; --gold-bright: #ffdf94;
+  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(230,192,106,0.05), transparent 40%),
+    radial-gradient(circle at 88% 92%, rgba(124,197,118,0.06), transparent 45%);
+}
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border-bright); background: var(--surface); position: sticky; top: 0; z-index: 10;
+  box-shadow: 0 1px 24px rgba(230,192,106,0.06);
+}
+.brand {
+  font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
+  position: absolute; left: 50%; transform: translateX(-50%); text-decoration: none; transition: color 0.15s;
+}
+.brand:hover { color: var(--gold); }
+#btn-logout {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.78rem;
+}
+#btn-logout:hover { border-color: var(--leaf); color: var(--text); }
+
+.layout { display: flex; min-height: calc(100vh - 57px); }
+main { flex: 1; padding: 1.6rem 1.8rem 4rem; min-width: 0; max-width: 1100px; }
+
+.page-head { margin-bottom: 1.8rem; position: relative; padding-bottom: 1.2rem; border-bottom: 1px solid var(--border); }
+.page-head::after {
+  content: ''; position: absolute; left: 0; bottom: -1px; height: 1px; width: 140px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent);
+  animation: sheikah-scan 4s ease-in-out infinite;
+}
+@keyframes sheikah-scan { 0%,100% { opacity: 0.35; width: 90px; } 50% { opacity: 1; width: 220px; } }
+.page-head h1 {
+  font-family: var(--heading); font-size: 1.7rem; color: var(--gold-bright); letter-spacing: 0.02em;
+  text-shadow: 0 0 18px rgba(230,192,106,0.35);
+}
+.page-head p { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; max-width: 700px; line-height: 1.65; }
+
+.macro-head { display: flex; align-items: baseline; gap: 0.7rem; margin: 2.2rem 0 1rem; }
+.macro-head:first-of-type { margin-top: 0; }
+.macro-head .macro-num {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--bg); background: var(--gold-bright);
+  border-radius: 5px; padding: 0.15rem 0.5rem; font-weight: 700;
+}
+.macro-head h2 { font-family: var(--heading); font-size: 1.25rem; color: var(--leaf-bright); }
+.macro-head .macro-sub { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+
+/* ---- Collapsible sections (top-level + nested) ---- */
+.op-section {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0.9rem; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.op-section.open { border-color: var(--border-bright); }
+.op-section.nested { background: var(--surface2); margin-bottom: 0.6rem; }
+.op-head { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; }
+.op-head:hover { background: rgba(163,214,140,0.05); }
+.op-section.open .op-head { border-bottom-color: var(--border); }
+.op-head .op-icon { font-size: 1.15rem; }
+.op-head h3 { font-family: var(--heading); font-size: 0.98rem; color: var(--leaf-bright); flex: 1; }
+.op-section.nested .op-head h3 { font-size: 0.88rem; color: var(--gold); }
+.op-head .op-count { font-family: var(--mono); font-size: 0.65rem; color: var(--dim); white-space: nowrap; }
+.op-head .chevron { transition: transform 0.15s; font-size: 0.7rem; color: var(--muted); }
+.op-section.open > .op-head .chevron { transform: rotate(90deg); }
+.op-body { display: none; padding: 1rem 1.1rem 1.2rem; }
+.op-section.open > .op-body { display: block; }
+
+.op-toolbar { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+.op-toolbar button {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer;
+}
+.op-toolbar button:hover { border-color: var(--gold); color: var(--gold-bright); }
+
+.op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; min-width: max-content; }
+th, td { border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; font-size: 0.8rem; vertical-align: top; max-width: 320px; }
+th { background: var(--surface2); font-family: var(--mono); font-weight: 600; color: var(--leaf-bright); white-space: nowrap; font-size: 0.68rem; }
+td { background: var(--surface); color: var(--text); min-width: 130px; }
+td[contenteditable="true"]:focus { outline: 2px solid var(--gold); outline-offset: -2px; background: var(--surface2); }
+.row-del { color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 0.7rem; text-align: center; width: 24px; }
+.row-del:hover { color: #f87171; }
+.row-handle { color: var(--dim); cursor: grab; text-align: center; width: 20px; min-width: 20px; padding: 0.5rem 0.3rem; font-size: 0.72rem; }
+.row-handle:active { cursor: grabbing; }
+tr[draggable="true"] { transition: opacity 0.1s; }
+th.grid-th { cursor: grab; }
+th.grid-th:active { cursor: grabbing; }
+.empty-note { color: var(--muted); font-size: 0.85rem; padding: 1.2rem; text-align: center; }
+
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.7rem; margin-bottom: 0.9rem; }
+.stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; text-align: center; }
+.stat-box .num { font-family: var(--heading); font-size: 1.3rem; font-weight: 800; color: var(--gold-bright); }
+.stat-box .label { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.15rem; }
+
+.routine-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.routine-row {
+  display: grid; grid-template-columns: 130px 1fr; gap: 0.9rem; align-items: start;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.9rem;
+}
+.routine-row:hover { border-color: var(--border-bright); }
+.routine-time {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--gold-bright); background: rgba(230,192,106,0.08);
+  border: 1px solid rgba(230,192,106,0.25); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center; align-self: center;
+}
+.routine-body .rtask { font-family: var(--heading); font-size: 0.92rem; color: var(--text); }
+.routine-body .rnotes { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.5; }
+[contenteditable="true"].rtask:focus, [contenteditable="true"].rnotes:focus, [contenteditable="true"].routine-time:focus { outline: 1px solid var(--gold); background: var(--surface2); }
+@media (max-width: 620px) { .routine-row { grid-template-columns: 1fr; } .routine-time { justify-self: start; } }
+
+.portal-note {
+  margin-top: 1rem; padding: 0.8rem 1rem; background: rgba(163,214,140,0.04); border: 1px dashed var(--border-bright);
+  border-radius: 10px; font-size: 0.76rem; color: var(--muted); line-height: 1.6;
+}
+.link-out { color: var(--leaf-bright); text-decoration: none; border-bottom: 1px dotted var(--leaf-bright); }
+.link-out:hover { color: var(--gold-bright); border-color: var(--gold-bright); }
+
+.nav-side {
+  width: 230px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface);
+  padding: 1.2rem 0.9rem; overflow-y: auto; position: sticky; top: 57px; height: calc(100vh - 57px);
+}
+.nav-group { margin-bottom: 0.3rem; }
+.nav-group-label {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin: 1.1rem 0.4rem 0.5rem;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;
+}
+.nav-group:first-child .nav-group-label { margin-top: 0; }
+.nav-group-label .chevron { transition: transform 0.15s; font-size: 0.6rem; }
+.nav-group-label.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group-content.collapsed { display: none; }
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 7px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
+}
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { background: var(--surface2); border-color: var(--gold); color: var(--gold-bright); font-weight: 600; }
+@media (max-width: 900px) { .nav-side { display: none; } main { padding: 1.2rem 1rem 3rem; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="home.html" class="brand">Kokiri OS</a>
+  <button id="btn-logout">Log Out</button>
+</div>
+
+<div class="layout">
+  <main>
+    <div class="page-head">
+      <h1>🏛️ Master Portal</h1>
+      <p>The command center — schedule, the loops that run it, and every business the schedule serves. Every grid here is the same live data as its home portal: edit it here or there, it's one source of truth. Everything collapses, every row is editable and draggable, and every edit is logged below.</p>
+    </div>
+
+    <!-- ================= SECTION 0: SCHEDULE ================= -->
+    <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span></div>
+
+    <div class="op-section open" data-key="sec-routine">
+      <div class="op-head"><span class="op-icon">☀️</span><h3>Daily Routine</h3><span class="op-count" id="count-master-routine"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-routine">+ Add Time Block</button>
+          <button data-action="add-col" data-slug="master-routine">+ Add Column</button>
+        </div>
+        <div class="routine-list" id="routine-list"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Live schedule/event log is still on <a class="link-out" href="schedule.html">the Schedule page</a> — this is the fixed daily template.</div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-loops">
+      <div class="op-head"><span class="op-icon">🔁</span><h3>Loops (Agents)</h3><span class="op-count" id="count-loops-agents"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="loops-agents">+ Add Loop</button>
+          <button data-action="add-col" data-slug="loops-agents">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-loops-agents"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Which automated loop helps with what — tools, global rules, tasks, how to trigger it, and the prompt to use. Live agent roster lives in <a class="link-out" href="agents.html">Agents</a>.</div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-sagastats">
+      <div class="op-head"><span class="op-icon">📖</span><h3>Saga / Stats</h3><span class="op-count" id="count-sagastats"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="sagas">+ Add Saga Row</button>
+          <button data-action="add-col" data-slug="sagas">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-sagas"><p class="empty-note">Loading…</p></div>
+        <div style="height:0.8rem;"></div>
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="system-stats">+ Add Stat Row</button>
+          <button data-action="add-col" data-slug="system-stats">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-system-stats"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Same live rows as <a class="link-out" href="saga.html">Saga</a> and Kokiri's System &amp; Stats sheet.</div>
+      </div>
+    </div>
+
+    <!-- ================= SECTION 1: JOBS ================= -->
+    <div class="macro-head"><span class="macro-num">1</span><h2>💼 Jobs</h2><span class="macro-sub">same rows as Portals → Jobs</span></div>
+    <div class="op-section open" data-key="sec-jobs">
+      <div class="op-head"><span class="op-icon">💼</span><h3>Job Applications</h3><span class="op-count" id="count-job-applications"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="stat-row" id="stats-jobs"></div>
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="job-applications">+ Add Row</button>
+          <button data-action="add-col" data-slug="job-applications">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-job-applications"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Fed by the Job Finder / Job Applier loops above. Full view: <a class="link-out" href="portals.html#jobs">Portals → Jobs</a>.</div>
+      </div>
+    </div>
+
+    <!-- ================= SECTION 2: FITNESS ================= -->
+    <div class="macro-head"><span class="macro-num">2</span><h2>💪 Fitness</h2><span class="macro-sub">clients · CRM · content · ads — same rows as Portals</span></div>
+
+    <div class="op-section open" data-key="sec-fit-clients">
+      <div class="op-head"><span class="op-icon">🧑‍🤝‍🧑</span><h3>1. Clients</h3><span class="op-count" id="count-clients"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-row" data-slug="clients">+ Add Row</button><button data-action="add-col" data-slug="clients">+ Add Column</button></div>
+        <div class="op-grid-wrap" id="grid-clients"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+    <div class="op-section" data-key="sec-fit-crm">
+      <div class="op-head"><span class="op-icon">📇</span><h3>2. CRM</h3><span class="op-count" id="count-crm"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-row" data-slug="crm">+ Add Row</button><button data-action="add-col" data-slug="crm">+ Add Column</button></div>
+        <div class="op-grid-wrap" id="grid-crm"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+    <div class="op-section" data-key="sec-fit-content">
+      <div class="op-head"><span class="op-icon">✍️</span><h3>3. Content</h3><span class="op-count" id="count-content"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-row" data-slug="content">+ Add Row</button><button data-action="add-col" data-slug="content">+ Add Column</button></div>
+        <div class="op-grid-wrap" id="grid-content"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+    <div class="op-section" data-key="sec-fit-ads">
+      <div class="op-head"><span class="op-icon">🎯</span><h3>4. Ads</h3><span class="op-count" id="count-ads"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-row" data-slug="ads">+ Add Row</button><button data-action="add-col" data-slug="ads">+ Add Column</button></div>
+        <div class="op-grid-wrap" id="grid-ads"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Full Fitness view with stats/AI-draft/Buffer + Adspirer connectors: <a class="link-out" href="portals.html#client">Portals → Client/CRM/Content/Ads</a>.</div>
+      </div>
+    </div>
+
+    <!-- ================= SECTION 3: SIDE HUSTLES ================= -->
+    <div class="macro-head"><span class="macro-num">3</span><h2>🎲 Side Hustles</h2><span class="macro-sub">stocks/bets · Facebook Marketplace</span></div>
+
+    <div class="op-section open" data-key="sec-sh-stocks">
+      <div class="op-head"><span class="op-icon">📈</span><h3>1. Stocks / Bets</h3><span class="op-count" id="count-stocks-bets"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-row" data-slug="stocks-bets">+ Add Row</button><button data-action="add-col" data-slug="stocks-bets">+ Add Column</button></div>
+        <div class="op-grid-wrap" id="grid-stocks-bets"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+    <div class="op-section" data-key="sec-sh-marketplace">
+      <div class="op-head"><span class="op-icon">🛒</span><h3>2. Facebook Marketplace</h3><span class="op-count" id="count-fb-marketplace"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-row" data-slug="fb-marketplace">+ Add Row</button><button data-action="add-col" data-slug="fb-marketplace">+ Add Column</button></div>
+        <div class="op-grid-wrap" id="grid-fb-marketplace"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Feeds the DoorDash time block's "negotiating selling stuff" — new listings/sales land here.</div>
+      </div>
+    </div>
+
+  </main>
+
+  <nav class="nav-side">
+    <a class="nav-link" href="app.html#repository" style="margin-bottom:0.8rem;padding-bottom:0.8rem;border-bottom:1px solid var(--border);">📁 Repository</a>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Kokiri">Kokiri: Sources + database<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-sheets"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Agents">Agents<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-agents"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Dashboards">Dashboards<span class="chevron">▾</span></div>
+      <div class="nav-group-content" id="nav-dashboards"></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Portals">Portals<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="portals.html">🚪 All Portals</a>
+        <a class="nav-link" href="portals.html#content">🎬 Content</a>
+        <a class="nav-link" href="portals.html#ads">🎯 Ad Funnels</a>
+        <a class="nav-link" href="portals.html#msgfunnels">📧 Email/Nurture/ManyChat Funnels</a>
+        <a class="nav-link" href="portals.html#journals">📔 Journals</a>
+        <a class="nav-link" href="portals.html#claude-tasks">🤖 Claude Code Tasks</a>
+        <a class="nav-link" href="portals.html#skills">🎓 Skills</a>
+        <a class="nav-link" href="portals.html#poetry">🎭 Poetry &amp; Songs</a>
+        <a class="nav-link" href="affiliate-portal.html">🤝 Affiliate Portal</a>
+        <a class="nav-link" href="client-portal.html">💪 Client Portal</a>
+        <a class="nav-link" href="sonzai.html">🌀 Sonzai</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Singularities">Singularities<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="singularities-real.html">♾️ Singularities — Real</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Businesses">Businesses<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="businesses.html">🏢 Businesses</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Saga">Saga<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="saga.html">📖 Saga</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="MasterPortal">Master Portal<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link active" href="master-portal.html">🏛️ Master Portal</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Context">Context<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="context.html">📝 Global Instructions</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label" data-group="Architecture">Architecture<span class="chevron">▾</span></div>
+      <div class="nav-group-content">
+        <a class="nav-link" href="architecture.html">🏛️ System Architecture</a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  import { requireOwnerPage } from './guard.js';
+  import { initPageSearch } from './search.js';
+  import { appendNonSheetSourcesToNav } from './lineage.js';
+  const supabase = createClient('https://qahriykfwknuoqctsaek.supabase.co', 'sb_publishable_nPF5goHAWj0iAiUOnhnXPA_8qd3b2mU');
+
+  const auth = await requireOwnerPage(supabase);
+  if (!auth) throw new Error('redirecting');
+  await initPageSearch(supabase);
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadNav() {
+    const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
+      supabase.from('kokiri_sheets').select('slug, name').not('slug', 'like', 'biz-%').order('sort_order'),
+      supabase.from('agents').select('id, name, icon').order('sort_order'),
+      supabase.from('dashboards').select('id, name, icon').order('sort_order'),
+    ]);
+    document.getElementById('nav-sheets').innerHTML = (sheetData || []).map(s => `<a class="nav-link" href="app.html#${s.slug}">${escapeHtml(s.name)}</a>`).join('');
+    await appendNonSheetSourcesToNav('nav-sheets');
+    document.getElementById('nav-agents').innerHTML = (agentData || []).map(a => `<a class="nav-link" href="agents.html#${a.id}">${a.icon || '⚔️'} ${escapeHtml(a.name)}</a>`).join('');
+    document.getElementById('nav-dashboards').innerHTML = (dashData || []).map(d => `<a class="nav-link" href="dashboards.html#${d.id}">${d.icon || '📊'} ${escapeHtml(d.name)}</a>`).join('')
+      + `<a class="nav-link" href="backups.html">🗄️ Versions/Backups</a><a class="nav-link" href="operations.html">🗂️ Operations Dashboard</a><a class="nav-link" href="replicas.html">🧬 All Replicas</a><a class="nav-link" href="reports.html">📊 Macro Reports</a><a class="nav-link" href="schedule.html">🗓️ Schedule</a><a class="nav-link" href="temple-of-time.html">🕰️ Temple of Time</a><a class="nav-link" href="users.html">👤 Users</a>`;
+  }
+
+  function initNavCollapse() {
+    const stored = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+    document.querySelectorAll('.nav-group-label[data-group]').forEach(label => {
+      const group = label.dataset.group;
+      const content = label.nextElementSibling;
+      if (stored[group]) { label.classList.add('collapsed'); content.classList.add('collapsed'); }
+      label.addEventListener('click', () => {
+        const isCollapsed = label.classList.toggle('collapsed');
+        content.classList.toggle('collapsed', isCollapsed);
+        const s = JSON.parse(localStorage.getItem('kokiri_nav_collapsed') || '{}');
+        s[group] = isCollapsed;
+        localStorage.setItem('kokiri_nav_collapsed', JSON.stringify(s));
+      });
+    });
+  }
+
+  // ---------- Collapsible sections (top-level + nested), state persisted per section ----------
+  document.querySelectorAll('.op-section[data-key]').forEach(section => {
+    const key = 'master_portal_section_' + section.dataset.key;
+    const stored = localStorage.getItem(key);
+    if (stored === 'open') section.classList.add('open');
+    if (stored === 'closed') section.classList.remove('open');
+    section.querySelector(':scope > .op-head').addEventListener('click', () => {
+      const open = section.classList.toggle('open');
+      localStorage.setItem(key, open ? 'open' : 'closed');
+    });
+  });
+
+  // ---------- Change log (same convention as every other portal — feeds the global changelog feed) ----------
+  const SLUG_TO_TAB = {
+    'master-routine': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
+    'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
+    'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal',
+  };
+  const changeLogSheetIds = {};
+  async function ensureExtraSheet(slug, name, columns) {
+    let { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    if (!sheet) {
+      const { data: created, error } = await supabase.from('kokiri_sheets').insert({ name, slug, sort_order: 9500 }).select().single();
+      if (error) throw error;
+      sheet = created;
+      await supabase.from('kokiri_columns').insert(columns.map((c, i) => ({ sheet_id: sheet.id, column_key: c.key, name: c.name, sort_order: i + 1 })));
+    }
+    return sheet.id;
+  }
+  async function logChange(gridSlug, description) {
+    const tabKey = SLUG_TO_TAB[gridSlug];
+    if (!tabKey) return;
+    try {
+      let sheetId = changeLogSheetIds[tabKey];
+      if (!sheetId) {
+        sheetId = await ensureExtraSheet(`changelog-${tabKey}`, `Change Log — ${tabKey}`, [{ key: 'timestamp', name: 'Timestamp' }, { key: 'change', name: 'Change' }]);
+        changeLogSheetIds[tabKey] = sheetId;
+      }
+      const { data: existing } = await supabase.from('kokiri_rows').select('sort_order').eq('sheet_id', sheetId).order('sort_order', { ascending: false }).limit(1);
+      const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+      await supabase.from('kokiri_rows').insert({ sheet_id: sheetId, sort_order: nextOrder, data: { timestamp: new Date().toLocaleString(), change: description } });
+    } catch { /* best-effort — never block the actual edit on logging */ }
+  }
+
+  // ---------- Generic editable/draggable grid engine (same pattern as Portals/Operations) ----------
+  function gridPrefKey(slug, kind) { return `kokiri_grid_${kind}_${slug}`; }
+  function getGridPrefSet(slug, kind) {
+    try { return new Set(JSON.parse(localStorage.getItem(gridPrefKey(slug, kind)) || '[]')); } catch { return new Set(); }
+  }
+  function setGridPrefSet(slug, kind, set) { localStorage.setItem(gridPrefKey(slug, kind), JSON.stringify([...set])); }
+
+  async function mountGrid(slug, onData) {
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    const wrap = document.getElementById('grid-' + slug);
+    if (!wrap) return;
+    if (!sheet) { wrap.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
+
+    let columns = [], rows = [];
+    async function loadData() {
+      const [{ data: cols }, { data: rowData }] = await Promise.all([
+        supabase.from('kokiri_columns').select('*').eq('sheet_id', sheet.id).order('sort_order'),
+        supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order'),
+      ]);
+      columns = cols || [];
+      rows = rowData || [];
+      renderGrid();
+      const countEl = document.getElementById('count-' + slug);
+      if (countEl) countEl.textContent = rows.length + ' row' + (rows.length === 1 ? '' : 's');
+      if (onData) onData(columns, rows);
+    }
+
+    function renderGrid() {
+      if (!columns.length) { wrap.innerHTML = '<p class="empty-note">No columns yet — click "+ Add Column" to start.</p>'; return; }
+      const collapsedCols = getGridPrefSet(slug, 'cols');
+      let html = '<table><thead><tr><th class="row-handle"></th><th class="row-del">×</th>';
+      columns.forEach(c => {
+        const isCollapsed = collapsedCols.has(c.column_key);
+        html += `<th class="grid-th${isCollapsed ? '' : ''}" draggable="true" data-col-key="${c.column_key}" title="Drag to reorder columns · Click to ${isCollapsed ? 'expand' : 'collapse'}">${isCollapsed ? '⋯' : escapeHtml(c.name)}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+      for (const r of rows) {
+        html += `<tr data-row-id="${r.id}" draggable="true"><td class="row-handle" title="Drag to reorder">⠿</td><td class="row-del" data-action="del-row">×</td>`;
+        for (const c of columns) {
+          const colCollapsed = collapsedCols.has(c.column_key);
+          html += `<td ${colCollapsed ? '' : 'contenteditable="true"'} data-col-key="${c.column_key}">${colCollapsed ? '' : escapeHtml(r.data?.[c.column_key] ?? '')}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+
+      let dragColKey = null;
+      wrap.querySelectorAll('th[data-col-key]').forEach(th => {
+        th.addEventListener('dragstart', (e) => { dragColKey = th.dataset.colKey; e.dataTransfer.effectAllowed = 'move'; });
+        th.addEventListener('dragover', (e) => e.preventDefault());
+        th.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const targetKey = th.dataset.colKey;
+          if (!dragColKey || dragColKey === targetKey) return;
+          const fromIdx = columns.findIndex(c => c.column_key === dragColKey);
+          const toIdx = columns.findIndex(c => c.column_key === targetKey);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const [moved] = columns.splice(fromIdx, 1);
+          columns.splice(toIdx, 0, moved);
+          renderGrid();
+          await Promise.all(columns.map((c, i) => supabase.from('kokiri_columns').update({ sort_order: i + 1 }).eq('id', c.id)));
+          logChange(slug, 'Reordered columns');
+        });
+        th.addEventListener('click', () => {
+          const set = getGridPrefSet(slug, 'cols');
+          if (set.has(th.dataset.colKey)) set.delete(th.dataset.colKey); else set.add(th.dataset.colKey);
+          setGridPrefSet(slug, 'cols', set);
+          renderGrid();
+        });
+      });
+
+      let dragRowId = null;
+      wrap.querySelectorAll('tr[draggable="true"]').forEach(tr => {
+        tr.addEventListener('dragstart', (e) => {
+          if (e.target.closest('[contenteditable="true"]')) { e.preventDefault(); return; }
+          dragRowId = tr.dataset.rowId; e.dataTransfer.effectAllowed = 'move';
+        });
+        tr.addEventListener('dragover', (e) => e.preventDefault());
+        tr.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const targetId = tr.dataset.rowId;
+          if (!dragRowId || dragRowId === targetId) return;
+          const fromIdx = rows.findIndex(r => r.id === dragRowId);
+          const toIdx = rows.findIndex(r => r.id === targetId);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const [moved] = rows.splice(fromIdx, 1);
+          rows.splice(toIdx, 0, moved);
+          renderGrid();
+          await Promise.all(rows.map((r, i) => supabase.from('kokiri_rows').update({ sort_order: i + 1 }).eq('id', r.id)));
+          logChange(slug, 'Reordered rows');
+        });
+      });
+
+      wrap.querySelectorAll('td[contenteditable="true"]').forEach(td => {
+        td.addEventListener('blur', async () => {
+          const rowId = td.closest('tr').dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          if (!row) return;
+          const col = columns.find(c => c.column_key === td.dataset.colKey);
+          row.data = { ...row.data, [td.dataset.colKey]: td.textContent };
+          await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+          logChange(slug, `Edited "${col?.name || td.dataset.colKey}" on a row`);
+          if (onData) onData(columns, rows);
+        });
+      });
+      wrap.querySelectorAll('[data-action="del-row"]').forEach(el => {
+        el.addEventListener('click', async () => {
+          const rowId = el.closest('tr').dataset.rowId;
+          if (!confirm('Delete this row?')) return;
+          await supabase.from('kokiri_rows').delete().eq('id', rowId);
+          rows = rows.filter(r => r.id !== rowId);
+          renderGrid();
+          const countEl = document.getElementById('count-' + slug);
+          if (countEl) countEl.textContent = rows.length + ' row' + (rows.length === 1 ? '' : 's');
+          logChange(slug, 'Deleted a row');
+          if (onData) onData(columns, rows);
+        });
+      });
+    }
+
+    document.querySelectorAll(`[data-action="add-row"][data-slug="${slug}"]`).forEach(btn => btn.addEventListener('click', async () => {
+      const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: {}, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      rows.push(data);
+      renderGrid();
+      const countEl = document.getElementById('count-' + slug);
+      if (countEl) countEl.textContent = rows.length + ' row' + (rows.length === 1 ? '' : 's');
+      logChange(slug, 'Added a row');
+      if (onData) onData(columns, rows);
+    }));
+    document.querySelectorAll(`[data-action="add-col"][data-slug="${slug}"]`).forEach(btn => btn.addEventListener('click', async () => {
+      const name = prompt('New column name:');
+      if (!name) return;
+      const key = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || ('col_' + Date.now());
+      const maxOrder = columns.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_columns').insert({ sheet_id: sheet.id, column_key: key, name, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      columns.push(data);
+      renderGrid();
+      logChange(slug, `Added column "${name}"`);
+    }));
+
+    await loadData();
+  }
+
+  // ---------- Daily Routine — its own compact card list (time block + task + notes), still edit/drag/log ----------
+  async function mountRoutine() {
+    const slug = 'master-routine';
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    const wrap = document.getElementById('routine-list');
+    if (!sheet) { wrap.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
+    let rows = [];
+    async function loadData() {
+      const { data } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
+      rows = data || [];
+      render();
+      document.getElementById('count-master-routine').textContent = rows.length + ' block' + (rows.length === 1 ? '' : 's');
+    }
+    function render() {
+      if (!rows.length) { wrap.innerHTML = '<p class="empty-note">No time blocks yet.</p>'; return; }
+      wrap.innerHTML = rows.map(r => `
+        <div class="routine-row" data-row-id="${r.id}" draggable="true">
+          <div class="routine-time" contenteditable="true" data-col-key="time_block">${escapeHtml(r.data?.time_block ?? '')}</div>
+          <div class="routine-body">
+            <div class="rtask" contenteditable="true" data-col-key="task">${escapeHtml(r.data?.task ?? '')}</div>
+            <div class="rnotes" contenteditable="true" data-col-key="notes">${escapeHtml(r.data?.notes ?? '')}</div>
+          </div>
+        </div>
+      `).join('');
+
+      wrap.querySelectorAll('[contenteditable="true"]').forEach(el => {
+        el.addEventListener('blur', async () => {
+          const rowEl = el.closest('.routine-row');
+          const rowId = rowEl.dataset.rowId;
+          const row = rows.find(r => r.id === rowId);
+          if (!row) return;
+          row.data = { ...row.data, [el.dataset.colKey]: el.textContent };
+          await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
+          logChange(slug, 'Edited a Daily Routine block');
+        });
+      });
+
+      let dragId = null;
+      wrap.querySelectorAll('.routine-row').forEach(rowEl => {
+        rowEl.addEventListener('dragstart', (e) => {
+          if (e.target.closest('[contenteditable="true"]')) { e.preventDefault(); return; }
+          dragId = rowEl.dataset.rowId; e.dataTransfer.effectAllowed = 'move';
+        });
+        rowEl.addEventListener('dragover', (e) => e.preventDefault());
+        rowEl.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const targetId = rowEl.dataset.rowId;
+          if (!dragId || dragId === targetId) return;
+          const fromIdx = rows.findIndex(r => r.id === dragId);
+          const toIdx = rows.findIndex(r => r.id === targetId);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const [moved] = rows.splice(fromIdx, 1);
+          rows.splice(toIdx, 0, moved);
+          render();
+          await Promise.all(rows.map((r, i) => supabase.from('kokiri_rows').update({ sort_order: i + 1 }).eq('id', r.id)));
+          logChange(slug, 'Reordered Daily Routine blocks');
+        });
+      });
+    }
+    document.querySelector('[data-action="add-routine"]').addEventListener('click', async () => {
+      const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { time_block: 'New', task: 'New block', notes: '' }, sort_order: maxOrder + 1 }).select().single();
+      if (error) { alert(error.message); return; }
+      rows.push(data);
+      render();
+      document.getElementById('count-master-routine').textContent = rows.length + ' block' + (rows.length === 1 ? '' : 's');
+      logChange(slug, 'Added a Daily Routine block');
+    });
+    await loadData();
+  }
+
+  // ---------- Jobs stats ----------
+  function updateJobStats(cols, rows) {
+    const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
+    const total = rows.length;
+    const applied = statusKey ? rows.filter(r => /applied/i.test(r.data?.[statusKey] || '') && !/not applied/i.test(r.data?.[statusKey] || '')).length : 0;
+    const notApplied = statusKey ? rows.filter(r => /not applied|^$/i.test((r.data?.[statusKey] || '').trim() || (statusKey ? '' : 'x'))).length : 0;
+    document.getElementById('stats-jobs').innerHTML = `
+      <div class="stat-box"><div class="num">${total}</div><div class="label">Total</div></div>
+      <div class="stat-box"><div class="num">${applied}</div><div class="label">Applied</div></div>
+      <div class="stat-box"><div class="num">${notApplied}</div><div class="label">Not Applied</div></div>
+    `;
+  }
+
+  // ---------- Combined saga/stats section row count ----------
+  function updateSagaStatsCount(sagaRows, statsRows) {
+    const total = (sagaRows || 0) + (statsRows || 0);
+    document.getElementById('count-sagastats').textContent = total + ' row' + (total === 1 ? '' : 's');
+  }
+
+  initNavCollapse();
+  await loadNav();
+  await mountRoutine();
+  await mountGrid('loops-agents');
+  let sagaCount = 0, statsCount = 0;
+  await mountGrid('sagas', (c, r) => { sagaCount = r.length; updateSagaStatsCount(sagaCount, statsCount); });
+  await mountGrid('system-stats', (c, r) => { statsCount = r.length; updateSagaStatsCount(sagaCount, statsCount); });
+  await mountGrid('job-applications', updateJobStats);
+  await mountGrid('clients');
+  await mountGrid('crm');
+  await mountGrid('content');
+  await mountGrid('ads');
+  await mountGrid('stocks-bets');
+  await mountGrid('fb-marketplace');
+</script>
+
+<script type="module" src="ambience.js"></script>
+<script type="module" src="widget.js"></script>
+</body>
+</html>
