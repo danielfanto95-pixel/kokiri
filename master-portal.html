@@ -4,26 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kokiri — Master Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0a0f0b; --surface: #121a13; --surface2: #17201a;
-  --border: rgba(163,214,140,0.14); --border-bright: rgba(163,214,140,0.32);
-  --text: #e4ede0; --muted: #9db396; --dim: #6b8065;
-  --leaf: #7cc576; --leaf-bright: #a8e79f; --gold: #e6c068; --gold-bright: #ffdf94;
-  --heading: 'Cinzel', serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
+  --bg: #07040f; --surface: #130b26; --surface2: #1c1038;
+  --border: rgba(0,229,255,0.14); --border-bright: rgba(255,45,149,0.4);
+  --text: #eae6ff; --muted: #a79bd1; --dim: #6f6296;
+  --leaf: #00e5ff; --leaf-bright: #6cf3ff; --gold: #ff2d95; --gold-bright: #ff6ec7;
+  --heading: 'Orbitron', sans-serif; --body: 'Inter', sans-serif; --mono: 'IBM Plex Mono', monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh;
   background-image:
-    radial-gradient(circle at 12% 8%, rgba(230,192,106,0.05), transparent 40%),
-    radial-gradient(circle at 88% 92%, rgba(124,197,118,0.06), transparent 45%);
+    radial-gradient(circle at 15% 8%, rgba(255,45,149,0.12), transparent 42%),
+    radial-gradient(circle at 88% 90%, rgba(0,229,255,0.14), transparent 48%),
+    repeating-linear-gradient(0deg, rgba(0,229,255,0.035) 0px, rgba(0,229,255,0.035) 1px, transparent 1px, transparent 42px),
+    repeating-linear-gradient(90deg, rgba(255,45,149,0.03) 0px, rgba(255,45,149,0.03) 1px, transparent 1px, transparent 42px);
+  background-attachment: fixed;
 }
 .topbar {
   display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem;
   border-bottom: 1px solid var(--border-bright); background: var(--surface); position: sticky; top: 0; z-index: 10;
-  box-shadow: 0 1px 24px rgba(230,192,106,0.06);
+  box-shadow: 0 1px 24px rgba(255,45,149,0.1);
 }
 .brand {
   font-family: var(--heading); font-weight: 800; color: var(--leaf-bright); font-size: 1.1rem; white-space: nowrap;
@@ -37,39 +40,48 @@ body {
 #btn-logout:hover { border-color: var(--leaf); color: var(--text); }
 
 .layout { display: flex; min-height: calc(100vh - 57px); }
-main { flex: 1; padding: 1.6rem 1.8rem 4rem; min-width: 0; max-width: 1100px; }
+main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
 
 .page-head { margin-bottom: 1.8rem; position: relative; padding-bottom: 1.2rem; border-bottom: 1px solid var(--border); }
 .page-head::after {
-  content: ''; position: absolute; left: 0; bottom: -1px; height: 1px; width: 140px;
-  background: linear-gradient(90deg, var(--gold-bright), transparent);
+  content: ''; position: absolute; left: 0; bottom: -1px; height: 2px; width: 140px;
+  background: linear-gradient(90deg, var(--leaf-bright), transparent);
+  box-shadow: 0 0 12px 1px rgba(0,229,255,0.6);
   animation: sheikah-scan 4s ease-in-out infinite;
 }
-@keyframes sheikah-scan { 0%,100% { opacity: 0.35; width: 90px; } 50% { opacity: 1; width: 220px; } }
+@keyframes sheikah-scan { 0%,100% { opacity: 0.35; width: 90px; } 50% { opacity: 1; width: 260px; } }
 .page-head h1 {
-  font-family: var(--heading); font-size: 1.7rem; color: var(--gold-bright); letter-spacing: 0.02em;
-  text-shadow: 0 0 18px rgba(230,192,106,0.35);
+  font-family: var(--heading); font-weight: 900; font-size: 1.7rem; color: var(--gold-bright); letter-spacing: 0.04em;
+  text-shadow: 0 0 8px rgba(255,45,149,0.7), 0 0 26px rgba(255,45,149,0.35);
 }
 .page-head p { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; max-width: 700px; line-height: 1.65; }
 
-.macro-head { display: flex; align-items: baseline; gap: 0.7rem; margin: 2.2rem 0 1rem; }
-.macro-head:first-of-type { margin-top: 0; }
+.macro-section { margin-bottom: 1rem; }
+.macro-head { display: flex; align-items: baseline; gap: 0.7rem; margin: 2.2rem 0 1rem; cursor: pointer; user-select: none; }
+.macro-section:first-child .macro-head { margin-top: 0; }
+.macro-head:hover h2 { text-shadow: 0 0 14px rgba(108,243,255,0.6); }
 .macro-head .macro-num {
   font-family: var(--mono); font-size: 0.72rem; color: var(--bg); background: var(--gold-bright);
-  border-radius: 5px; padding: 0.15rem 0.5rem; font-weight: 700;
+  border-radius: 5px; padding: 0.15rem 0.5rem; font-weight: 700; box-shadow: 0 0 10px -1px rgba(255,45,149,0.7);
 }
-.macro-head h2 { font-family: var(--heading); font-size: 1.25rem; color: var(--leaf-bright); }
+.macro-head h2 {
+  font-family: var(--heading); font-weight: 800; font-size: 1.2rem; color: var(--leaf-bright); letter-spacing: 0.03em;
+  text-shadow: 0 0 10px rgba(0,229,255,0.4);
+}
 .macro-head .macro-sub { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+.macro-head .macro-chevron { margin-left: auto; font-size: 0.75rem; color: var(--muted); transition: transform 0.15s; }
+.macro-section.collapsed .macro-head .macro-chevron { transform: rotate(-90deg); }
+.macro-section.collapsed .macro-body { display: none; }
 
 /* ---- Collapsible sections (top-level + nested) ---- */
 .op-section {
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0.9rem; overflow: hidden;
   transition: border-color 0.2s;
 }
-.op-section.open { border-color: var(--border-bright); }
+.op-section.open { border-color: var(--border-bright); box-shadow: 0 0 26px -10px rgba(0,229,255,0.3); }
 .op-section.nested { background: var(--surface2); margin-bottom: 0.6rem; }
 .op-head { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; }
-.op-head:hover { background: rgba(163,214,140,0.05); }
+.op-head:hover { background: rgba(0,229,255,0.06); }
 .op-section.open .op-head { border-bottom-color: var(--border); }
 .op-head .op-icon { font-size: 1.15rem; }
 .op-head h3 { font-family: var(--heading); font-size: 0.98rem; color: var(--leaf-bright); flex: 1; }
@@ -85,7 +97,7 @@ main { flex: 1; padding: 1.6rem 1.8rem 4rem; min-width: 0; max-width: 1100px; }
   font-family: var(--mono); font-size: 0.72rem; color: var(--text); background: var(--surface);
   border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer;
 }
-.op-toolbar button:hover { border-color: var(--gold); color: var(--gold-bright); }
+.op-toolbar button:hover { border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 10px -2px rgba(255,45,149,0.55); }
 
 .op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
 table { border-collapse: collapse; width: 100%; min-width: max-content; }
@@ -114,8 +126,8 @@ th.grid-th:active { cursor: grabbing; }
 }
 .routine-row:hover { border-color: var(--border-bright); }
 .routine-time {
-  font-family: var(--mono); font-size: 0.68rem; color: var(--gold-bright); background: rgba(230,192,106,0.08);
-  border: 1px solid rgba(230,192,106,0.25); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center; align-self: center;
+  font-family: var(--mono); font-size: 0.68rem; color: var(--gold-bright); background: rgba(255,45,149,0.1);
+  border: 1px solid rgba(255,45,149,0.3); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center; align-self: center;
 }
 .routine-body .rtask { font-family: var(--heading); font-size: 0.92rem; color: var(--text); }
 .routine-body .rnotes { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.5; }
@@ -123,7 +135,7 @@ th.grid-th:active { cursor: grabbing; }
 @media (max-width: 620px) { .routine-row { grid-template-columns: 1fr; } .routine-time { justify-self: start; } }
 
 .portal-note {
-  margin-top: 1rem; padding: 0.8rem 1rem; background: rgba(163,214,140,0.04); border: 1px dashed var(--border-bright);
+  margin-top: 1rem; padding: 0.8rem 1rem; background: rgba(0,229,255,0.05); border: 1px dashed var(--border-bright);
   border-radius: 10px; font-size: 0.76rem; color: var(--muted); line-height: 1.6;
 }
 .link-out { color: var(--leaf-bright); text-decoration: none; border-bottom: 1px dotted var(--leaf-bright); }
@@ -147,7 +159,7 @@ th.grid-th:active { cursor: grabbing; }
   cursor: pointer; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.15rem; border: 1px solid transparent; text-decoration: none;
 }
 .nav-link:hover { background: var(--surface2); color: var(--text); }
-.nav-link.active { background: var(--surface2); border-color: var(--gold); color: var(--gold-bright); font-weight: 600; }
+.nav-link.active { background: var(--surface2); border-color: var(--gold); color: var(--gold-bright); font-weight: 600; box-shadow: 0 0 14px -4px rgba(255,45,149,0.5); }
 @media (max-width: 900px) { .nav-side { display: none; } main { padding: 1.2rem 1rem 3rem; } }
 </style>
 </head>
@@ -166,7 +178,9 @@ th.grid-th:active { cursor: grabbing; }
     </div>
 
     <!-- ================= SECTION 0: SCHEDULE ================= -->
-    <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span></div>
+    <div class="macro-section" data-macro="schedule">
+    <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-body">
 
     <div class="op-section open" data-key="sec-routine">
       <div class="op-head"><span class="op-icon">☀️</span><h3>Daily Routine</h3><span class="op-count" id="count-master-routine"></span><span class="chevron">▸</span></div>
@@ -210,8 +224,14 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    </div>
+    </div>
+
     <!-- ================= SECTION 1: JOBS ================= -->
-    <div class="macro-head"><span class="macro-num">1</span><h2>💼 Jobs</h2><span class="macro-sub">same rows as Portals → Jobs</span></div>
+    <div class="macro-section" data-macro="jobs">
+    <div class="macro-head"><span class="macro-num">1</span><h2>💼 Jobs</h2><span class="macro-sub">same rows as Portals → Jobs</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-body">
+
     <div class="op-section open" data-key="sec-jobs">
       <div class="op-head"><span class="op-icon">💼</span><h3>Job Applications</h3><span class="op-count" id="count-job-applications"></span><span class="chevron">▸</span></div>
       <div class="op-body">
@@ -225,8 +245,13 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    </div>
+    </div>
+
     <!-- ================= SECTION 2: FITNESS ================= -->
-    <div class="macro-head"><span class="macro-num">2</span><h2>💪 Fitness</h2><span class="macro-sub">clients · CRM · content · ads — same rows as Portals</span></div>
+    <div class="macro-section" data-macro="fitness">
+    <div class="macro-head"><span class="macro-num">2</span><h2>💪 Fitness</h2><span class="macro-sub">clients · CRM · content · ads — same rows as Portals</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-body">
 
     <div class="op-section open" data-key="sec-fit-clients">
       <div class="op-head"><span class="op-icon">🧑‍🤝‍🧑</span><h3>1. Clients</h3><span class="op-count" id="count-clients"></span><span class="chevron">▸</span></div>
@@ -258,8 +283,13 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    </div>
+    </div>
+
     <!-- ================= SECTION 3: SIDE HUSTLES ================= -->
-    <div class="macro-head"><span class="macro-num">3</span><h2>🎲 Side Hustles</h2><span class="macro-sub">stocks/bets · Facebook Marketplace</span></div>
+    <div class="macro-section" data-macro="sidehustles">
+    <div class="macro-head"><span class="macro-num">3</span><h2>🎲 Side Hustles</h2><span class="macro-sub">stocks/bets · Facebook Marketplace</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-body">
 
     <div class="op-section open" data-key="sec-sh-stocks">
       <div class="op-head"><span class="op-icon">📈</span><h3>1. Stocks / Bets</h3><span class="op-count" id="count-stocks-bets"></span><span class="chevron">▸</span></div>
@@ -275,6 +305,9 @@ th.grid-th:active { cursor: grabbing; }
         <div class="op-grid-wrap" id="grid-fb-marketplace"><p class="empty-note">Loading…</p></div>
         <div class="portal-note">Feeds the DoorDash time block's "negotiating selling stuff" — new listings/sales land here.</div>
       </div>
+    </div>
+
+    </div>
     </div>
 
   </main>
@@ -394,6 +427,16 @@ th.grid-th:active { cursor: grabbing; }
       });
     });
   }
+
+  // ---------- Collapsible macro-sections (0 Schedule / 1 Jobs / 2 Fitness / 3 Side Hustles) ----------
+  document.querySelectorAll('.macro-section[data-macro]').forEach(section => {
+    const key = 'master_portal_macro_' + section.dataset.macro;
+    if (localStorage.getItem(key) === 'collapsed') section.classList.add('collapsed');
+    section.querySelector(':scope > .macro-head').addEventListener('click', () => {
+      const collapsed = section.classList.toggle('collapsed');
+      localStorage.setItem(key, collapsed ? 'collapsed' : 'open');
+    });
+  });
 
   // ---------- Collapsible sections (top-level + nested), state persisted per section ----------
   document.querySelectorAll('.op-section[data-key]').forEach(section => {
@@ -692,7 +735,6 @@ th.grid-th:active { cursor: grabbing; }
   await mountGrid('fb-marketplace');
 </script>
 
-<script type="module" src="ambience.js"></script>
 <script type="module" src="widget.js"></script>
 </body>
 </html>
