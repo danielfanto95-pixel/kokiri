@@ -170,7 +170,7 @@ th.grid-th:active { cursor: grabbing; }
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem;
 }
 .task-card:hover { border-color: var(--border-bright); }
-.task-card .trow { display: grid; grid-template-columns: 1fr 130px 190px 150px 24px; gap: 0.7rem; align-items: center; }
+.task-card .trow { display: grid; grid-template-columns: 1fr 110px 120px 180px 150px 24px; gap: 0.6rem; align-items: center; }
 .task-card select[data-col-key="status"] { font-weight: 600; }
 .task-card select[data-col-key="status"][data-status="Complete"] { color: var(--gold-bright); border-color: var(--border-bright); }
 .task-card select[data-col-key="status"][data-status="Needs Your Review"] { color: #ffd166; border-color: rgba(255,209,102,0.4); }
@@ -986,6 +986,7 @@ th.grid-th:active { cursor: grabbing; }
   // ---------- Tasks — Recurring + Assigned To (Me or an agent) ----------
   const RECURRING_OPTIONS = ['None', 'Every 8 Hours', 'Daily', 'Weekdays', 'Weekly'];
   const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Needs Your Review', 'Complete'];
+  const TASK_TYPE_OPTIONS = ['General', 'Media Task', 'Job Search', 'Review', 'Maintenance', 'Research'];
 
   async function mountTasks() {
     const slug = 'master-tasks';
@@ -1013,10 +1014,12 @@ th.grid-th:active { cursor: grabbing; }
         const recurring = r.data?.recurring || 'None';
         const assignedTo = r.data?.assigned_to || assigneeOptions[0];
         const status = r.data?.status || STATUS_OPTIONS[0];
+        const taskType = r.data?.task_type || TASK_TYPE_OPTIONS[0];
         return `
         <div class="task-card" data-row-id="${r.id}" draggable="true">
           <div class="trow">
             <div class="ttask" contenteditable="true" data-col-key="task">${escapeHtml(r.data?.task ?? '')}</div>
+            <select data-col-key="task_type">${optionsHtml(TASK_TYPE_OPTIONS, taskType)}</select>
             <select data-col-key="recurring">${optionsHtml(RECURRING_OPTIONS, recurring)}</select>
             <select data-col-key="assigned_to">${optionsHtml(assigneeOptions.includes(assignedTo) ? assigneeOptions : [assignedTo, ...assigneeOptions], assignedTo)}</select>
             <select data-col-key="status" data-status="${escapeHtml(status)}">${optionsHtml(STATUS_OPTIONS, status)}</select>
@@ -1052,7 +1055,7 @@ th.grid-th:active { cursor: grabbing; }
           logChange(slug, el.classList.contains('tnotes') ? 'Edited a task\'s details' : 'Edited a task');
         });
       });
-      const SELECT_LABELS = { recurring: 'Recurring', assigned_to: 'Assigned To', status: 'Status' };
+      const SELECT_LABELS = { task_type: 'Type', recurring: 'Recurring', assigned_to: 'Assigned To', status: 'Status' };
       wrap.querySelectorAll('select[data-col-key]').forEach(sel => {
         sel.addEventListener('change', async () => {
           const rowId = sel.closest('.task-card').dataset.rowId;
@@ -1108,7 +1111,7 @@ th.grid-th:active { cursor: grabbing; }
 
     document.querySelector('[data-action="add-task"]').addEventListener('click', async () => {
       const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
-      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', recurring: 'None', assigned_to: defaultAutomatedAssignee, status: STATUS_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
+      const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', task_type: TASK_TYPE_OPTIONS[0], recurring: 'None', assigned_to: defaultAutomatedAssignee, status: STATUS_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert(error.message); return; }
       rows.push(data);
       render();
