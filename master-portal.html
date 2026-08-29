@@ -278,6 +278,19 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    <!-- ================= INTEGRATIONS ================= -->
+    <div class="op-section" data-key="sec-integrations">
+      <div class="op-head"><span class="op-icon">🔌</span><h3>Integrations</h3><span class="op-count" id="count-integrations"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="integrations">+ Add Integration</button>
+          <button data-action="add-col" data-slug="integrations">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-integrations"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Every real connection between Kokiri and an outside tool — what triggers it, what it does, and how it's wired.</div>
+      </div>
+    </div>
+
     <!-- ================= SECTION 0: SCHEDULE ================= -->
     <div class="macro-section" data-macro="schedule">
     <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span><span class="macro-chevron">▾</span></div>
@@ -613,7 +626,7 @@ th.grid-th:active { cursor: grabbing; }
     'master-routine': 'masterportal', 'master-tasks': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
     'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
     'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal', 'hot-links': 'masterportal',
-    'sonzai-state-goals-objectives': 'masterportal', 'claude-tasks': 'claude-tasks',
+    'sonzai-state-goals-objectives': 'masterportal', 'claude-tasks': 'claude-tasks', 'integrations': 'masterportal',
   };
   const changeLogSheetIds = {};
   async function ensureExtraSheet(slug, name, columns) {
@@ -1190,6 +1203,7 @@ th.grid-th:active { cursor: grabbing; }
   await loadNav();
   await mountHotLinks();
   await mountDocs();
+  await mountGrid('integrations');
   await mountRoutine();
   await mountTasks();
   await mountTasksNotes();
