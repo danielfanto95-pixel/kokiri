@@ -185,6 +185,13 @@ th.grid-th:active { cursor: grabbing; }
 .task-group-label { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.9rem 0 0.4rem; }
 .task-group-label:first-child { margin-top: 0; }
 .task-group-label span { color: var(--dim); }
+.tasks-notes-block { margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+.tasks-notes-block h4 { font-family: var(--heading); font-size: 0.85rem; color: var(--gold-bright); margin-bottom: 0.5rem; }
+.tasks-notes-block textarea {
+  width: 100%; min-height: 90px; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.82rem; resize: vertical;
+}
+.tasks-notes-block textarea:focus { outline: 1px solid var(--gold); }
 .task-card select {
   background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px;
   padding: 0.35rem 0.5rem; font-family: var(--mono); font-size: 0.72rem; cursor: pointer;
@@ -272,7 +279,19 @@ th.grid-th:active { cursor: grabbing; }
     <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span><span class="macro-chevron">▾</span></div>
     <div class="macro-body">
 
-    <div class="op-section open" data-key="sec-routine">
+    <div class="op-section open" data-key="sec-objectives">
+      <div class="op-head"><span class="op-icon">🎯</span><h3>Objectives</h3><span class="op-count" id="count-sonzai-state-goals-objectives"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="sonzai-state-goals-objectives">+ Add Objective</button>
+          <button data-action="add-col" data-slug="sonzai-state-goals-objectives">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives — kept at the top so Tasks below stay focused against real objectives.</div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-routine">
       <div class="op-head"><span class="op-icon">☀️</span><h3>Daily Routine</h3><span class="op-count" id="count-master-routine"></span><span class="chevron">▸</span></div>
       <div class="op-body">
         <div class="op-toolbar">
@@ -291,18 +310,10 @@ th.grid-th:active { cursor: grabbing; }
           <button data-action="add-task">+ Add Task</button>
         </div>
         <div class="task-list" id="task-list"><p class="empty-note">Loading…</p></div>
-      </div>
-    </div>
-
-    <div class="op-section nested" data-key="sec-objectives">
-      <div class="op-head"><span class="op-icon">🎯</span><h3>Objectives</h3><span class="op-count" id="count-sonzai-state-goals-objectives"></span><span class="chevron">▸</span></div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-row" data-slug="sonzai-state-goals-objectives">+ Add Objective</button>
-          <button data-action="add-col" data-slug="sonzai-state-goals-objectives">+ Add Column</button>
+        <div class="tasks-notes-block">
+          <h4>📝 Notes</h4>
+          <textarea id="tasks-section-notes" placeholder="General notes for this Tasks section…"></textarea>
         </div>
-        <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
-        <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives.</div>
       </div>
     </div>
 
@@ -1018,13 +1029,17 @@ th.grid-th:active { cursor: grabbing; }
 
     function render() {
       if (!rows.length) { wrap.innerHTML = '<p class="empty-note">No tasks yet — click "+ Add Task" to start.</p>'; return; }
-      const recurring = rows.filter(r => (r.data?.recurring || 'None') !== 'None');
-      const oneTime = rows.filter(r => (r.data?.recurring || 'None') === 'None');
+      const completed = rows.filter(r => r.data?.status === 'Complete');
+      const active = rows.filter(r => r.data?.status !== 'Complete');
+      const recurring = active.filter(r => (r.data?.recurring || 'None') !== 'None');
+      const oneTime = active.filter(r => (r.data?.recurring || 'None') === 'None');
       wrap.innerHTML = `
         <div class="task-group-label">🔁 Recurring <span>(${recurring.length})</span></div>
         ${recurring.length ? recurring.map(cardHtml).join('') : '<p class="empty-note">No recurring tasks yet.</p>'}
         <div class="task-group-label">📌 One-Time <span>(${oneTime.length})</span></div>
         ${oneTime.length ? oneTime.map(cardHtml).join('') : '<p class="empty-note">No one-time tasks yet.</p>'}
+        <div class="task-group-label">✅ Completed <span>(${completed.length})</span></div>
+        ${completed.length ? completed.map(cardHtml).join('') : '<p class="empty-note">Nothing completed yet — full history is kept here once a task is.</p>'}
       `;
 
       wrap.querySelectorAll('.ttask[contenteditable="true"], .tnotes[contenteditable="true"], .thistory[contenteditable="true"]').forEach(el => {
@@ -1053,7 +1068,7 @@ th.grid-th:active { cursor: grabbing; }
           }
           await supabase.from('kokiri_rows').update({ data: row.data, updated_at: new Date().toISOString() }).eq('id', rowId);
           logChange(slug, `Set ${SELECT_LABELS[sel.dataset.colKey] || sel.dataset.colKey} on a task`);
-          if (sel.dataset.colKey === 'recurring' || (sel.dataset.colKey === 'status' && sel.value === 'Complete')) render();
+          if (sel.dataset.colKey === 'recurring' || sel.dataset.colKey === 'status') render();
         });
       });
       wrap.querySelectorAll('.tdel').forEach(el => {
@@ -1104,6 +1119,17 @@ th.grid-th:active { cursor: grabbing; }
     await loadData();
   }
 
+  // ---------- Tasks section — free-text notes ----------
+  async function mountTasksNotes() {
+    const el = document.getElementById('tasks-section-notes');
+    const { data } = await supabase.from('kokiri_settings').select('value').eq('key', 'master_tasks_notes').maybeSingle();
+    el.value = data?.value || '';
+    el.addEventListener('blur', async () => {
+      await supabase.from('kokiri_settings').update({ value: el.value }).eq('key', 'master_tasks_notes');
+      logChange('master-tasks', 'Edited the Tasks section notes');
+    });
+  }
+
   // ---------- Jobs stats ----------
   function updateJobStats(cols, rows) {
     const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
@@ -1130,6 +1156,7 @@ th.grid-th:active { cursor: grabbing; }
   await mountDocs();
   await mountRoutine();
   await mountTasks();
+  await mountTasksNotes();
   await mountGrid('sonzai-state-goals-objectives');
   await mountGrid('loops-agents');
   let sagaCount = 0, statsCount = 0;
