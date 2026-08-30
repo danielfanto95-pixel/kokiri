@@ -365,18 +365,6 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
-    <div class="op-section nested" data-key="sec-objectives">
-      <div class="op-head"><span class="op-icon">🎯</span><h3>Objectives</h3><span class="op-count" id="count-sonzai-state-goals-objectives"></span><span class="chevron">▸</span></div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-row" data-slug="sonzai-state-goals-objectives">+ Add Objective</button>
-          <button data-action="add-col" data-slug="sonzai-state-goals-objectives">+ Add Column</button>
-        </div>
-        <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
-        <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives.</div>
-      </div>
-    </div>
-
     <div class="op-section nested" data-key="sec-routine">
       <div class="op-head"><span class="op-icon">☀️</span><h3>Daily Routine</h3><span class="op-count" id="count-master-routine"></span><span class="chevron">▸</span></div>
       <div class="op-body">
@@ -404,6 +392,24 @@ th.grid-th:active { cursor: grabbing; }
     <div class="op-section nested" data-key="sec-sagastats">
       <div class="op-head"><span class="op-icon">📖</span><h3>Saga / Stats</h3><span class="op-count" id="count-sagastats"></span><span class="chevron">▸</span></div>
       <div class="op-body">
+
+        <div class="op-section nested" data-key="sec-objectives">
+          <div class="op-head"><span class="op-icon">🎯</span><h3>Objectives</h3><span class="op-count" id="count-sonzai-state-goals-objectives"></span><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <div class="op-toolbar">
+              <button data-action="add-row" data-slug="sonzai-state-goals-objectives">+ Add Objective</button>
+              <button data-action="add-col" data-slug="sonzai-state-goals-objectives">+ Add Column</button>
+            </div>
+            <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
+            <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives.</div>
+          </div>
+        </div>
+
+        <div class="tasks-notes-block">
+          <h4>📖 Saga Description</h4>
+          <textarea id="saga-description-notes" placeholder="Long-form description of everything going on in this saga right now…" style="min-height:160px;"></textarea>
+        </div>
+
         <div class="op-toolbar">
           <button data-action="add-row" data-slug="sagas">+ Add Saga Row</button>
           <button data-action="add-col" data-slug="sagas">+ Add Column</button>
@@ -1469,6 +1475,17 @@ th.grid-th:active { cursor: grabbing; }
     });
   }
 
+  // ---------- Saga / Stats — long-form saga description ----------
+  async function mountSagaDescription() {
+    const el = document.getElementById('saga-description-notes');
+    const { data } = await supabase.from('kokiri_settings').select('value').eq('key', 'master_saga_description').maybeSingle();
+    el.value = data?.value || '';
+    el.addEventListener('blur', async () => {
+      await supabase.from('kokiri_settings').update({ value: el.value }).eq('key', 'master_saga_description');
+      logChange('sagas', 'Edited the Saga description');
+    });
+  }
+
   // ---------- Jobs stats ----------
   function updateJobStats(cols, rows) {
     const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
@@ -1498,6 +1515,7 @@ th.grid-th:active { cursor: grabbing; }
   await mountRoutine();
   await mountTasks();
   await mountTasksNotes();
+  await mountSagaDescription();
   await mountGrid('sonzai-state-goals-objectives');
   await mountGrid('loops-agents');
   let sagaCount = 0, statsCount = 0;
