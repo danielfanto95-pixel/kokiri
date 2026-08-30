@@ -106,6 +106,13 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
 #generate-report-btn:hover { box-shadow: 0 0 12px -2px rgba(46,232,143,0.6); }
 #generate-report-btn:disabled { opacity: 0.55; cursor: wait; }
 
+.add-subsection-btn {
+  display: block; width: 100%; margin-top: 0.4rem;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--muted); background: transparent;
+  border: 1px dashed var(--border); border-radius: 8px; padding: 0.6rem; cursor: pointer;
+}
+.add-subsection-btn:hover { border-color: var(--gold); color: var(--gold-bright); border-style: solid; }
+
 .report-panel {
   border: 1px solid var(--gold); border-radius: 8px; background: var(--surface2);
   padding: 1rem 1.1rem; margin-bottom: 1rem;
@@ -457,6 +464,8 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    <button class="add-subsection-btn" data-add-subsection="schedule" type="button">+ Add Subsection</button>
+
     </div>
     </div>
 
@@ -477,6 +486,8 @@ th.grid-th:active { cursor: grabbing; }
         <div class="portal-note">Fed by the Job Finder / Job Applier loops above. Full view: <a class="link-out" href="portals.html#jobs">Portals → Jobs</a>.</div>
       </div>
     </div>
+
+    <button class="add-subsection-btn" data-add-subsection="jobs" type="button">+ Add Subsection</button>
 
     </div>
     </div>
@@ -516,6 +527,8 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    <button class="add-subsection-btn" data-add-subsection="fitness" type="button">+ Add Subsection</button>
+
     </div>
     </div>
 
@@ -540,6 +553,8 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    <button class="add-subsection-btn" data-add-subsection="sidehustles" type="button">+ Add Subsection</button>
+
     </div>
     </div>
 
@@ -556,6 +571,8 @@ th.grid-th:active { cursor: grabbing; }
         <div class="portal-note">Same live rows as Kokiri's CRM: Marketing Agency sheet — leads for hajimesolutions.com (websites, advertising/lead gen, AI agents).</div>
       </div>
     </div>
+
+    <button class="add-subsection-btn" data-add-subsection="hajime" type="button">+ Add Subsection</button>
 
     </div>
     </div>
@@ -804,7 +821,7 @@ th.grid-th:active { cursor: grabbing; }
   });
 
   // ---------- Collapsible sections (top-level + nested), state persisted per section ----------
-  document.querySelectorAll('.op-section[data-key]').forEach(section => {
+  function wireOpSectionCollapse(section) {
     const key = 'master_portal_section_' + section.dataset.key;
     const stored = localStorage.getItem(key);
     if (stored === 'open') section.classList.add('open');
@@ -813,7 +830,8 @@ th.grid-th:active { cursor: grabbing; }
       const open = section.classList.toggle('open');
       localStorage.setItem(key, open ? 'open' : 'closed');
     });
-  });
+  }
+  document.querySelectorAll('.op-section[data-key]').forEach(wireOpSectionCollapse);
 
   // ---------- Change log (same convention as every other portal — feeds the global changelog feed) ----------
   const SLUG_TO_TAB = {
@@ -836,7 +854,7 @@ th.grid-th:active { cursor: grabbing; }
     return sheet.id;
   }
   async function logChange(gridSlug, description) {
-    const tabKey = SLUG_TO_TAB[gridSlug];
+    const tabKey = SLUG_TO_TAB[gridSlug] || (gridSlug.startsWith('custom-') ? 'masterportal' : null);
     if (!tabKey) return;
     try {
       let sheetId = changeLogSheetIds[tabKey];
@@ -1386,6 +1404,60 @@ th.grid-th:active { cursor: grabbing; }
     await loadData();
   }
 
+  // ---------- Custom subsections (user-added, one per macro-section) ----------
+  async function mountCustomSubsections() {
+    const { data } = await supabase.from('kokiri_custom_subsections').select('*').order('sort_order');
+    const rows = data || [];
+
+    function subsectionHtml(row) {
+      return `
+      <div class="op-section nested" data-key="custom-${row.id}">
+        <div class="op-head"><span class="op-icon">${escapeHtml(row.icon)}</span><h3>${escapeHtml(row.title)}</h3><span class="op-count" id="count-custom-${row.id}"></span><span class="chevron">▸</span></div>
+        <div class="op-body">
+          <div class="op-toolbar"><button data-action="add-custom-task" data-custom-id="${row.id}">+ Add Task</button></div>
+          <div class="task-list" id="tasklist-custom-${row.id}"><p class="empty-note">Loading…</p></div>
+        </div>
+      </div>`;
+    }
+
+    async function insertSubsection(row) {
+      const addBtn = document.querySelector(`[data-add-subsection="${row.macro_key}"]`);
+      if (!addBtn) return;
+      addBtn.insertAdjacentHTML('beforebegin', subsectionHtml(row));
+      wireOpSectionCollapse(document.getElementById(`count-custom-${row.id}`).closest('.op-section'));
+      await mountTaskList({
+        slug: row.sheet_slug,
+        listId: `tasklist-custom-${row.id}`,
+        countId: `count-custom-${row.id}`,
+        addSelector: `[data-action="add-custom-task"][data-custom-id="${row.id}"]`,
+      });
+    }
+
+    for (const row of rows) await insertSubsection(row);
+
+    document.querySelectorAll('[data-add-subsection]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const macroKey = btn.dataset.addSubsection;
+        const title = (prompt('Name this subsection:') || '').trim();
+        if (!title) return;
+        const base = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'section';
+        const slug = `custom-${base}-${Math.random().toString(36).slice(2, 7)}`;
+        const { error: sheetErr } = await supabase.from('kokiri_sheets').insert({ slug, name: `Master Portal — ${title}` });
+        if (sheetErr) { alert(sheetErr.message); return; }
+        const maxOrder = rows.filter(r => r.macro_key === macroKey).reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+        const { data: newRow, error: rowErr } = await supabase
+          .from('kokiri_custom_subsections')
+          .insert({ macro_key: macroKey, title, sheet_slug: slug, sort_order: maxOrder + 1 })
+          .select()
+          .single();
+        if (rowErr) { alert(rowErr.message); return; }
+        rows.push(newRow);
+        await insertSubsection(newRow);
+        logChange(slug, `Added a new subsection: ${title}`);
+      });
+    });
+  }
+
   // ---------- Tasks section — free-text notes ----------
   async function mountTasksNotes() {
     const el = document.getElementById('tasks-section-notes');
@@ -1444,6 +1516,7 @@ th.grid-th:active { cursor: grabbing; }
   await mountGrid('fb-marketplace');
   await mountGrid('claude-tasks');
   await mountGrid('crm-marketing');
+  await mountCustomSubsections();
 </script>
 
 <script type="module" src="widget.js"></script>
