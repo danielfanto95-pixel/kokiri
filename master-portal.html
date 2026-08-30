@@ -208,9 +208,16 @@ th.grid-th:active { cursor: grabbing; }
   border-top: 1px dashed var(--border); padding-top: 0.35rem; margin-top: 0.1rem;
 }
 [contenteditable="true"].tnotes:focus, [contenteditable="true"].thistory:focus { outline: 1px solid var(--gold); background: var(--surface2); }
-.task-group-label { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.9rem 0 0.4rem; }
-.task-group-label:first-child { margin-top: 0; }
+.task-group { margin: 0; }
+.task-group-label {
+  font-family: var(--mono); font-size: 0.7rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em;
+  margin: 0.9rem 0 0.4rem; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 0.4rem;
+}
+.task-group:first-child .task-group-label { margin-top: 0; }
 .task-group-label span { color: var(--dim); }
+.task-group-label .tg-chevron { margin-left: auto; font-size: 0.65rem; transition: transform 0.15s; }
+.task-group.collapsed .tg-chevron { transform: rotate(-90deg); }
+.task-group.collapsed .task-group-body { display: none; }
 .tasks-notes-block { margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
 .tasks-notes-block h4 { font-family: var(--heading); font-size: 0.85rem; color: var(--gold-bright); margin-bottom: 0.5rem; }
 .tasks-notes-block textarea {
@@ -402,50 +409,51 @@ th.grid-th:active { cursor: grabbing; }
         </div>
         <div class="op-grid-wrap" id="grid-system-stats"><p class="empty-note">Loading…</p></div>
         <div class="portal-note">Same live rows as <a class="link-out" href="saga.html">Saga</a> and Kokiri's System &amp; Stats sheet.</div>
-      </div>
-    </div>
 
-    <div class="op-section nested" data-key="sec-expenses">
-      <div class="op-head"><span class="op-icon">💸</span><h3>Expenses</h3><span class="op-count" id="count-expenses"></span><span class="chevron">▸</span></div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-row" data-slug="expenses">+ Add Expense</button>
-          <button data-action="add-col" data-slug="expenses">+ Add Column</button>
+        <div class="op-section nested" data-key="sec-expenses">
+          <div class="op-head"><span class="op-icon">💸</span><h3>Expenses</h3><span class="op-count" id="count-expenses"></span><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <div class="op-toolbar">
+              <button data-action="add-row" data-slug="expenses">+ Add Expense</button>
+              <button data-action="add-col" data-slug="expenses">+ Add Column</button>
+            </div>
+            <div class="op-grid-wrap" id="grid-expenses"><p class="empty-note">Loading…</p></div>
+          </div>
         </div>
-        <div class="op-grid-wrap" id="grid-expenses"><p class="empty-note">Loading…</p></div>
-      </div>
-    </div>
 
-    <div class="op-section nested" data-key="sec-current-job">
-      <div class="op-head"><span class="op-icon">💼</span><h3>Current Job</h3><span class="op-count" id="count-current-job"></span><span class="chevron">▸</span></div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-row" data-slug="current-job">+ Add Row</button>
-          <button data-action="add-col" data-slug="current-job">+ Add Column</button>
+        <div class="op-section nested" data-key="sec-current-job">
+          <div class="op-head"><span class="op-icon">💼</span><h3>Current Job</h3><span class="op-count" id="count-current-job"></span><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <div class="op-toolbar">
+              <button data-action="add-row" data-slug="current-job">+ Add Row</button>
+              <button data-action="add-col" data-slug="current-job">+ Add Column</button>
+            </div>
+            <div class="op-grid-wrap" id="grid-current-job"><p class="empty-note">Loading…</p></div>
+          </div>
         </div>
-        <div class="op-grid-wrap" id="grid-current-job"><p class="empty-note">Loading…</p></div>
-      </div>
-    </div>
 
-    <div class="op-section nested" data-key="sec-income-sources">
-      <div class="op-head"><span class="op-icon">💵</span><h3>Income Sources</h3><span class="op-count" id="count-income-sources"></span><span class="chevron">▸</span></div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-row" data-slug="income-sources">+ Add Income Source</button>
-          <button data-action="add-col" data-slug="income-sources">+ Add Column</button>
+        <div class="op-section nested" data-key="sec-income-sources">
+          <div class="op-head"><span class="op-icon">💵</span><h3>Income Sources</h3><span class="op-count" id="count-income-sources"></span><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <div class="op-toolbar">
+              <button data-action="add-row" data-slug="income-sources">+ Add Income Source</button>
+              <button data-action="add-col" data-slug="income-sources">+ Add Column</button>
+            </div>
+            <div class="op-grid-wrap" id="grid-income-sources"><p class="empty-note">Loading…</p></div>
+          </div>
         </div>
-        <div class="op-grid-wrap" id="grid-income-sources"><p class="empty-note">Loading…</p></div>
-      </div>
-    </div>
 
-    <div class="op-section nested" data-key="sec-physical-social-stats">
-      <div class="op-head"><span class="op-icon">🧍</span><h3>Physical &amp; Social Stats (Living Situation)</h3><span class="op-count" id="count-physical-social-stats"></span><span class="chevron">▸</span></div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-row" data-slug="physical-social-stats">+ Add Row</button>
-          <button data-action="add-col" data-slug="physical-social-stats">+ Add Column</button>
+        <div class="op-section nested" data-key="sec-physical-social-stats">
+          <div class="op-head"><span class="op-icon">🧍</span><h3>Physical &amp; Social Stats (Living Situation)</h3><span class="op-count" id="count-physical-social-stats"></span><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <div class="op-toolbar">
+              <button data-action="add-row" data-slug="physical-social-stats">+ Add Row</button>
+              <button data-action="add-col" data-slug="physical-social-stats">+ Add Column</button>
+            </div>
+            <div class="op-grid-wrap" id="grid-physical-social-stats"><p class="empty-note">Loading…</p></div>
+          </div>
         </div>
-        <div class="op-grid-wrap" id="grid-physical-social-stats"><p class="empty-note">Loading…</p></div>
+
       </div>
     </div>
 
@@ -1263,20 +1271,38 @@ th.grid-th:active { cursor: grabbing; }
         </div>`;
     }
 
+    function isGroupCollapsed(key) { return localStorage.getItem(`master_portal_taskgroup_${slug}_${key}`) === 'closed'; }
+    function setGroupCollapsed(key, collapsed) { localStorage.setItem(`master_portal_taskgroup_${slug}_${key}`, collapsed ? 'closed' : 'open'); }
+    function groupHtml(key, icon, label, items, emptyMsg) {
+      const collapsed = isGroupCollapsed(key);
+      return `
+        <div class="task-group${collapsed ? ' collapsed' : ''}" data-group="${key}">
+          <div class="task-group-label" data-group-toggle="${key}">${icon} ${label} <span>(${items.length})</span><span class="tg-chevron">▸</span></div>
+          <div class="task-group-body">
+            ${items.length ? items.map(cardHtml).join('') : `<p class="empty-note">${emptyMsg}</p>`}
+          </div>
+        </div>`;
+    }
+
     function render() {
       if (!rows.length) { wrap.innerHTML = '<p class="empty-note">No tasks yet — click "+ Add Task" to start.</p>'; return; }
       const completed = rows.filter(r => r.data?.status === 'Complete');
       const active = rows.filter(r => r.data?.status !== 'Complete');
       const recurring = active.filter(r => (r.data?.recurring || 'None') !== 'None');
       const oneTime = active.filter(r => (r.data?.recurring || 'None') === 'None');
-      wrap.innerHTML = `
-        <div class="task-group-label">🔁 Recurring <span>(${recurring.length})</span></div>
-        ${recurring.length ? recurring.map(cardHtml).join('') : '<p class="empty-note">No recurring tasks yet.</p>'}
-        <div class="task-group-label">📌 One-Time <span>(${oneTime.length})</span></div>
-        ${oneTime.length ? oneTime.map(cardHtml).join('') : '<p class="empty-note">No one-time tasks yet.</p>'}
-        <div class="task-group-label">✅ Completed <span>(${completed.length})</span></div>
-        ${completed.length ? completed.map(cardHtml).join('') : '<p class="empty-note">Nothing completed yet — full history is kept here once a task is.</p>'}
-      `;
+      wrap.innerHTML =
+        groupHtml('recurring', '🔁', 'Recurring', recurring, 'No recurring tasks yet.') +
+        groupHtml('onetime', '📌', 'One-Time', oneTime, 'No one-time tasks yet.') +
+        groupHtml('completed', '✅', 'Completed', completed, 'Nothing completed yet — full history is kept here once a task is.');
+
+      wrap.querySelectorAll('[data-group-toggle]').forEach(el => {
+        el.addEventListener('click', () => {
+          const key = el.dataset.groupToggle;
+          const groupEl = el.closest('.task-group');
+          const collapsed = groupEl.classList.toggle('collapsed');
+          setGroupCollapsed(key, collapsed);
+        });
+      });
 
       wrap.querySelectorAll('.ttask[contenteditable="true"], .tnotes[contenteditable="true"], .thistory[contenteditable="true"]').forEach(el => {
         el.addEventListener('blur', async () => {
