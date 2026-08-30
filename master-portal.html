@@ -450,6 +450,23 @@ th.grid-th:active { cursor: grabbing; }
     </div>
     </div>
 
+    <!-- ================= SECTION 4: AI WEBSITES & MARKETING SERVICES ================= -->
+    <div class="macro-section" data-macro="hajime">
+    <div class="macro-head"><span class="macro-num">4</span><h2>🛠️ AI Websites & Marketing (Hajime Solutions)</h2><span class="macro-sub">separate business — its own CRM</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-body">
+
+    <div class="op-section open" data-key="sec-hajime-crm">
+      <div class="op-head"><span class="op-icon">📇</span><h3>1. CRM</h3><span class="op-count" id="count-crm-marketing"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar"><button data-action="add-row" data-slug="crm-marketing">+ Add Row</button><button data-action="add-col" data-slug="crm-marketing">+ Add Column</button></div>
+        <div class="op-grid-wrap" id="grid-crm-marketing"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Same live rows as Kokiri's CRM: Marketing Agency sheet — leads for hajimesolutions.com (websites, advertising/lead gen, AI agents).</div>
+      </div>
+    </div>
+
+    </div>
+    </div>
+
     <!-- ================= CLAUDE CODE TASKS (this session's own work, tracked) ================= -->
     <div class="macro-head" style="cursor:default;"><span class="macro-num">·</span><h2>🤖 Claude Code Tasks</h2><span class="macro-sub">every build request in this session, logged &amp; tracked</span></div>
     <div class="op-section open" data-key="sec-claude-tasks">
@@ -627,6 +644,7 @@ th.grid-th:active { cursor: grabbing; }
     'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
     'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal', 'hot-links': 'masterportal',
     'sonzai-state-goals-objectives': 'masterportal', 'claude-tasks': 'claude-tasks', 'integrations': 'masterportal',
+    'crm-marketing': 'crm',
   };
   const changeLogSheetIds = {};
   async function ensureExtraSheet(slug, name, columns) {
@@ -1220,6 +1238,7 @@ th.grid-th:active { cursor: grabbing; }
   await mountGrid('stocks-bets');
   await mountGrid('fb-marketplace');
   await mountGrid('claude-tasks');
+  await mountGrid('crm-marketing');
 </script>
 
 <script type="module" src="widget.js"></script>
