@@ -374,6 +374,50 @@ th.grid-th:active { cursor: grabbing; }
       </div>
     </div>
 
+    <div class="op-section nested" data-key="sec-expenses">
+      <div class="op-head"><span class="op-icon">💸</span><h3>Expenses</h3><span class="op-count" id="count-expenses"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="expenses">+ Add Expense</button>
+          <button data-action="add-col" data-slug="expenses">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-expenses"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-current-job">
+      <div class="op-head"><span class="op-icon">💼</span><h3>Current Job</h3><span class="op-count" id="count-current-job"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="current-job">+ Add Row</button>
+          <button data-action="add-col" data-slug="current-job">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-current-job"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-income-sources">
+      <div class="op-head"><span class="op-icon">💵</span><h3>Income Sources</h3><span class="op-count" id="count-income-sources"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="income-sources">+ Add Income Source</button>
+          <button data-action="add-col" data-slug="income-sources">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-income-sources"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-physical-social-stats">
+      <div class="op-head"><span class="op-icon">🧍</span><h3>Physical &amp; Social Stats (Living Situation)</h3><span class="op-count" id="count-physical-social-stats"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="physical-social-stats">+ Add Row</button>
+          <button data-action="add-col" data-slug="physical-social-stats">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-physical-social-stats"><p class="empty-note">Loading…</p></div>
+      </div>
+    </div>
+
     </div>
     </div>
 
@@ -651,6 +695,7 @@ th.grid-th:active { cursor: grabbing; }
   // ---------- Change log (same convention as every other portal — feeds the global changelog feed) ----------
   const SLUG_TO_TAB = {
     'master-routine': 'masterportal', 'master-tasks': 'masterportal', 'master-prereq-tasks': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
+    'expenses': 'masterportal', 'current-job': 'masterportal', 'income-sources': 'masterportal', 'physical-social-stats': 'masterportal',
     'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
     'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal', 'hot-links': 'masterportal',
     'sonzai-state-goals-objectives': 'masterportal', 'claude-tasks': 'claude-tasks', 'integrations': 'masterportal',
@@ -1244,6 +1289,10 @@ th.grid-th:active { cursor: grabbing; }
   let sagaCount = 0, statsCount = 0;
   await mountGrid('sagas', (c, r) => { sagaCount = r.length; updateSagaStatsCount(sagaCount, statsCount); });
   await mountGrid('system-stats', (c, r) => { statsCount = r.length; updateSagaStatsCount(sagaCount, statsCount); });
+  await mountGrid('expenses');
+  await mountGrid('current-job');
+  await mountGrid('income-sources');
+  await mountGrid('physical-social-stats');
   await mountGrid('job-applications', updateJobStats);
   await mountGrid('clients');
   await mountGrid('crm');
