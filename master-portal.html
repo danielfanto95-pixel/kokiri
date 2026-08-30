@@ -99,6 +99,28 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
 }
 .op-toolbar button:hover { border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 10px -2px rgba(46,232,143,0.55); }
 
+#generate-report-btn {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--gold-bright); background: var(--surface);
+  border: 1px solid var(--gold); border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer;
+}
+#generate-report-btn:hover { box-shadow: 0 0 12px -2px rgba(46,232,143,0.6); }
+#generate-report-btn:disabled { opacity: 0.55; cursor: wait; }
+
+.report-panel {
+  border: 1px solid var(--gold); border-radius: 8px; background: var(--surface2);
+  padding: 1rem 1.1rem; margin-bottom: 1rem;
+}
+.report-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+.report-panel-head h4 { margin: 0; font-size: 0.9rem; color: var(--gold-bright); }
+.report-panel-head button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
+.report-panel-head button:hover { color: var(--text); }
+.report-panel-body { font-size: 0.85rem; line-height: 1.55; white-space: pre-wrap; max-height: 60vh; overflow-y: auto; }
+.report-panel-body h1, .report-panel-body h2, .report-panel-body h3 { color: var(--gold-bright); margin: 0.9rem 0 0.4rem; }
+.report-panel-body h1:first-child, .report-panel-body h2:first-child, .report-panel-body h3:first-child { margin-top: 0; }
+.report-history { margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--dim); }
+.report-history-item { cursor: pointer; padding: 0.2rem 0; }
+.report-history-item:hover { color: var(--gold-bright); }
+
 .op-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
 table { border-collapse: collapse; width: 100%; min-width: max-content; }
 th, td { border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; font-size: 0.8rem; vertical-align: top; max-width: 320px; }
@@ -293,8 +315,17 @@ th.grid-th:active { cursor: grabbing; }
 
     <!-- ================= SECTION 0: SCHEDULE ================= -->
     <div class="macro-section" data-macro="schedule">
-    <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span><button id="generate-report-btn" type="button">📊 Generate Report</button><span class="macro-chevron">▾</span></div>
     <div class="macro-body">
+
+    <div class="report-panel" id="report-panel" style="display:none;">
+      <div class="report-panel-head">
+        <h4 id="report-panel-title">Schedule Report</h4>
+        <button type="button" id="report-panel-close">✕</button>
+      </div>
+      <div class="report-panel-body" id="report-panel-body"></div>
+      <div class="report-history" id="report-history"></div>
+    </div>
 
     <div class="op-section open" data-key="sec-prereq-tasks">
       <div class="op-head"><span class="op-icon">📋</span><h3>Pre-Req Tasks</h3><span class="op-count" id="count-master-prereq-tasks"></span><span class="chevron">▸</span></div>
@@ -624,6 +655,90 @@ th.grid-th:active { cursor: grabbing; }
   });
 
   function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ---------- Lightweight markdown renderer (for the Schedule Generate Report panel) ----------
+  function mdInline(text) {
+    return escapeHtml(text)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+  }
+  function renderMarkdown(md) {
+    const lines = (md || '').split('\n');
+    let html = '', inList = false;
+    for (const raw of lines) {
+      const line = raw;
+      if (/^### /.test(line)) { html += `<h3>${mdInline(line.slice(4))}</h3>`; continue; }
+      if (/^## /.test(line)) { html += `<h2>${mdInline(line.slice(3))}</h2>`; continue; }
+      if (/^# /.test(line)) { html += `<h1>${mdInline(line.slice(2))}</h1>`; continue; }
+      if (/^\d+\.\s/.test(line) || /^[-*]\s/.test(line)) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${mdInline(line.replace(/^(\d+\.|[-*])\s/, ''))}</li>`;
+        continue;
+      } else if (inList) { html += '</ul>'; inList = false; }
+      if (line.trim() === '') continue;
+      html += `<p>${mdInline(line)}</p>`;
+    }
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  // ---------- Schedule section: Generate Report ----------
+  async function mountScheduleReport() {
+    const btn = document.getElementById('generate-report-btn');
+    const panel = document.getElementById('report-panel');
+    const title = document.getElementById('report-panel-title');
+    const body = document.getElementById('report-panel-body');
+    const historyWrap = document.getElementById('report-history');
+    const closeBtn = document.getElementById('report-panel-close');
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); generate(); });
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); panel.style.display = 'none'; });
+    panel.addEventListener('click', (e) => e.stopPropagation());
+
+    function showReport(reportMd, createdAt) {
+      title.textContent = 'Schedule Report — ' + new Date(createdAt).toLocaleString();
+      body.innerHTML = renderMarkdown(reportMd);
+      panel.style.display = 'block';
+    }
+
+    async function loadHistory() {
+      const { data } = await supabase.from('kokiri_schedule_reports').select('id, summary, report_md, created_at').order('created_at', { ascending: false }).limit(5);
+      if (!data || !data.length) { historyWrap.innerHTML = ''; return; }
+      historyWrap.innerHTML = '<div style="margin-bottom:0.3rem;">Past reports:</div>' + data.map(r =>
+        `<div class="report-history-item" data-id="${r.id}">${new Date(r.created_at).toLocaleString()} — ${escapeHtml(r.summary || '')}</div>`
+      ).join('');
+      historyWrap.querySelectorAll('.report-history-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const row = data.find(r => r.id === el.dataset.id);
+          if (row) showReport(row.report_md, row.created_at);
+        });
+      });
+    }
+
+    async function generate() {
+      btn.disabled = true;
+      const prevLabel = btn.textContent;
+      btn.textContent = '⏳ Generating…';
+      title.textContent = 'Schedule Report';
+      body.innerHTML = '<p class="empty-note">Gathering everything in this section and writing the analysis — this can take up to a minute…</p>';
+      panel.style.display = 'block';
+      try {
+        const { data, error } = await supabase.functions.invoke('schedule-report', { body: {} });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.detail || data.error);
+        showReport(data.report_md, data.created_at || new Date().toISOString());
+        await loadHistory();
+      } catch (e) {
+        body.innerHTML = `<p class="empty-note">Failed to generate report: ${escapeHtml(e.message || String(e))}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prevLabel;
+      }
+    }
+
+    await loadHistory();
+  }
 
   async function loadNav() {
     const [{ data: sheetData }, { data: agentData }, { data: dashData }] = await Promise.all([
@@ -1278,6 +1393,7 @@ th.grid-th:active { cursor: grabbing; }
   initSidebarToggle();
   initNavCollapse();
   await loadNav();
+  await mountScheduleReport();
   await mountHotLinks();
   await mountDocs();
   await mountGrid('integrations');
