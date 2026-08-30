@@ -296,27 +296,13 @@ th.grid-th:active { cursor: grabbing; }
     <div class="macro-head"><span class="macro-num">0</span><h2>🗓️ Schedule</h2><span class="macro-sub">daily routine · the loops behind it · saga &amp; stats</span><span class="macro-chevron">▾</span></div>
     <div class="macro-body">
 
-    <div class="op-section open" data-key="sec-objectives">
-      <div class="op-head"><span class="op-icon">🎯</span><h3>Objectives</h3><span class="op-count" id="count-sonzai-state-goals-objectives"></span><span class="chevron">▸</span></div>
+    <div class="op-section open" data-key="sec-prereq-tasks">
+      <div class="op-head"><span class="op-icon">📋</span><h3>Pre-Req Tasks</h3><span class="op-count" id="count-master-prereq-tasks"></span><span class="chevron">▸</span></div>
       <div class="op-body">
         <div class="op-toolbar">
-          <button data-action="add-row" data-slug="sonzai-state-goals-objectives">+ Add Objective</button>
-          <button data-action="add-col" data-slug="sonzai-state-goals-objectives">+ Add Column</button>
+          <button data-action="add-prereq-task">+ Add Pre-Req Task</button>
         </div>
-        <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
-        <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives — kept at the top so Tasks below stay focused against real objectives.</div>
-      </div>
-    </div>
-
-    <div class="op-section nested" data-key="sec-routine">
-      <div class="op-head"><span class="op-icon">☀️</span><h3>Daily Routine</h3><span class="op-count" id="count-master-routine"></span><span class="chevron">▸</span></div>
-      <div class="op-body">
-        <div class="op-toolbar">
-          <button data-action="add-routine">+ Add Time Block</button>
-          <button data-action="add-col" data-slug="master-routine">+ Add Column</button>
-        </div>
-        <div class="routine-list" id="routine-list"><p class="empty-note">Loading…</p></div>
-        <div class="portal-note">Live schedule/event log is still on <a class="link-out" href="schedule.html">the Schedule page</a> — this is the fixed daily template.</div>
+        <div class="task-list" id="prereq-task-list"><p class="empty-note">Loading…</p></div>
       </div>
     </div>
 
@@ -331,6 +317,30 @@ th.grid-th:active { cursor: grabbing; }
           <h4>📝 Notes</h4>
           <textarea id="tasks-section-notes" placeholder="General notes for this Tasks section…"></textarea>
         </div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-objectives">
+      <div class="op-head"><span class="op-icon">🎯</span><h3>Objectives</h3><span class="op-count" id="count-sonzai-state-goals-objectives"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="sonzai-state-goals-objectives">+ Add Objective</button>
+          <button data-action="add-col" data-slug="sonzai-state-goals-objectives">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives.</div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-routine">
+      <div class="op-head"><span class="op-icon">☀️</span><h3>Daily Routine</h3><span class="op-count" id="count-master-routine"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-routine">+ Add Time Block</button>
+          <button data-action="add-col" data-slug="master-routine">+ Add Column</button>
+        </div>
+        <div class="routine-list" id="routine-list"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">Live schedule/event log is still on <a class="link-out" href="schedule.html">the Schedule page</a> — this is the fixed daily template.</div>
       </div>
     </div>
 
@@ -640,7 +650,7 @@ th.grid-th:active { cursor: grabbing; }
 
   // ---------- Change log (same convention as every other portal — feeds the global changelog feed) ----------
   const SLUG_TO_TAB = {
-    'master-routine': 'masterportal', 'master-tasks': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
+    'master-routine': 'masterportal', 'master-tasks': 'masterportal', 'master-prereq-tasks': 'masterportal', 'loops-agents': 'masterportal', 'sagas': 'masterportal', 'system-stats': 'masterportal',
     'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
     'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal', 'hot-links': 'masterportal',
     'sonzai-state-goals-objectives': 'masterportal', 'claude-tasks': 'claude-tasks', 'integrations': 'masterportal',
@@ -1046,9 +1056,13 @@ th.grid-th:active { cursor: grabbing; }
   const LIVE_OPTIONS = ['Live', 'Paused'];
 
   async function mountTasks() {
-    const slug = 'master-tasks';
+    await mountTaskList({ slug: 'master-prereq-tasks', listId: 'prereq-task-list', countId: 'count-master-prereq-tasks', addSelector: '[data-action="add-prereq-task"]' });
+    await mountTaskList({ slug: 'master-tasks', listId: 'task-list', countId: 'count-master-tasks', addSelector: '[data-action="add-task"]' });
+  }
+
+  async function mountTaskList({ slug, listId, countId, addSelector }) {
     const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
-    const wrap = document.getElementById('task-list');
+    const wrap = document.getElementById(listId);
     if (!sheet) { wrap.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
 
     const { data: agentRows } = await supabase.from('kokiri_rows').select('data').eq('sheet_id', (await supabase.from('kokiri_sheets').select('id').eq('slug', 'loops-agents').maybeSingle()).data?.id);
@@ -1060,7 +1074,7 @@ th.grid-th:active { cursor: grabbing; }
       const { data } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
       rows = data || [];
       render();
-      document.getElementById('count-master-tasks').textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
+      document.getElementById(countId).textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
     }
 
     function optionsHtml(list, selected) {
@@ -1145,7 +1159,7 @@ th.grid-th:active { cursor: grabbing; }
           await supabase.from('kokiri_rows').delete().eq('id', rowId);
           rows = rows.filter(r => r.id !== rowId);
           render();
-          document.getElementById('count-master-tasks').textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
+          document.getElementById(countId).textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
           logChange(slug, 'Deleted a task');
         });
       });
@@ -1173,13 +1187,13 @@ th.grid-th:active { cursor: grabbing; }
       });
     }
 
-    document.querySelector('[data-action="add-task"]').addEventListener('click', async () => {
+    document.querySelector(addSelector).addEventListener('click', async () => {
       const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
       const { data, error } = await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, data: { task: 'New task', task_type: TASK_TYPE_OPTIONS[0], recurring: 'None', assigned_to: defaultAutomatedAssignee, status: STATUS_OPTIONS[0], live_status: LIVE_OPTIONS[0] }, sort_order: maxOrder + 1 }).select().single();
       if (error) { alert(error.message); return; }
       rows.push(data);
       render();
-      document.getElementById('count-master-tasks').textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
+      document.getElementById(countId).textContent = rows.length + ' task' + (rows.length === 1 ? '' : 's');
       logChange(slug, 'Added a task');
     });
 
