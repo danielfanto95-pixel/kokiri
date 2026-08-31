@@ -164,6 +164,16 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
     </div>
 
     <div class="section-block">
+      <h2>😣 Current Stressors</h2>
+      <div class="desc">What's actually weighing on things right now — kept current, not aspirational.</div>
+      <div id="stressors-list"><p class="empty-note">Loading…</p></div>
+      <div class="hist-add-form">
+        <textarea id="stressor-input" placeholder="Add a current stressor…"></textarea>
+        <button id="btn-add-stressor">+ Add</button>
+      </div>
+    </div>
+
+    <div class="section-block">
       <h2>👤 Profile — Past / Present / Future</h2>
       <div class="profile-grid">
         <div class="profile-col">
@@ -386,6 +396,33 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
     await loadHistory();
   });
 
+  // ---------- Current Stressors ----------
+  async function loadStressors() {
+    const el = document.getElementById('stressors-list');
+    const { data } = await supabase.from('kokiri_saga_stressors').select('*').order('sort_order').order('created_at');
+    if (!data || !data.length) { el.innerHTML = '<p class="empty-note">No stressors logged right now.</p>'; return; }
+    el.innerHTML = data.map(s => `
+      <div class="hist-row" data-id="${s.id}">
+        <span class="htext">${escapeHtml(s.entry)}</span>
+        <button class="hdel" data-id="${s.id}">✕</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.hdel').forEach(btn => btn.addEventListener('click', async () => {
+      await supabase.from('kokiri_saga_stressors').delete().eq('id', btn.dataset.id);
+      await loadStressors();
+    }));
+  }
+  document.getElementById('btn-add-stressor').addEventListener('click', async () => {
+    const input = document.getElementById('stressor-input');
+    const entry = input.value.trim();
+    if (!entry) return;
+    const { data: existing } = await supabase.from('kokiri_saga_stressors').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+    const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+    await supabase.from('kokiri_saga_stressors').insert({ entry, sort_order: nextOrder });
+    input.value = '';
+    await loadStressors();
+  });
+
   // ---------- Profile ----------
   async function loadProfile() {
     const { data } = await supabase.from('kokiri_saga_profile').select('*');
@@ -443,7 +480,7 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; max-width: 900px; }
 
   initNavCollapse();
   await loadNav();
-  await Promise.all([loadContext(), loadStats(), loadHistory(), loadProfile(), loadObjectives()]);
+  await Promise.all([loadContext(), loadStats(), loadHistory(), loadStressors(), loadProfile(), loadObjectives()]);
 </script>
 
 <script type="module" src="ambience.js"></script>
