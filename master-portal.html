@@ -113,6 +113,20 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
 }
 .add-subsection-btn:hover { border-color: var(--gold); color: var(--gold-bright); border-style: solid; }
 
+.hist-row { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.6rem 0.7rem; background: var(--surface); border-radius: 8px; margin-bottom: 0.5rem; }
+.hist-row .htext { flex: 1; font-size: 0.85rem; line-height: 1.5; }
+.hist-row .hdel { color: var(--dim); cursor: pointer; font-size: 0.85rem; background: none; border: none; padding: 0 0.2rem; }
+.hist-add-form { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
+.hist-add-form textarea {
+  flex: 1; min-height: 50px; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.82rem; resize: vertical;
+}
+.hist-add-form textarea:focus { outline: 1px solid var(--gold); }
+.hist-add-form button {
+  background: var(--gold); color: var(--bg); border: none; border-radius: 6px; padding: 0.55rem 1rem;
+  font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; align-self: flex-start;
+}
+
 .report-panel {
   border: 1px solid var(--gold); border-radius: 8px; background: var(--surface2);
   padding: 1rem 1.1rem; margin-bottom: 1rem;
@@ -402,6 +416,18 @@ th.grid-th:active { cursor: grabbing; }
             </div>
             <div class="op-grid-wrap" id="grid-sonzai-state-goals-objectives"><p class="empty-note">Loading…</p></div>
             <div class="portal-note">Same live rows as Sonzai → State → Goals/Objectives.</div>
+          </div>
+        </div>
+
+        <div class="op-section nested" data-key="sec-stressors">
+          <div class="op-head"><span class="op-icon">😣</span><h3>Current Stressors</h3><span class="op-count" id="count-saga-stressors"></span><span class="chevron">▸</span></div>
+          <div class="op-body">
+            <div id="stressors-list"><p class="empty-note">Loading…</p></div>
+            <div class="hist-add-form">
+              <textarea id="stressor-input" placeholder="Add a current stressor…"></textarea>
+              <button id="btn-add-stressor" type="button">+ Add</button>
+            </div>
+            <div class="portal-note">Same live rows as Saga → Current Stressors.</div>
           </div>
         </div>
 
@@ -1486,6 +1512,43 @@ th.grid-th:active { cursor: grabbing; }
     });
   }
 
+  // ---------- Saga / Stats — Current Stressors (same table as Saga page) ----------
+  async function mountStressors() {
+    const list = document.getElementById('stressors-list');
+    const countEl = document.getElementById('count-saga-stressors');
+
+    async function load() {
+      const { data } = await supabase.from('kokiri_saga_stressors').select('*').order('sort_order').order('created_at');
+      if (countEl) countEl.textContent = (data?.length || 0) + ' item' + (data?.length === 1 ? '' : 's');
+      if (!data || !data.length) { list.innerHTML = '<p class="empty-note">No stressors logged right now.</p>'; return; }
+      list.innerHTML = data.map(s => `
+        <div class="hist-row" data-id="${s.id}">
+          <span class="htext">${escapeHtml(s.entry)}</span>
+          <button class="hdel" data-id="${s.id}">✕</button>
+        </div>
+      `).join('');
+      list.querySelectorAll('.hdel').forEach(btn => btn.addEventListener('click', async () => {
+        await supabase.from('kokiri_saga_stressors').delete().eq('id', btn.dataset.id);
+        logChange('sagas', 'Removed a stressor');
+        await load();
+      }));
+    }
+
+    document.getElementById('btn-add-stressor').addEventListener('click', async () => {
+      const input = document.getElementById('stressor-input');
+      const entry = input.value.trim();
+      if (!entry) return;
+      const { data: existing } = await supabase.from('kokiri_saga_stressors').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+      const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+      await supabase.from('kokiri_saga_stressors').insert({ entry, sort_order: nextOrder });
+      input.value = '';
+      logChange('sagas', 'Added a stressor');
+      await load();
+    });
+
+    await load();
+  }
+
   // ---------- Jobs stats ----------
   function updateJobStats(cols, rows) {
     const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
@@ -1516,6 +1579,7 @@ th.grid-th:active { cursor: grabbing; }
   await mountTasks();
   await mountTasksNotes();
   await mountSagaDescription();
+  await mountStressors();
   await mountGrid('sonzai-state-goals-objectives');
   await mountGrid('loops-agents');
   let sagaCount = 0, statsCount = 0;
