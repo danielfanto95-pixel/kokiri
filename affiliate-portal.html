@@ -305,12 +305,13 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
 
     sub.textContent = `Viewing: ${affiliate.name}${affiliate.business_name ? ' — ' + affiliate.business_name : ''} · Referral code: ${affiliate.referral_code}`;
 
-    const [{ data: resources }, { data: links }, { data: monthly }, { data: crmSheet }, { data: tickets }] = await Promise.all([
+    const [{ data: resources }, { data: links }, { data: monthly }, { data: crmSheet }, { data: tickets }, { data: clicks }] = await Promise.all([
       supabase.from('kokiri_affiliate_resources').select('*').order('category').order('sort_order'),
       supabase.from('kokiri_affiliate_links').select('*').eq('affiliate_id', affiliate.id).order('sort_order'),
       supabase.from('kokiri_affiliate_monthly_results').select('*').eq('affiliate_id', affiliate.id).order('month', { ascending: false }),
       supabase.from('kokiri_sheets').select('id').eq('slug', 'crm').maybeSingle(),
       supabase.from('kokiri_affiliate_tickets').select('*').eq('affiliate_id', affiliate.id).order('created_at', { ascending: false }),
+      supabase.from('kokiri_affiliate_clicks').select('*').eq('ref', affiliate.referral_code).order('created_at', { ascending: false }).limit(200),
     ]);
 
     let pipelineRows = [];
@@ -369,6 +370,18 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
         ${tile('pipeline', '📊', 'Pipeline & Referrals', pipelineRows.length, 'Leads matched to you in the CRM.',
           `<div class="desc">Leads matched by referral code/name in the CRM's Lead Source field.</div>
           ${pipelineRows.length ? `<table class="pipeline-table"><thead><tr><th>Name</th><th>Status</th></tr></thead><tbody>${pipelineRows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.status)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty-note">No matched leads yet.</p>'}`
+        )}
+
+        ${tile('clicks', '📈', 'Link Clicks', clicks?.length, 'Every time someone lands on a page via your link.',
+          (() => {
+            if (!clicks || !clicks.length) return '<p class="empty-note">No clicks logged yet.</p>';
+            const byPage = {};
+            clicks.forEach(c => { const p = c.page || '(unknown page)'; byPage[p] = (byPage[p] || 0) + 1; });
+            const byPageHtml = Object.entries(byPage).sort((a, b) => b[1] - a[1])
+              .map(([page, count]) => `<div class="resource-row" style="display:flex;justify-content:space-between;"><span>${escapeHtml(page)}</span><b>${count}</b></div>`).join('');
+            const recentHtml = clicks.slice(0, 20).map(c => `<div style="font-size:0.78rem;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--border);">${new Date(c.created_at).toLocaleString()} — ${escapeHtml(c.page || '(unknown page)')}</div>`).join('');
+            return `<div class="desc">By page:</div>${byPageHtml}<div class="desc" style="margin-top:16px;">Most recent:</div>${recentHtml}`;
+          })()
         )}
 
         ${tile('history', '📅', 'Results History', monthly?.length, 'Referrals, conversions, and commissions by month.',
