@@ -364,7 +364,17 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
           `<div id="links-list">${(links && links.length) ? links.map(l => `
             <div class="link-row"><span class="llabel">${escapeHtml(l.label)}</span><span class="lurl">${escapeHtml(l.url)}</span><button class="lcopy" data-url="${escapeHtml(l.url)}">Copy</button></div>
           `).join('') : '<p class="empty-note">No links yet.</p>'}</div>
-          ${isOwner ? `<div class="link-add-form"><input type="text" id="link-label" placeholder="Label"><input type="text" id="link-url" placeholder="URL"><button id="btn-add-link">+ Add Link</button></div>` : ''}`
+          ${isOwner ? `<div class="link-add-form"><input type="text" id="link-label" placeholder="Label"><input type="text" id="link-url" placeholder="URL"><button id="btn-add-link">+ Add Link</button></div>` : ''}
+          <div style="background:rgba(230,192,104,0.08);border:1px solid rgba(230,192,104,0.3);border-radius:8px;padding:14px 16px;margin-top:16px;">
+            <div style="font-weight:700;color:var(--gold);font-size:0.82rem;margin-bottom:6px;">⚠️ Make Sure You Get Credit</div>
+            <div style="font-size:0.78rem;color:var(--muted);line-height:1.6;">
+              Credit only attaches the moment someone actually <b style="color:var(--text);">clicks your link</b>.<br>
+              • Always send <b style="color:var(--text);">your</b> link — not just "check out Furin Fitness," and never a screenshot with no link.<br>
+              • Sending someone straight to buy or book? Use your Landing Page or Booking link so credit attaches right where they act.<br>
+              • Once they've clicked through, they're safe — refreshing the page or taking a few minutes won't lose it.<br>
+              • But if they close the tab and come back later on their own (Googling it, typing the URL from memory), that visit won't carry your code — follow up with your link again rather than assuming they'll find their way back.
+            </div>
+          </div>`
         )}
 
         ${tile('pipeline', '📊', 'Pipeline & Referrals', pipelineRows.length, 'Leads matched to you in the CRM.',
