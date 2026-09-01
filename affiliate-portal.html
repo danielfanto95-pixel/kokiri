@@ -41,6 +41,25 @@ main { flex: 1; padding: 1.5rem 1.8rem; min-width: 0; width: 100%; }
 .section-block .desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.9rem; }
 .empty-note { color: var(--muted); font-size: 0.82rem; padding: 0.5rem; }
 
+.portal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; align-items: start; }
+.portal-tile {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem;
+  cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; aspect-ratio: 1 / 1;
+  display: flex; flex-direction: column;
+}
+.portal-tile:hover { border-color: var(--border-bright); box-shadow: 0 0 0 1px var(--border-bright); }
+.portal-tile.expanded { grid-column: 1 / -1; aspect-ratio: auto; cursor: default; border-color: var(--leaf); }
+.tile-head { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
+.tile-icon { font-size: 1.6rem; }
+.tile-title { font-family: var(--heading); font-size: 1rem; color: var(--leaf-bright); flex: 1; }
+.tile-count { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+.tile-chevron { font-size: 0.7rem; color: var(--muted); transition: transform 0.15s; }
+.portal-tile.expanded .tile-chevron { transform: rotate(90deg); }
+.tile-teaser { flex: 1; display: flex; align-items: center; color: var(--muted); font-size: 0.78rem; margin-top: 0.5rem; }
+.portal-tile.expanded .tile-teaser { display: none; }
+.tile-body { display: none; margin-top: 1rem; }
+.portal-tile.expanded .tile-body { display: block; }
+
 .resource-row { padding: 0.7rem 0.8rem; background: var(--surface2); border-radius: 8px; margin-bottom: 0.6rem; }
 .resource-row .rtitle { font-weight: 700; margin-bottom: 0.3rem; }
 .resource-row .rcontent { font-size: 0.85rem; color: var(--muted); line-height: 1.6; white-space: pre-wrap; }
@@ -238,18 +257,29 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
 
     el.querySelectorAll('.approve').forEach(btn => btn.addEventListener('click', async () => {
       btn.disabled = true; btn.textContent = 'Approving…';
-      const result = await callUserAdmin({ type: 'create_affiliate', application_id: btn.dataset.id });
-      if (result.error) { alert('⚠ ' + result.error); btn.disabled = false; btn.textContent = '✓ Approve'; return; }
-      const row = btn.closest('.app-row');
-      row.insertAdjacentHTML('beforeend', `<div class="credential-box">Created. Referral code: <b>${escapeHtml(result.referral_code)}</b>${result.password ? `<br>Login: ${escapeHtml(result.email)} / ${escapeHtml(result.password)} (shown once — send this to them securely)` : '<br>(existing Kokiri account was linked — no new password.)'}</div>`);
-      btn.remove();
-      row.querySelector('.reject')?.remove();
+      try {
+        const result = await callUserAdmin({ type: 'create_affiliate', application_id: btn.dataset.id });
+        if (result.error) { alert('⚠ ' + result.error); btn.disabled = false; btn.textContent = '✓ Approve'; return; }
+        const row = btn.closest('.app-row');
+        row.insertAdjacentHTML('beforeend', `<div class="credential-box">Created. Referral code: <b>${escapeHtml(result.referral_code)}</b>${result.password ? `<br>Login: ${escapeHtml(result.email)} / ${escapeHtml(result.password)} (shown once — send this to them securely)` : '<br>(existing Kokiri account was linked — no new password.)'}</div>`);
+        btn.remove();
+        row.querySelector('.reject')?.remove();
+      } catch (e) {
+        alert('⚠ Request failed: ' + e.message);
+        btn.disabled = false; btn.textContent = '✓ Approve';
+      }
     }));
     el.querySelectorAll('.reject').forEach(btn => btn.addEventListener('click', async () => {
       if (!confirm('Reject this application?')) return;
-      const result = await callUserAdmin({ type: 'reject_affiliate', application_id: btn.dataset.id });
-      if (result.error) { alert('⚠ ' + result.error); return; }
-      await renderAdminArea();
+      btn.disabled = true;
+      try {
+        const result = await callUserAdmin({ type: 'reject_affiliate', application_id: btn.dataset.id });
+        if (result.error) { alert('⚠ ' + result.error); btn.disabled = false; return; }
+        await renderAdminArea();
+      } catch (e) {
+        alert('⚠ Request failed: ' + e.message);
+        btn.disabled = false;
+      }
     }));
     document.getElementById('affiliate-select').addEventListener('change', async (e) => {
       const affiliate = allAffiliates.find(a => a.id === e.target.value);
@@ -299,72 +329,87 @@ table.pipeline-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(
     const resourcesByCat = { 'Sales Collateral': [], 'How-To-Sell Guide': [] };
     (resources || []).forEach(r => resourcesByCat[r.category]?.push(r));
 
+    function tile(key, icon, title, count, teaser, bodyHtml) {
+      return `
+        <div class="portal-tile" data-tile="${key}">
+          <div class="tile-head">
+            <span class="tile-icon">${icon}</span>
+            <span class="tile-title">${title}</span>
+            ${count != null ? `<span class="tile-count">${count}</span>` : ''}
+            <span class="tile-chevron">▸</span>
+          </div>
+          <div class="tile-teaser">${teaser}</div>
+          <div class="tile-body">${bodyHtml}</div>
+        </div>
+      `;
+    }
+
     el.innerHTML = `
-      <div class="section-block">
-        <h2>🎯 Sales Collateral</h2>
-        <div class="desc">Assets to use when promoting Furin Fitness.</div>
-        ${resourcesByCat['Sales Collateral'].length ? resourcesByCat['Sales Collateral'].map(r => `
-          <div class="resource-row"><div class="rtitle">${escapeHtml(r.title)}</div>${r.content ? `<div class="rcontent">${escapeHtml(r.content)}</div>` : ''}${r.url ? `<a class="rurl" href="${escapeHtml(r.url)}" target="_blank">${escapeHtml(r.url)}</a>` : ''}</div>
-        `).join('') : '<p class="empty-note">No collateral uploaded yet — check back soon.</p>'}
-      </div>
+      <div class="portal-grid" id="portal-grid">
+        ${tile('collateral', '🎯', 'Sales Collateral', resourcesByCat['Sales Collateral'].length,
+          'Assets to use when promoting Furin Fitness.',
+          resourcesByCat['Sales Collateral'].length ? resourcesByCat['Sales Collateral'].map(r => `
+            <div class="resource-row"><div class="rtitle">${escapeHtml(r.title)}</div>${r.content ? `<div class="rcontent">${escapeHtml(r.content)}</div>` : ''}${r.url ? `<a class="rurl" href="${escapeHtml(r.url)}" target="_blank">${escapeHtml(r.url)}</a>` : ''}</div>
+          `).join('') : '<p class="empty-note">No collateral uploaded yet — check back soon.</p>'
+        )}
 
-      <div class="section-block">
-        <h2>📖 How to Sell</h2>
-        ${resourcesByCat['How-To-Sell Guide'].map(r => `
-          <div class="resource-row"><div class="rtitle">${escapeHtml(r.title)}</div><div class="rcontent">${escapeHtml(r.content || '')}</div></div>
-        `).join('') || '<p class="empty-note">No guide yet.</p>'}
-      </div>
+        ${tile('howto', '📖', 'How to Sell', resourcesByCat['How-To-Sell Guide'].length, 'Guidance and scripts for pitching partners.',
+          resourcesByCat['How-To-Sell Guide'].map(r => `
+            <div class="resource-row"><div class="rtitle">${escapeHtml(r.title)}</div><div class="rcontent">${escapeHtml(r.content || '')}</div></div>
+          `).join('') || '<p class="empty-note">No guide yet.</p>'
+        )}
 
-      <div class="section-block">
-        <h2>🔗 My Links</h2>
-        <div id="links-list">${(links && links.length) ? links.map(l => `
-          <div class="link-row"><span class="llabel">${escapeHtml(l.label)}</span><span class="lurl">${escapeHtml(l.url)}</span><button class="lcopy" data-url="${escapeHtml(l.url)}">Copy</button></div>
-        `).join('') : '<p class="empty-note">No links yet.</p>'}</div>
-        ${isOwner ? `<div class="link-add-form"><input type="text" id="link-label" placeholder="Label"><input type="text" id="link-url" placeholder="URL"><button id="btn-add-link">+ Add Link</button></div>` : ''}
-      </div>
+        ${tile('links', '🔗', 'My Links', links?.length, 'Your referral, landing page, and booking links.',
+          `<div id="links-list">${(links && links.length) ? links.map(l => `
+            <div class="link-row"><span class="llabel">${escapeHtml(l.label)}</span><span class="lurl">${escapeHtml(l.url)}</span><button class="lcopy" data-url="${escapeHtml(l.url)}">Copy</button></div>
+          `).join('') : '<p class="empty-note">No links yet.</p>'}</div>
+          ${isOwner ? `<div class="link-add-form"><input type="text" id="link-label" placeholder="Label"><input type="text" id="link-url" placeholder="URL"><button id="btn-add-link">+ Add Link</button></div>` : ''}`
+        )}
 
-      <div class="section-block">
-        <h2>📊 Current Pipeline & Referrals <span style="font-family:var(--mono);font-size:0.7rem;color:var(--dim);">from CRM</span></h2>
-        <div class="desc">Leads matched by referral code/name in the CRM's Lead Source field.</div>
-        ${pipelineRows.length ? `<table class="pipeline-table"><thead><tr><th>Name</th><th>Status</th></tr></thead><tbody>${pipelineRows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.status)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty-note">No matched leads yet.</p>'}
-      </div>
+        ${tile('pipeline', '📊', 'Pipeline & Referrals', pipelineRows.length, 'Leads matched to you in the CRM.',
+          `<div class="desc">Leads matched by referral code/name in the CRM's Lead Source field.</div>
+          ${pipelineRows.length ? `<table class="pipeline-table"><thead><tr><th>Name</th><th>Status</th></tr></thead><tbody>${pipelineRows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.status)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty-note">No matched leads yet.</p>'}`
+        )}
 
-      <div class="section-block">
-        <h2>📅 History of Results — Month by Month</h2>
-        <div id="monthly-list">${(monthly && monthly.length) ? monthly.map(m => `
-          <div class="monthly-row"><span class="mmonth">${new Date(m.month).toLocaleDateString(undefined,{year:'numeric',month:'short'})}</span><span class="mstat">${m.referrals} referrals · ${m.conversions} conversions · $${Number(m.commission_owed).toFixed(2)} owed · $${Number(m.commission_paid).toFixed(2)} paid</span></div>
-        `).join('') : '<p class="empty-note">No monthly history logged yet.</p>'}</div>
-        ${isOwner ? `<div class="monthly-add-form">
-          <input type="month" id="m-month"><input type="number" id="m-referrals" placeholder="Referrals">
-          <input type="number" id="m-conversions" placeholder="Conversions"><input type="number" step="0.01" id="m-owed" placeholder="Owed $">
-          <input type="number" step="0.01" id="m-paid" placeholder="Paid $"><button id="btn-add-month">+ Log Month</button>
-        </div>` : ''}
-      </div>
+        ${tile('history', '📅', 'Results History', monthly?.length, 'Referrals, conversions, and commissions by month.',
+          `<div id="monthly-list">${(monthly && monthly.length) ? monthly.map(m => `
+            <div class="monthly-row"><span class="mmonth">${new Date(m.month).toLocaleDateString(undefined,{year:'numeric',month:'short'})}</span><span class="mstat">${m.referrals} referrals · ${m.conversions} conversions · $${Number(m.commission_owed).toFixed(2)} owed · $${Number(m.commission_paid).toFixed(2)} paid</span></div>
+          `).join('') : '<p class="empty-note">No monthly history logged yet.</p>'}</div>
+          ${isOwner ? `<div class="monthly-add-form">
+            <input type="month" id="m-month"><input type="number" id="m-referrals" placeholder="Referrals">
+            <input type="number" id="m-conversions" placeholder="Conversions"><input type="number" step="0.01" id="m-owed" placeholder="Owed $">
+            <input type="number" step="0.01" id="m-paid" placeholder="Paid $"><button id="btn-add-month">+ Log Month</button>
+          </div>` : ''}`
+        )}
 
-      <div class="section-block">
-        <h2>✅ Apply</h2>
-        <div class="apply-link-box"><span>Share with new prospective partners:</span> <a href="${APPLY_URL}" target="_blank">${APPLY_URL}</a></div>
-      </div>
+        ${tile('apply', '✅', 'Apply', null, 'Share this with new prospective partners.',
+          `<div class="apply-link-box"><span>Share with new prospective partners:</span> <a href="${APPLY_URL}" target="_blank">${APPLY_URL}</a></div>`
+        )}
 
-      <div class="section-block">
-        <h2>💬 Contact</h2>
-        <div class="contact-box">
-          <div>Email: danielfanto95@gmail.com</div>
-          <div>Referral code: <b>${escapeHtml(affiliate.referral_code)}</b></div>
-        </div>
-        <div class="desc">Open a ticket for anything — commission questions, materials requests, etc.</div>
-        <div id="ticket-list">${(tickets && tickets.length) ? tickets.map(t => `
-          <div class="ticket-row"><span class="tsubject">${escapeHtml(t.subject)}</span><span class="tstatus">${t.status}</span><div style="margin-top:0.3rem;color:var(--muted);">${escapeHtml(t.message)}</div></div>
-        `).join('') : '<p class="empty-note">No tickets yet.</p>'}</div>
-        <div class="ticket-form" style="margin-top:0.8rem;">
-          <input type="text" id="ticket-subject" placeholder="Subject">
-          <textarea id="ticket-message" placeholder="What do you need?"></textarea>
-          <button id="btn-submit-ticket">Submit Ticket</button>
-        </div>
+        ${tile('contact', '💬', 'Contact', tickets?.length, 'Questions, materials requests, commission issues.',
+          `<div class="contact-box">
+            <div>Email: danielfanto95@gmail.com</div>
+            <div>Referral code: <b>${escapeHtml(affiliate.referral_code)}</b></div>
+          </div>
+          <div class="desc">Open a ticket for anything — commission questions, materials requests, etc.</div>
+          <div id="ticket-list">${(tickets && tickets.length) ? tickets.map(t => `
+            <div class="ticket-row"><span class="tsubject">${escapeHtml(t.subject)}</span><span class="tstatus">${t.status}</span><div style="margin-top:0.3rem;color:var(--muted);">${escapeHtml(t.message)}</div></div>
+          `).join('') : '<p class="empty-note">No tickets yet.</p>'}</div>
+          <div class="ticket-form" style="margin-top:0.8rem;">
+            <input type="text" id="ticket-subject" placeholder="Subject">
+            <textarea id="ticket-message" placeholder="What do you need?"></textarea>
+            <button id="btn-submit-ticket">Submit Ticket</button>
+          </div>`
+        )}
       </div>
     `;
 
-    el.querySelectorAll('.lcopy').forEach(btn => btn.addEventListener('click', () => {
+    el.querySelectorAll('.tile-head').forEach(head => head.addEventListener('click', () => {
+      head.closest('.portal-tile').classList.toggle('expanded');
+    }));
+
+    el.querySelectorAll('.lcopy').forEach(btn => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       navigator.clipboard.writeText(btn.dataset.url);
       btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500);
     }));
