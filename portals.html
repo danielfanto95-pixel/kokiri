@@ -1028,6 +1028,15 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
 
   const NOTES_COL = [{ key: 'notes', name: 'Notes' }, { key: 'status', name: 'Status' }];
   const CHANGELOG_COLS = [{ key: 'timestamp', name: 'Timestamp' }, { key: 'change', name: 'Change' }];
+  const STOCK_FOOTAGE_COLS = [
+    { key: 'clip_name', name: 'Clip / Search Term' },
+    { key: 'category', name: 'Category' },
+    { key: 'source', name: 'Source' },
+    { key: 'link', name: 'Link' },
+    { key: 'use_case', name: 'Use Case' },
+    { key: 'license', name: 'License' },
+    { key: 'notes', name: 'Notes' },
+  ];
 
   // Journals isn't backed by one pre-existing sheet like the other 13 tabs — every one of its
   // sections is mounted the same lazy way Pre-Reqs/Change Log are elsewhere. Entries first (as
@@ -1049,6 +1058,7 @@ tr.row-collapsed td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
   ];
 
   async function mountAllExtraSections() {
+    await mountExtraSection('ads', 'panel-ads', 'stockfootage', '🎬', 'Stock Footage', STOCK_FOOTAGE_COLS);
     for (const tab of EXTRA_SECTIONS_TABS) {
       await mountExtraSection(tab.key, tab.panel, 'prereqs', '📋', 'Pre-Reqs', NOTES_COL);
       await mountExtraSection(tab.key, tab.panel, 'changelog', '📜', 'Change Log', CHANGELOG_COLS);
