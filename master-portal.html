@@ -127,6 +127,25 @@ main { flex: 1; padding: 1.6rem 2.4rem 5rem; min-width: 0; width: 100%; }
   font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; align-self: flex-start;
 }
 
+.sim-row { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 0.9rem; margin-bottom: 0.6rem; }
+.sim-row .stitle { font-weight: 700; color: var(--gold-bright); margin-bottom: 0.4rem; display: flex; justify-content: space-between; gap: 0.6rem; }
+.sim-row .scontent { font-size: 0.82rem; color: var(--muted); line-height: 1.65; white-space: pre-wrap; }
+.sim-row .sdel { color: var(--dim); cursor: pointer; font-size: 0.8rem; background: none; border: none; flex-shrink: 0; }
+.sim-add-form { margin-top: 0.8rem; border-top: 1px solid var(--border); padding-top: 0.8rem; }
+.sim-add-form input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 0.5rem 0.8rem; font-family: inherit; font-size: 0.85rem; margin-bottom: 0.5rem;
+}
+.sim-add-form textarea {
+  width: 100%; min-height: 70px; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.82rem; resize: vertical; margin-bottom: 0.5rem;
+}
+.sim-add-form input:focus, .sim-add-form textarea:focus { outline: 1px solid var(--gold); }
+.sim-add-form button {
+  background: var(--gold); color: var(--bg); border: none; border-radius: 6px; padding: 0.5rem 1rem;
+  font-weight: 700; font-size: 0.8rem; cursor: pointer;
+}
+
 .report-panel {
   border: 1px solid var(--gold); border-radius: 8px; background: var(--surface2);
   padding: 1rem 1.1rem; margin-bottom: 1rem;
@@ -609,6 +628,110 @@ th.grid-th:active { cursor: grabbing; }
     </div>
     </div>
 
+    <!-- ================= SECTION 5: SIMULATIONS ================= -->
+    <div class="macro-section" data-macro="simulations">
+    <div class="macro-head"><span class="macro-num">5</span><h2>🎭 Simulations</h2><span class="macro-sub">practice scenarios — rehearse before it's real</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-body">
+
+    <div class="op-section open" data-key="sec-sim-sales">
+      <div class="op-head"><span class="op-icon">💼</span><h3>1. Sales</h3><span class="op-count" id="count-sim-sales"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div id="sim-list-sales"><p class="empty-note">Loading…</p></div>
+        <div class="sim-add-form">
+          <input type="text" id="sim-title-sales" placeholder="Scenario title">
+          <textarea id="sim-content-sales" placeholder="The scenario, script, or what to practice…"></textarea>
+          <button data-action="add-sim" data-sim="sales" type="button">+ Add Scenario</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-sim-triggers">
+      <div class="op-head"><span class="op-icon">⚡</span><h3>2. Triggers + Being Triggered</h3><span class="op-count" id="count-sim-triggers"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div id="sim-list-triggers"><p class="empty-note">Loading…</p></div>
+        <div class="sim-add-form">
+          <input type="text" id="sim-title-triggers" placeholder="Scenario title">
+          <textarea id="sim-content-triggers" placeholder="The scenario, script, or what to practice…"></textarea>
+          <button data-action="add-sim" data-sim="triggers" type="button">+ Add Scenario</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-sim-confrontations">
+      <div class="op-head"><span class="op-icon">🥊</span><h3>2.5 Confrontations</h3><span class="op-count" id="count-sim-confrontations"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div id="sim-list-confrontations"><p class="empty-note">Loading…</p></div>
+        <div class="sim-add-form">
+          <input type="text" id="sim-title-confrontations" placeholder="Scenario title">
+          <textarea id="sim-content-confrontations" placeholder="The scenario, script, or what to practice…"></textarea>
+          <button data-action="add-sim" data-sim="confrontations" type="button">+ Add Scenario</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-sim-shittalking">
+      <div class="op-head"><span class="op-icon">🗣️</span><h3>2.75 Shit Talking</h3><span class="op-count" id="count-sim-shittalking"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div id="sim-list-shittalking"><p class="empty-note">Loading…</p></div>
+        <div class="sim-add-form">
+          <input type="text" id="sim-title-shittalking" placeholder="Scenario title">
+          <textarea id="sim-content-shittalking" placeholder="The scenario, script, or what to practice…"></textarea>
+          <button data-action="add-sim" data-sim="shittalking" type="button">+ Add Scenario</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-sim-therapy">
+      <div class="op-head"><span class="op-icon">🛋️</span><h3>3. Therapy Sessions</h3><span class="op-count" id="count-sim-therapy"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div id="sim-list-therapy"><p class="empty-note">Loading…</p></div>
+        <div class="sim-add-form">
+          <input type="text" id="sim-title-therapy" placeholder="Scenario title">
+          <textarea id="sim-content-therapy" placeholder="The scenario, script, or what to practice…"></textarea>
+          <button data-action="add-sim" data-sim="therapy" type="button">+ Add Scenario</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="op-section nested" data-key="sec-sim-affirmations">
+      <div class="op-head"><span class="op-icon">🌟</span><h3>4. Affirmations</h3><span class="op-count" id="count-sim-affirmations"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div id="sim-list-affirmations"><p class="empty-note">Loading…</p></div>
+        <div class="sim-add-form">
+          <input type="text" id="sim-title-affirmations" placeholder="Scenario title">
+          <textarea id="sim-content-affirmations" placeholder="The scenario, script, or what to practice…"></textarea>
+          <button data-action="add-sim" data-sim="affirmations" type="button">+ Add Scenario</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="add-subsection-btn" data-add-subsection="simulations" type="button">+ Add Subsection</button>
+
+    </div>
+    </div>
+
+    <!-- ================= SECTION 6: HEALTH ================= -->
+    <div class="macro-section" data-macro="health">
+    <div class="macro-head"><span class="macro-num">6</span><h2>❤️ Health</h2><span class="macro-sub">weight · waist · steps · cardio · calories</span><span class="macro-chevron">▾</span></div>
+    <div class="macro-body">
+
+    <div class="op-section open" data-key="sec-health-log">
+      <div class="op-head"><span class="op-icon">📋</span><h3>Health Log</h3><span class="op-count" id="count-health-log"></span><span class="chevron">▸</span></div>
+      <div class="op-body">
+        <div class="op-toolbar">
+          <button data-action="add-row" data-slug="health-log">+ Add Entry</button>
+          <button data-action="add-col" data-slug="health-log">+ Add Column</button>
+        </div>
+        <div class="op-grid-wrap" id="grid-health-log"><p class="empty-note">Loading…</p></div>
+        <div class="portal-note">One row per check-in. Add more columns (body fat %, sleep, macros, etc.) any time with + Add Column.</div>
+      </div>
+    </div>
+
+    <button class="add-subsection-btn" data-add-subsection="health" type="button">+ Add Subsection</button>
+
+    </div>
+    </div>
+
     <!-- ================= CLAUDE CODE TASKS (this session's own work, tracked) ================= -->
     <div class="macro-head" style="cursor:default;"><span class="macro-num">·</span><h2>🤖 Claude Code Tasks</h2><span class="macro-sub">every build request in this session, logged &amp; tracked</span></div>
     <div class="op-section open" data-key="sec-claude-tasks">
@@ -872,7 +995,9 @@ th.grid-th:active { cursor: grabbing; }
     'job-applications': 'jobs', 'clients': 'client', 'crm': 'crm', 'content': 'content', 'ads': 'ads',
     'stocks-bets': 'masterportal', 'fb-marketplace': 'masterportal', 'hot-links': 'masterportal',
     'sonzai-state-goals-objectives': 'masterportal', 'claude-tasks': 'claude-tasks', 'integrations': 'masterportal',
-    'crm-marketing': 'crm',
+    'crm-marketing': 'crm', 'health-log': 'masterportal',
+    'sim-sales': 'masterportal', 'sim-triggers': 'masterportal', 'sim-confrontations': 'masterportal',
+    'sim-shittalking': 'masterportal', 'sim-therapy': 'masterportal', 'sim-affirmations': 'masterportal',
   };
   const changeLogSheetIds = {};
   async function ensureExtraSheet(slug, name, columns) {
@@ -1549,6 +1674,58 @@ th.grid-th:active { cursor: grabbing; }
     await load();
   }
 
+  // ---------- Simulations (Sales / Triggers / Confrontations / Shit Talking / Therapy / Affirmations) ----------
+  const SIM_SLUGS = {
+    sales: 'sim-sales', triggers: 'sim-triggers', confrontations: 'sim-confrontations',
+    shittalking: 'sim-shittalking', therapy: 'sim-therapy', affirmations: 'sim-affirmations',
+  };
+
+  async function mountSimList(key) {
+    const slug = SIM_SLUGS[key];
+    const { data: sheet } = await supabase.from('kokiri_sheets').select('id').eq('slug', slug).maybeSingle();
+    const list = document.getElementById(`sim-list-${key}`);
+    const countEl = document.getElementById(`count-sim-${key}`);
+    if (!sheet) { list.innerHTML = '<p class="empty-note">Sheet not found.</p>'; return; }
+
+    let rows = [];
+    async function load() {
+      const { data } = await supabase.from('kokiri_rows').select('*').eq('sheet_id', sheet.id).order('sort_order');
+      rows = data || [];
+      if (countEl) countEl.textContent = rows.length + ' scenario' + (rows.length === 1 ? '' : 's');
+      if (!rows.length) { list.innerHTML = '<p class="empty-note">No scenarios yet — add one below.</p>'; return; }
+      list.innerHTML = rows.map(r => `
+        <div class="sim-row" data-id="${r.id}">
+          <div class="stitle"><span>${escapeHtml(r.data?.title || '(untitled)')}</span><button class="sdel" data-id="${r.id}">✕</button></div>
+          <div class="scontent">${escapeHtml(r.data?.content || '')}</div>
+        </div>
+      `).join('');
+      list.querySelectorAll('.sdel').forEach(btn => btn.addEventListener('click', async () => {
+        await supabase.from('kokiri_rows').delete().eq('id', btn.dataset.id);
+        logChange(slug, 'Removed a simulation scenario');
+        await load();
+      }));
+    }
+
+    document.querySelector(`[data-action="add-sim"][data-sim="${key}"]`).addEventListener('click', async () => {
+      const titleEl = document.getElementById(`sim-title-${key}`);
+      const contentEl = document.getElementById(`sim-content-${key}`);
+      const title = titleEl.value.trim();
+      const content = contentEl.value.trim();
+      if (!title && !content) return;
+      const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order || 0), 0);
+      await supabase.from('kokiri_rows').insert({ sheet_id: sheet.id, sort_order: maxOrder + 1, data: { title, content } });
+      titleEl.value = ''; contentEl.value = '';
+      logChange(slug, 'Added a simulation scenario');
+      await load();
+    });
+
+    await load();
+  }
+
+  async function mountSimulations() {
+    for (const key of Object.keys(SIM_SLUGS)) await mountSimList(key);
+  }
+
   // ---------- Jobs stats ----------
   function updateJobStats(cols, rows) {
     const statusKey = cols.find(c => /status/i.test(c.name))?.column_key;
@@ -1599,6 +1776,8 @@ th.grid-th:active { cursor: grabbing; }
   await mountGrid('claude-tasks');
   await mountGrid('crm-marketing');
   await mountCustomSubsections();
+  await mountSimulations();
+  await mountGrid('health-log');
 </script>
 
 <script type="module" src="widget.js"></script>
